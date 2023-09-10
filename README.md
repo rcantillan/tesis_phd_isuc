@@ -10,7 +10,7 @@ Article 3: Agent-based model (under development).
 
 ## Bibliografía 
 
--Bearman, P. (1997). Generalized Exchange. American Journal of Sociology, 102(5), 1383–1415. https://doi.org/10.1086/231087
+- Bearman, P. (1997). Generalized Exchange. American Journal of Sociology, 102(5), 1383–1415. https://doi.org/10.1086/231087
 - Cheng, S., & Park, B. (2020). Flows and Boundaries: A Network Approach to Studying Occupational Mobility in the Labor Market. American Journal of Sociology, 126(3), 577–631. https://doi.org/10.1086/712406
 - Cornwell, B. (2015). Social sequence analysis: Methods and applications. Cambridge University Press.
 - Knoke, D., Diani, M., Hollway, J., & Christopoulos, D. (2021). Multimodal Political Networks (1st ed.). Cambridge University Press. https://doi.org/10.1017/9781108985000
