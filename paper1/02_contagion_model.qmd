@@ -1,0 +1,1533 @@
+---
+title: "Modelos de diferenciación y contagio"
+subtitle: "Ejericio de tesis"
+author: "Cantillan, R."
+institute: "ISUC"
+page-layout: article
+date: today
+date-format: short
+number-sections: true
+format:
+  html:
+    titlepage-logo: "images/uc-chile.png"
+    logo-align: left
+    logo-size: 1.5
+    theme: 
+      light: flatly
+      dark: darkly
+    toc: true
+    toc_float: true
+    toc-depth: 5
+    toc-title: "En este ejercicio"
+editor: visual
+title-block-banner: true
+title-block-style: default
+title-block-categories: true
+freeze: true
+execute: 
+  echo: fenced
+  eval: true
+  output: true
+  warning: false
+reference-location: margin
+citation-location: margin
+bibliography: tesis.bib
+
+include-in-header:
+  - text: |
+     <link rel = "shortcut icon" href = "favicon.ico" />
+#highlight-style: ayu-dark
+#code-block-bg: "#2E2E2E"
+#code-block-border-left: "#31BAE9"
+---
+
+<head><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></head>
+
+::: sidebar-icons
+<a href="#"><i class="fab fa-github"></i> source </a> <!-- Otros íconos aquí -->
+:::
+
+<head>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+```{=html}
+<style>
+    .sidebar-icons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sidebar-icons a {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      color: #333;
+    }
+    .sidebar-icons i {
+      margin-right: 10px;
+    }
+  </style>
+```
+</head>
+
+
+## Cálculo de matriz de adyacencia ponderada. 
+
+Calculamos los vínculos ponderados no dirigidos entre las ocupaciones $i$ y $j$ durante el período $p$ como la tasa promedio de movilidad entre ocupaciones ponderada por el tamaño ocupacional del año pasado, que podría simplificarse como movimiento conjunto sobre tamaño de articulación:
+
+$$
+E_{i\leftrightarrow j, p} = \frac{C_{i\rightarrow j,p} + C_{j\rightarrow i,p}}{O_{i,p} + O_{j,p}}
+$$
+
+donde $C_{i\rightarrow j,p}$ y $C_{j\rightarrow i,p}$ denotan el número ponderado por población de trabajadores que se movieron entre la ocupación $i$ y la ocupación $j$ durante el período $p$ y $O_{i,p}$ y $O_{j,p}$ denotan los tamaños de las ocupaciones i y j del año pasado (es decir, los márgenes de las filas en la figura 1A). Porque $O_{i,p}$ + $O_{j,p}$ limita $C_{i\rightarrow j,p}$ + $C_{j\rightarrow i,p}$, $E_{i\leftrightarrow j, p}$ oscila entre 0 y 1, con valores grandes que indican altas tasas de intercambio. 
+
+
+
+
+## Modelo de diferenciación diádica.
+
+En desarrollo... 
+
+## Modelo de contagio ocupacional.
+
+En el análisis de movilidad canónico, se supone que las ocupaciones son estables en sus atributos y no se ven afectadas por la movilidad.
+
+-   En este ejercicio emularemos el modelo de ontagio desarrollado en el paper [@linNetworkStructureOccupations2022]
+
+-   En efecto, examinamos si el atributo de una ocupación podría ser consecuencia de intercambios con otras ocupaciones.
+
+-   Puesto así cualquier hipótesis de ontagio entre ocupaciones esta basada en el supuesto de que es probable que las ocupaciones vinculadas compartan conocimientos y culturas similares como resultado del movimiento rutinario de individuos. Adcionalmente, la competencia por los trabajadores también puede conducir a una convergencia en las prácticas laborales.
+
+-   En este ejercicio en particular se testea cómo el salario medio ocupacional puede correlacionarse con el de ocupaciones vinculadas
+
+Para realizar lo anterior, utilizamos el conjunto de datos de panel de la Estructura de Red de Ocupaciones del período de ocupación (N = 756).
+
+A continuación describo el modelo:
+
+-Primero obtenemos un salario vinculado promedio ponderado en función del tipo de cambio $G_{i,p}$ para cada período de ocupación, definido de la siguiente manera:
+
+$$
+G_{i,p}=\frac{\sum^J_j (E_{i\leftrightarrow j, p} W_{j,p})}{\sum^J_j E_{i\leftrightarrow j, p}},
+$$ {#eq-contagion}
+
+Donde $E_{i\leftrightarrow j, p}$ derivado de la ecuación (1), denota la fuerza del intercambio entre i y j en el período p y $W_{j,p}$ denota el salario medio registrado de la ocupación $j$ para un período específico. En resumen, $G_{i,p}$ varía según la `ocupación` y el `período`, y representa la mediana del salario ponderado intercambiado de las ocupaciones vinculadas para la ocupación $i$ en el período $p$.
+
+Debido a la naturaleza endógena entre atributo ocupacional e intercambio, instrumentamos $G_{i,p}$ con otros atributos de ocupaciones vinculadas (también ponderados por intercambio), incluyendo tanto la `composición de la fuerza laboral`, como el `contenido ocupacional`. El supuesto es que los atributos vinculados no influyen en el salario focal excepto indirectamente a través de (a) $G_{i,p}$ o (b) atributos del ego, los cuales se tienen en cuenta en nuestros modelos.
+
+Debido a que nuestro período es bastante largo (es decir, una década), nos centramos en la asociación contemporánea entre $G_{i,p}$ y $W_{j,p}$. Estimamos dos modelos de autocorrelación de redes (@ordEstimationMethodsModels1975; @leendersModelingSocialInfluence2002). El primero, un modelo de efectos fijos (FE), se especifica como:
+
+$$
+log(W_{i,j})= \alpha_p + \alpha_i + \beta_1 log(\hat G_{i,p}) + \overset{M}{\underset{m}\sum} \beta_m D_{i,m,p}+\varepsilon_{i,p}
+$$ {#eq-contagionFE}
+
+donde $W_{i,p}$ denota el salario mediano de la ocupación $i$, $\alpha_P$ y $\alpha_i$ denotan interceptos específicos de período y ocupación, $D_{i,m,p}$ denota características ocupacionales que varían en el tiempo, y $\hat G_{i,p}$ denota salario vinculado instrumentado por otros atributos vinculados. Esperamos que $\beta_1$ sea positivo. Es decir, la variación del salario medio dentro de la ocupación y entre períodos es una función tanto de los salarios medianos de ocupaciones vinculadas como de los cambios en los atributos ocupacionales. Cabe señalar que los interceptos ocupacionales también absorben los efectos de la pertenencia a una clase, sin importar qué esquema consideremos. Por tanto, la estimación de $b_1$ es un efecto neto de pertenencia a una clase compartida.
+
+Debido a que el intercambio de trabajadores y los salarios vinculados podrían estar impulsados por los salarios medianos en el período anterior, estimamos otro modelo con la variable dependiente rezagada (LDV) para el segundo y tercer período (N= 504):
+
+$$
+log(W_{i,p})=\alpha_p+log(W_{i,p}) + \beta_2 log(\hat G_{i,p}) + \overset{M}{\underset{m}\sum} \beta_m D_{i,m,p} + \overset{N}{\underset{n}\sum} \beta_n S_{i,n} + \varepsilon_{i,p}
+$$ {#eq-contagionLDV}
+
+donde los interceptos de ocupación en la ecuación (5) se reemplazan con el salario medio en $p - 1$ y los atributos invariantes en el tiempo $S_{i,n}$ se agregan a la ecuación. Nuevamente, esperamos que $b_2$ sea positivo. Es decir, condicionado a los salarios anteriores y los atributos ocupacionales, el salario mediano se correlaciona con los salarios de ocupaciones vinculadas. En un análisis separado, también estimamos un modelo en primera diferenciación (primeras diferencias) y encontramos resultados sustancialmente similares.
+
+## Procesamiento de datos:
+
+### Ejemplo con EPS 2009 y EPS 2019.
+
+En este ejemplo, construimos los datos panel para las ocupaciones en los 3 periodos de análisis
+
+### librerías
+
+```{r, echo=F, message=F}
+library(igraph)
+library(ggraph)
+library(dplyr)
+library(haven)
+library(readxl)
+library(cowplot)
+library(tidyverse)
+library(questionr)
+library(igraph)
+library(here)
+library(netmem)
+library(occupar)
+library(data.table)
+library(infomapecology)
+library(devtools)
+library(tidygraph)
+library(sjlabelled)
+library(viridis)
+```
+
+### Datos
+
+## 2009
+```{r}
+# 2009 
+hlaboral_2009 <- read_dta(here("data/EPS/2009/hlaboral.dta"))
+ind_attr_2009 <- read_dta(here("data/EPS/2009/entrevistado.dta"))
+
+ind_2009 <- ind_attr_2009 %>% select(folio_n20,a8,a9,a12n) #sexo,edad,nivel educativo
+s_2009<-hlaboral_2009%>%dplyr::select(folio_n20, oficio, b12, b13, orden) #ingreso,horas semanales
+# Repetor para el 2012, 2015 y 2019
+```
+
+##### overlap ocupaciones
+```{r}
+# renombrar columnas
+#colnames(s_2009)<-c("from", "to", "orden")
+#m_2009 <- create_am(s_2009[,1:2])
+
+# edgelist to 
+m1 <- netmem::edgelist_to_matrix(cbind(s_2009$folio_n20,s_2009$oficio), bipartite = T)
+m1t <-t(m1)
+overlap_2009 <- m1t%*%t(m1t)
+
+# borrar x en nombres de filas
+rownames(overlap_2009) <- gsub('X', '', rownames(overlap_2009))
+#rownames(overlap_2009)
+#colnames(overlap_2009)
+
+# Eliminar las filas y columnas de nombre NA 
+filas_a_eliminar <- 338
+overlap_2009 <- overlap_2009[-filas_a_eliminar, ]
+overlap_2009 <- overlap_2009[,-filas_a_eliminar]
+```
+
+
+```{r}
+# Extracción de los nombres de filas y columnas 
+occupation_names <- rownames(overlap_2009)
+
+# Calcular los marginales (tamaños de ocupaciones)
+calculate_occupation_margins <- function(overlap_2009) {
+  row_margins <- rowSums(overlap_2009)
+  col_margins <- colSums(overlap_2009)
+  return(list(row_margins, col_margins))
+}
+
+# Calcula la matriz de vínculos ponderados no dirigidos
+calculate_weighted_adjacency <- function(overlap_2009, occupation_names) {
+  n <- nrow(overlap_2009)
+  weighted_adjacency <- matrix(0, nrow = n, ncol = n)
+  
+  margins <- calculate_occupation_margins(overlap_2009)
+  row_margins <- margins[[1]]
+  col_margins <- margins[[2]]
+  
+  rownames(weighted_adjacency) <- occupation_names
+  colnames(weighted_adjacency) <- occupation_names
+  
+  for (i in 1:n) {
+    for (j in 1:n) {
+      c_ijp <- overlap_2009[i, j]
+      c_jip <- overlap_2009[j, i]
+      o_i <- row_margins[i]
+      o_j <- col_margins[j]
+      
+      # Calcula E_ijp utilizando la fórmula
+      e_ijp <- (c_ijp + c_jip) / (o_i + o_j)
+      
+      weighted_adjacency[i, j] <- e_ijp
+    }
+  }
+  
+  return(weighted_adjacency)
+}
+
+# Aplicar función
+weighted_matrix <- calculate_weighted_adjacency(overlap_2009, occupation_names)
+
+# Revisar matriz. 
+#print(weighted_matrix)
+
+# Proporción de casillas que son 0 en la matriz de adyacencia
+proportion_zero_edges <- sum(weighted_matrix == 0) / length(weighted_matrix) *100
+print(paste("Proporción de casillas que son 0:", round(proportion_zero_edges, 2), "%"))
+
+```
+
+### edgelist
+```{r}
+# to edgelist con igraph 
+wedgelist_2009 <- graph.adjacency(weighted_matrix, weighted=TRUE)
+wedgelist_2009 <- get.data.frame(wedgelist_2009)
+wedgelist_2009 <- wedgelist_2009%>%filter(from!=to) # Remove self loops
+
+#save(wedgelist_2009, file="wedgelist_2009.RData")
+#wedgelist_2009<-wedgelist_2009%>%filter(from!=to) # Remove self loops
+#cl<-wedgelist_2009 %>% select(from, to)
+#wgraph_2009<-graph_from_adjacency_matrix(overlap_2009, weighted=TRUE, diag=F)
+#wgraph_2009
+```
+
+
+###  Distribuciones del intercambio a nivel de díadas
+```{r}
+# Calcula el intercambio a nivel de díadas (suma de las dos direcciones)
+wedgelist_2009 <- wedgelist_2009 %>%
+  group_by(from, to) %>%
+  summarise(exchange = sum(weight)) 
+
+# Calcula la media del intercambio
+mean_non_zero_edges <- mean(wedgelist_2009$exchange)
+
+# Transformación logarítmica 
+wedgelist_2009$log_exchange <- log(wedgelist_2009$exchange)
+
+# Gráfico de la distribución del intercambio a nivel de díadas (histograma de densidad)
+ggplot(wedgelist_2009, aes(x = log_exchange)) +
+  geom_density(fill = "blue", alpha = 0.5,  adjust = 2) +
+  geom_label(aes(x = Inf, y = Inf,
+                 label = paste("Porcentaje de vínculos = 0:", round(proportion_zero_edges, 3), "%",
+                               "\nMedia de intercambio si E>0:", round(mean_non_zero_edges, 3))),
+             size = 4, hjust = 1.1, vjust = 1.2, label.padding = unit(0.5, "lines"),
+             color = "black") +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "lines")) +
+  labs(title = "Distribución del Intercambio en díadas ocupacionales 2009",
+       x = "(Log) Intercambio",
+       y = "Densidad")
+```
+
+
+### Average shortest distance
+```{r, message=FALSE}
+
+# Crear un objeto de grafo ponderado a partir del edgelist
+weighted_graph <- graph_from_data_frame(wedgelist_2009, directed = FALSE) %>%
+  set_edge_attr("weight", value = wedgelist_2009$exchange)
+
+# Calcular las distancias más cortas ponderadas entre todas las parejas de nodos
+shortest_distances <- distances(weighted_graph, mode = "all", weights = E(weighted_graph)$weight, algorithm = "dijkstra")
+
+# Filtrar los valores Inf
+filtered_distances <- log(shortest_distances[is.finite(shortest_distances)])
+
+# Calcular la media de las distancias más cortas
+average_shortest_distance<-mean(filtered_distances[is.finite(filtered_distances)])
+
+# plot
+ggplot() + 
+  aes(filtered_distances)+ 
+  #geom_histogram(aes(y = ..density..),
+  #               colour = 1, fill = "white", bins=30) +
+  geom_density(fill = "blue", alpha = 0.5, adjust = 5) +
+  geom_label(aes(x = Inf, y = Inf,
+                 label = paste("Average shortest distance :", round(average_shortest_distance, 3))),
+             size = 4, hjust = 1.1, vjust = 1.3, label.padding = unit(0.5, "lines"),
+             color = "black") +
+  labs(title = "Distribución `shortest distance` en diadas ocupacionales 2009",
+       x = "(Log) Shortest distance",
+       y = "Densidad")
+  theme_grey()
+```
+
+
+## clusters 2009 
+
+- `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar. 
+
+
+### Louvain
+```{r}
+# Crear un objeto de grafo ponderado a partir del edgelist
+weighted_graph <- graph_from_data_frame(wedgelist_2009, directed = FALSE) %>%
+  set_edge_attr("weight", value = wedgelist_2009$exchange)
+
+
+# Aplicar el algoritmo Louvain para encontrar comunidades
+louvain_communities <- cluster_louvain(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(louvain_communities)
+
+# Calcular la modularidad del resultado
+modularity_value <- modularity(louvain_communities)
+#modularity_value
+
+data_ocup_cluster_2009_1 <- data.frame(type="louvain", 
+                                n = length(unique(membership(louvain_communities))), 
+                                modularity=modularity_value,
+                                ano=2009)
+```
+
+
+
+
+### leading eigen
+
+```{r}
+# Aplicar el algoritmo Leading Eigenvector para encontrar comunidades
+leading_eigen_communities <- cluster_leading_eigen(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(leading_eigen_communities)
+
+# Calcular la modularidad del resultado
+modularity_value <- modularity(leading_eigen_communities)
+#modularity_value
+
+data_ocup_cluster_2009_2 <- data.frame(type="leading_eigen", 
+                                n = length(unique(membership(leading_eigen_communities))), 
+                                modularity=modularity_value,
+                                ano=2009)
+```
+
+
+- `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
+
+### Walktrap. 
+```{r}
+# Aplicar el algoritmo Walktrap 
+walktrap_communities <- cluster_walktrap(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(walktrap_communities)
+
+# Calcular la modularidad
+modularity_value <- modularity(walktrap_communities)
+#modularity_value
+
+data_ocup_cluster_2009_3 <- data.frame(type="walktrap", 
+                                n = length(unique(membership(walktrap_communities))), 
+                                modularity=modularity_value,
+                                ano=2009)
+```
+
+
+
+### Infomap
+```{r}
+network_object <- create_monolayer_object(wedgelist_2009, directed = F, bipartite = F)
+res_dir <- run_infomap_monolayer(network_object, 
+                                 infomap_executable='Infomap',
+                                 flow_model = 'undirected',
+                                 silent=T,
+                                 trials=500)
+                                 #two_level=-2)
+
+res_rawdir <- run_infomap_monolayer(network_object, 
+                                    infomap_executable='Infomap',
+                                    flow_model = 'rawdir',
+                                    silent=T,
+                                    trials=500, 
+                                    #two_level=-1, 
+                                    signif=F)
+
+
+res_dir_modules <- res_dir$modules %>% drop_na()
+res_rawdir_modules <- res_rawdir$modules %>% drop_na()
+#create_infomap_linklist(network_object)
+```
+
+### link_rank (calcular modularidad)
+
+El "LinkRank modularity" se diferencia de otras medidas porque también considera la dirección y la fuerza de las conexiones. Puedes pensar en ello como si tuvieras una persona caminando al azar por la red. La medida compara cuánto tiempo pasa esta persona en diferentes grupos de conexiones en comparación con lo que esperaríamos si simplemente se moviera sin rumbo fijo. Si pasa más tiempo del esperado en ciertos grupos, eso significa que hay comunidades reales en la red.
+
+En resumen, el "LinkRank modularity" nos ayuda a ver cómo las conexiones en una red se agrupan en comunidades, considerando su dirección y fuerza. Esto es útil para entender cómo las cosas están conectadas en redes más complejas. (Referencias: Leicht y Newman, 2008; Fortunato, 2010; Kim et al., 2012).
+
+
+```{r}
+# LinkRank 
+lr.modularity <- function(g,
+                          partition, 
+                          damping = .85, 
+                          pr.algo = 'prpack',
+                          weights = NULL) {
+  
+  ## g           = graph (igraph object)
+  ## partition   = graph partition (numeric vector of memberships or "communities" object)
+  ## damping     = damping factor (1 - teleportation prob.)
+  ## pr.algo     = algorithm to calculate Perron vector,
+  ##               possible options are "prpack", "arpack", and "power"
+  ## weights     = If this is NULL and the graph has a weight edge attribute
+  ##               then that is used. If weights is a numerical vector then
+  ##               it used, even if the graph has a weights edge attribute.
+  ##               If this is NA, then no edge weights are used (even if the
+  ##               graph has a weight edge attribute)
+  
+  # check args
+  if (!is.igraph(g)) 
+    stop('graph is not an i.graph object')
+  
+  if (damping > 1 | damping < 0) 
+    stop('damping factor has to be between zero and one!')
+  
+  # get algorithm name to calculate Perron vector
+  pr.algo <- match.arg(pr.algo, c('prpack','arpack','power'))
+  
+  # no of nodes
+  n <- vcount(g)
+  # node sequence
+  v.seq <- seq_len(n)
+  
+  # get membership vector
+  if (class(partition) == 'communities') {
+    
+    pp <- membership(partition)
+    
+  } else {
+    
+    if (!is.numeric(partition))
+      stop("'partition' has to be a 'communities' object or a numeric vector!")
+    pp <- partition
+    
+  }
+  
+  # check dimensions
+  if (length(pp) != n) 
+    stop('Length of membership vector differs from number of nodes!')
+  
+  # get adjacency matrix & out-degree
+  if (is.vector(weights) & length(weights) > 1) {
+    
+    # check args
+    if (ecount(g) != length(weights))
+      stop("'weights' differes in length from ecount!")
+    if (!is.numeric(weights))
+      stop("'weights' must be 'NA','NULL', or a numeric vector!")
+    
+    edge_attr(g, 'tmp') <- weights
+    A <- get.adjacency(g, type = 'both', attr = 'tmp')
+    
+    out.deg <- strength(g, mode = 'out', weights = weights)
+    
+  } else if (is.null(weights)) {
+    
+    if ('weight' %in% edge_attr_names(g)) {
+      
+      A <- get.adjacency(g, type='both', attr='weight')
+      out.deg <- strength(g, mode = 'out')
+      
+    }  else {
+      
+      A <- get.adjacency(g, type='both')
+      out.deg <- degree(g, mode = 'out')
+      
+    }
+    
+  } else if (is.na(weights)) {
+    
+    A <- get.adjacency(g, type='both')
+    out.deg <- degree(g, mode = 'out')
+    
+  } else {
+    
+    stop("'weights' option has to be 'NA','NULL', or a numeric vector!")
+    
+  }
+  
+  # dead-end nodes
+  dangling <- out.deg == 0
+  
+  # row-normalize A (recycle vector)
+  G.temp <- A / out.deg
+  # equivalent to sweep(A, 1, out.deg, FUN='/')
+  
+  # set rows for dead-end nodes to zero
+  if (sum(dangling) > 0) {
+    G.temp[dangling,] <- 0
+  }
+  
+  # add teleportation probabilities
+  Tmat <- Matrix::Matrix(1/n * (damping * dangling + 1 - damping), 
+                         nrow = n, ncol = n)
+  G <- damping * G.temp + Tmat
+  
+  # get Perron vector (PageRank)
+  p.vec <- page_rank(g, damping = damping, algo = pr.algo, weights = weights)$vector
+  
+  # LinkRank matrix
+  Q <- G * p.vec -  tcrossprod(p.vec)
+  # equivalent to sweep(G, 1, p.vec, '*') -  tcrossprod(p.vec)
+  
+  # get LinkRank Modularity by summing over within-community weights
+  return(sum(Q[outer(pp, pp, '==')]))
+  
+}
+
+```
+
+
+```{r}
+memb<-res_dir$modules
+memb<-memb%>%dplyr::select(node_name, module_level1)
+
+# join con membresía 
+wedgelist_2009<-as_tbl_graph(wedgelist_2009, directed = T)
+
+wedgelist_2009 <- wedgelist_2009 %>%
+  left_join(memb, by = c("name" = "node_name"))
+
+#borrar nodos sin memb
+wedgelist_2009<-wedgelist_2009%>%activate(nodes)%>%filter(!is.na(module_level1))
+
+# link_rank
+mod_09<-lr.modularity(wedgelist_2009,
+              V(wedgelist_2009)$module_level1, 
+              damping = .85, 
+              pr.algo = 'prpack',
+              weights = E(wedgelist_2009)$exchange)
+
+```
+
+
+```{r}
+data_ocup_cluster_2009_4 <- data.frame(type="infomap", 
+                                n = max(res_dir$modules$module_level1, na.rm=TRUE), 
+                                modularity=mod_09,
+                                ano=2009)
+```
+
+
+```{r}
+data_ocup_cluster_2009<-rbind(data_ocup_cluster_2009_1, 
+                              data_ocup_cluster_2009_2, 
+                              data_ocup_cluster_2009_3,
+                              data_ocup_cluster_2009_4)
+
+data_ocup_cluster_2009
+```
+
+
+
+## 2012
+```{r}
+# 2009 
+hlaboral_2012 <- read_dta(here("data/EPS/2012/hlaboral.dta"))
+ind_attr_2012 <- read_dta(here("data/EPS/2012/entrevistado.dta"))
+
+ind_2012 <- ind_attr_2012 %>% select(folio_n20,a8,a9,a12n) #sexo,edad,nivel educativo
+s_2012<-hlaboral_2012%>%dplyr::select(folio_n20, b5_cod, b12m, b13, orden) #ingreso,horas semanales
+```
+
+
+##### overlap ocupaciones
+```{r}
+# edgelist to 
+m1 <- netmem::edgelist_to_matrix(cbind(s_2012$folio_n20,s_2012$b5_cod), bipartite = T)
+m1t <-t(m1)
+overlap_2012 <- m1t%*%t(m1t)
+
+# borrar x en nombres de filas
+rownames(overlap_2012) <- gsub('X', '', rownames(overlap_2012))
+
+# Eliminar las filas y columnas de nombre NA 
+filas_a_eliminar <- 338
+overlap_2012 <- overlap_2012[-filas_a_eliminar, ]
+overlap_2012 <- overlap_2012[,-filas_a_eliminar]
+```
+
+
+```{r}
+# Extracción de los nombres de filas y columnas 
+occupation_names <- rownames(overlap_2012)
+
+# Calcular los marginales (tamaños de ocupaciones)
+calculate_occupation_margins <- function(overlap_2012) {
+  row_margins <- rowSums(overlap_2012)
+  col_margins <- colSums(overlap_2012)
+  return(list(row_margins, col_margins))
+}
+
+# Calcula la matriz de vínculos ponderados no dirigidos
+calculate_weighted_adjacency <- function(overlap_2012, occupation_names) {
+  n <- nrow(overlap_2012)
+  weighted_adjacency <- matrix(0, nrow = n, ncol = n)
+  
+  margins <- calculate_occupation_margins(overlap_2012)
+  row_margins <- margins[[1]]
+  col_margins <- margins[[2]]
+  
+  rownames(weighted_adjacency) <- occupation_names
+  colnames(weighted_adjacency) <- occupation_names
+  
+  for (i in 1:n) {
+    for (j in 1:n) {
+      c_ijp <- overlap_2012[i, j]
+      c_jip <- overlap_2012[j, i]
+      o_i <- row_margins[i]
+      o_j <- col_margins[j]
+      
+      # Calcula E_ijp utilizando la fórmula
+      e_ijp <- (c_ijp + c_jip) / (o_i + o_j)
+      
+      weighted_adjacency[i, j] <- e_ijp
+    }
+  }
+  
+  return(weighted_adjacency)
+}
+
+# Aplicar función
+weighted_matrix <- calculate_weighted_adjacency(overlap_2012, occupation_names)
+
+# Revisar matriz. 
+#print(weighted_matrix)
+
+# Proporción de casillas que son 0 en la matriz de adyacencia
+proportion_zero_edges <- sum(weighted_matrix == 0) / length(weighted_matrix) *100
+print(paste("Proporción de casillas que son 0:", round(proportion_zero_edges, 2), "%"))
+```
+
+### edgelist
+```{r}
+# to edgelist con igraph 
+wedgelist_2012 <- graph.adjacency(weighted_matrix, weighted=TRUE)
+wedgelist_2012 <- get.data.frame(wedgelist_2012)
+wedgelist_2012 <- wedgelist_2012%>%filter(from!=to) # Remove self loops
+
+#save(wedgelist_2009, file="wedgelist_2009.RData")
+#wedgelist_2009<-wedgelist_2009%>%filter(from!=to) # Remove self loops
+#cl<-wedgelist_2009 %>% select(from, to)
+#wgraph_2009<-graph_from_adjacency_matrix(overlap_2009, weighted=TRUE, diag=F)
+#wgraph_2009
+```
+
+
+###  Distribuciones del intercambio a nivel de díadas
+```{r}
+# Calcula el intercambio a nivel de díadas (suma de las dos direcciones)
+wedgelist_2012 <- wedgelist_2012 %>%
+  group_by(from, to) %>%
+  summarise(exchange = sum(weight)) 
+
+# Calcula la media del intercambio
+mean_non_zero_edges <- mean(wedgelist_2012$exchange)
+
+# Transformación logarítmica 
+wedgelist_2012$log_exchange <- log(wedgelist_2012$exchange)
+
+# Gráfico de la distribución del intercambio a nivel de díadas (histograma de densidad)
+ggplot(wedgelist_2012, aes(x = log_exchange)) +
+  geom_density(fill = "blue", alpha = 0.5,  adjust = 2) +
+  geom_label(aes(x = Inf, y = Inf,
+                 label = paste("Porcentaje de vínculos = 0:", round(proportion_zero_edges, 3), "%",
+                               "\nMedia de intercambio si E>0:", round(mean_non_zero_edges, 3))),
+             size = 4, hjust = 1.1, vjust = 1.2, label.padding = unit(0.5, "lines"),
+             color = "black") +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "lines")) +
+  labs(title = "Distribución del Intercambio en díadas ocupacionales 2012",
+       x = "(Log) Intercambio",
+       y = "Densidad")
+```
+
+
+### Average shortest distance
+```{r, message=FALSE}
+# Crear un objeto de grafo ponderado a partir del edgelist
+weighted_graph <- graph_from_data_frame(wedgelist_2012, directed = FALSE) %>%
+  set_edge_attr("weight", value = wedgelist_2012$exchange)
+
+# Calcular las distancias más cortas ponderadas entre todas las parejas de nodos
+shortest_distances <- distances(weighted_graph, mode = "all", weights = E(weighted_graph)$weight, algorithm = "dijkstra")
+
+# Filtrar los valores Inf
+filtered_distances <- log(shortest_distances[is.finite(shortest_distances)])
+
+# Calcular la media de las distancias más cortas
+average_shortest_distance<-mean(filtered_distances[is.finite(filtered_distances)])
+
+# plot
+ggplot() + 
+  aes(filtered_distances)+ 
+  #geom_histogram(aes(y = ..density..),
+  #               colour = 1, fill = "white", bins=30) +
+  geom_density(fill = "blue", alpha = 0.5, adjust = 5) +
+  geom_label(aes(x = Inf, y = Inf,
+                 label = paste("Average shortest distance :", round(average_shortest_distance, 3))),
+             size = 4, hjust = 1.1, vjust = 1.3, label.padding = unit(0.5, "lines"),
+             color = "black") +
+  labs(title = "Distribución `shortest distance` en diadas ocupacionales 2012",
+       x = "(Log) Shortest distance",
+       y = "Densidad")
+  theme_grey()
+```
+
+
+## clusters 2012 
+
+- `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar. 
+
+
+### Louvain
+```{r}
+# Crear un objeto de grafo ponderado a partir del edgelist
+weighted_graph <- graph_from_data_frame(wedgelist_2012, directed = FALSE) %>%
+  set_edge_attr("weight", value = wedgelist_2012$exchange)
+
+
+# Aplicar el algoritmo Louvain para encontrar comunidades
+louvain_communities <- cluster_louvain(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(louvain_communities)
+
+# Calcular la modularidad del resultado
+modularity_value <- modularity(louvain_communities)
+#modularity_value
+
+data_ocup_cluster_2012_1 <- data.frame(type="louvain", 
+                                n = length(unique(membership(louvain_communities))), 
+                                modularity=modularity_value,
+                                ano=2012)
+```
+
+### leading_eigen
+
+```{r}
+# Aplicar el algoritmo Leading Eigenvector para encontrar comunidades
+leading_eigen_communities <- cluster_leading_eigen(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(leading_eigen_communities)
+
+# Calcular la modularidad del resultado
+modularity_value <- modularity(leading_eigen_communities)
+#modularity_value
+
+data_ocup_cluster_2012_2 <- data.frame(type="leading_eigen", 
+                                n = length(unique(membership(leading_eigen_communities))), 
+                                modularity=modularity_value,
+                                ano=2012)
+```
+
+
+- `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
+
+### Walktrap. 
+```{r}
+# Aplicar el algoritmo Walktrap 
+walktrap_communities <- cluster_walktrap(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(walktrap_communities)
+
+# Calcular la modularidad
+modularity_value <- modularity(walktrap_communities)
+#modularity_value
+
+data_ocup_cluster_2012_3 <- data.frame(type="walktrap", 
+                                n = length(unique(membership(walktrap_communities))), 
+                                modularity=modularity_value,
+                                ano=2012)
+```
+
+
+
+### Infomap
+```{r}
+network_object <- create_monolayer_object(wedgelist_2012, directed = F, bipartite = F)
+res_dir <- run_infomap_monolayer(network_object, 
+                                 infomap_executable='Infomap',
+                                 flow_model = 'undirected',
+                                 silent=T,
+                                 trials=500)
+                                 #two_level=-2)
+
+res_rawdir <- run_infomap_monolayer(network_object, 
+                                    infomap_executable='Infomap',
+                                    flow_model = 'rawdir',
+                                    silent=T,
+                                    trials=500, 
+                                    #two_level=-1, 
+                                    signif=F)
+
+
+res_dir_modules <- res_dir$modules %>% drop_na()
+res_rawdir_modules <- res_rawdir$modules %>% drop_na()
+#create_infomap_linklist(network_object)
+```
+
+### link_rank (calcular modularidad)
+
+El "LinkRank modularity" se diferencia de otras medidas porque también considera la dirección y la fuerza de las conexiones. Puedes pensar en ello como si tuvieras una persona caminando al azar por la red. La medida compara cuánto tiempo pasa esta persona en diferentes grupos de conexiones en comparación con lo que esperaríamos si simplemente se moviera sin rumbo fijo. Si pasa más tiempo del esperado en ciertos grupos, eso significa que hay comunidades reales en la red.
+
+En resumen, el "LinkRank modularity" nos ayuda a ver cómo las conexiones en una red se agrupan en comunidades, considerando su dirección y fuerza. Esto es útil para entender cómo las cosas están conectadas en redes más complejas. (Referencias: Leicht y Newman, 2008; Fortunato, 2010; Kim et al., 2012).
+
+
+```{r}
+memb<-res_dir$modules
+memb<-memb%>%dplyr::select(node_name, module_level1)
+
+# join con membresía 
+wedgelist_2012<-as_tbl_graph(wedgelist_2012, directed = T)
+
+wedgelist_2012 <- wedgelist_2012 %>%
+  left_join(memb, by = c("name" = "node_name"))
+
+#borrar nodos sin memb
+wedgelist_2012<-wedgelist_2012%>%activate(nodes)%>%filter(!is.na(module_level1))
+
+# link_rank
+mod_12<-lr.modularity(wedgelist_2012,
+              V(wedgelist_2012)$module_level1, 
+              damping = .85, 
+              pr.algo = 'prpack',
+              weights = E(wedgelist_2012)$exchange)
+
+```
+
+
+```{r}
+data_ocup_cluster_2012_4 <- data.frame(type="infomap", 
+                                n = max(res_dir$modules$module_level1, na.rm=TRUE), 
+                                modularity=mod_12,
+                                ano=2012)
+```
+
+```{r}
+data_ocup_cluster_2012<-rbind(data_ocup_cluster_2012_1, 
+                              data_ocup_cluster_2012_2, 
+                              data_ocup_cluster_2012_3,
+                              data_ocup_cluster_2012_4)
+data_ocup_cluster_2012
+```
+
+
+
+## 2015
+```{r}
+hlaboral_2015 <- read_dta(here("data/EPS/2015/MODULOB_historia_laboral.dta"))
+ind_attr_2015 <- read_dta(here("data/EPS/2015/MODULOA_entrevistado.dta"))
+
+ind_2015 <- ind_attr_2015 %>% select(folio_n20,a8,a9,a12n) #sexo,edad,nivel educativo
+s_2015<-hlaboral_2015%>%dplyr::select(folio_n20, b5_cod, b12, b13, orden) #ingreso,horas semanales
+```
+
+
+
+##### overlap ocupaciones
+```{r}
+# edgelist to 
+m1 <- netmem::edgelist_to_matrix(cbind(s_2015$folio_n20,s_2015$b5_cod), bipartite = T)
+m1t <-t(m1)
+overlap_2015 <- m1t%*%t(m1t)
+
+# borrar x en nombres de filas
+rownames(overlap_2015) <- gsub('X', '', rownames(overlap_2015))
+
+# Eliminar las filas y columnas de nombre NA 
+filas_a_eliminar <- 356
+overlap_2015 <- overlap_2015[-filas_a_eliminar, ]
+overlap_2015 <- overlap_2015[,-filas_a_eliminar]
+```
+
+
+```{r}
+# Extracción de los nombres de filas y columnas 
+occupation_names <- rownames(overlap_2015)
+
+# Calcular los marginales (tamaños de ocupaciones)
+calculate_occupation_margins <- function(overlap_2015) {
+  row_margins <- rowSums(overlap_2015)
+  col_margins <- colSums(overlap_2015)
+  return(list(row_margins, col_margins))
+}
+
+# Calcula la matriz de vínculos ponderados no dirigidos
+calculate_weighted_adjacency <- function(overlap_2015, occupation_names) {
+  n <- nrow(overlap_2015)
+  weighted_adjacency <- matrix(0, nrow = n, ncol = n)
+  
+  margins <- calculate_occupation_margins(overlap_2015)
+  row_margins <- margins[[1]]
+  col_margins <- margins[[2]]
+  
+  rownames(weighted_adjacency) <- occupation_names
+  colnames(weighted_adjacency) <- occupation_names
+  
+  for (i in 1:n) {
+    for (j in 1:n) {
+      c_ijp <- overlap_2015[i, j]
+      c_jip <- overlap_2015[j, i]
+      o_i <- row_margins[i]
+      o_j <- col_margins[j]
+      
+      # Calcula E_ijp utilizando la fórmula
+      e_ijp <- (c_ijp + c_jip) / (o_i + o_j)
+      
+      weighted_adjacency[i, j] <- e_ijp
+    }
+  }
+  
+  return(weighted_adjacency)
+}
+
+# Aplicar función
+weighted_matrix <- calculate_weighted_adjacency(overlap_2015, occupation_names)
+
+# Revisar matriz. 
+#print(weighted_matrix)
+
+# Proporción de casillas que son 0 en la matriz de adyacencia
+proportion_zero_edges <- sum(weighted_matrix == 0) / length(weighted_matrix) *100
+print(paste("Proporción de casillas que son 0:", round(proportion_zero_edges, 2), "%"))
+```
+
+### edgelist
+```{r}
+# to edgelist con igraph 
+wedgelist_2015 <- graph.adjacency(weighted_matrix, weighted=TRUE)
+wedgelist_2015 <- get.data.frame(wedgelist_2015)
+wedgelist_2015 <- wedgelist_2015%>%filter(from!=to) # Remove self loops
+
+#save(wedgelist_2009, file="wedgelist_2009.RData")
+#wedgelist_2009<-wedgelist_2009%>%filter(from!=to) # Remove self loops
+#cl<-wedgelist_2009 %>% select(from, to)
+#wgraph_2009<-graph_from_adjacency_matrix(overlap_2009, weighted=TRUE, diag=F)
+#wgraph_2009
+```
+
+
+###  Distribuciones del intercambio a nivel de díadas
+```{r, message=FALSE}
+# Calcula el intercambio a nivel de díadas (suma de las dos direcciones)
+wedgelist_2015 <- wedgelist_2015 %>%
+  group_by(from, to) %>%
+  summarise(exchange = sum(weight)) 
+
+# Calcula la media del intercambio
+mean_non_zero_edges <- mean(wedgelist_2015$exchange)
+
+# Transformación logarítmica 
+wedgelist_2015$log_exchange <- log(wedgelist_2015$exchange)
+
+# Gráfico de la distribución del intercambio a nivel de díadas (histograma de densidad)
+ggplot(wedgelist_2015, aes(x = log_exchange)) +
+  geom_density(fill = "blue", alpha = 0.5,  adjust = 2) +
+  geom_label(aes(x = Inf, y = Inf,
+                 label = paste("Porcentaje de vínculos = 0:", round(proportion_zero_edges, 3), "%",
+                               "\nMedia de intercambio si E>0:", round(mean_non_zero_edges, 3))),
+             size = 4, hjust = 1.1, vjust = 1.2, label.padding = unit(0.5, "lines"),
+             color = "black") +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "lines")) +
+  labs(title = "Distribución del Intercambio en díadas ocupacionales 2015",
+       x = "(Log) Intercambio",
+       y = "Densidad")
+
+```
+
+
+### Average shortest distance
+```{r, message=FALSE}
+# Crear un objeto de grafo ponderado a partir del edgelist
+weighted_graph <- graph_from_data_frame(wedgelist_2015, directed = FALSE) %>%
+  set_edge_attr("weight", value = wedgelist_2015$exchange)
+
+# Calcular las distancias más cortas ponderadas entre todas las parejas de nodos
+shortest_distances <- distances(weighted_graph, mode = "all", weights = E(weighted_graph)$weight, algorithm = "dijkstra")
+
+# Filtrar los valores Inf
+filtered_distances <- log(shortest_distances[is.finite(shortest_distances)])
+
+# Calcular la media de las distancias más cortas
+average_shortest_distance<-mean(filtered_distances[is.finite(filtered_distances)])
+
+# plot
+ggplot() + 
+  aes(filtered_distances)+ 
+  #geom_histogram(aes(y = ..density..),
+  #               colour = 1, fill = "white", bins=30) +
+  geom_density(fill = "blue", alpha = 0.5, adjust = 5) +
+  geom_label(aes(x = Inf, y = Inf,
+                 label = paste("Average shortest distance :", round(average_shortest_distance, 2))),
+             size = 4, hjust = 1.1, vjust = 1.3, label.padding = unit(0.5, "lines"),
+             color = "black") +
+  labs(title = "Distribución `shortest distance` en diadas ocupacionales 2015",
+       x = "(Log) Shortest distance",
+       y = "Densidad")
+  theme_grey()
+
+```
+
+
+## clusters 2015 
+
+- `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar. 
+
+
+### Louvain
+```{r}
+# Crear un objeto de grafo ponderado a partir del edgelist
+weighted_graph <- graph_from_data_frame(wedgelist_2015, directed = FALSE) %>%
+  set_edge_attr("weight", value = wedgelist_2015$exchange)
+
+
+# Aplicar el algoritmo Louvain para encontrar comunidades
+louvain_communities <- cluster_louvain(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(louvain_communities)
+
+# Calcular la modularidad del resultado
+modularity_value <- modularity(louvain_communities)
+#modularity_value
+
+data_ocup_cluster_2015_1 <- data.frame(type="louvain", 
+                                n = length(unique(membership(louvain_communities))), 
+                                modularity=modularity_value,
+                                ano=2015)
+```
+
+### leading_eigen
+
+```{r}
+# Aplicar el algoritmo Leading Eigenvector para encontrar comunidades
+leading_eigen_communities <- cluster_leading_eigen(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(leading_eigen_communities)
+
+# Calcular la modularidad del resultado
+modularity_value <- modularity(leading_eigen_communities)
+modularity_value
+
+data_ocup_cluster_2015_2 <- data.frame(type="leading_eigen", 
+                                n = length(unique(membership(leading_eigen_communities))), 
+                                modularity=modularity_value,
+                                ano=2015)
+```
+
+
+- `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
+
+### Walktrap. 
+```{r}
+# Aplicar el algoritmo Walktrap 
+walktrap_communities <- cluster_walktrap(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(walktrap_communities)
+
+# Calcular la modularidad
+modularity_value <- modularity(walktrap_communities)
+#modularity_value
+
+data_ocup_cluster_2015_3 <- data.frame(type="walktrap", 
+                                n = length(unique(membership(walktrap_communities))), 
+                                modularity=modularity_value,
+                                ano=2015)
+```
+
+
+
+### Infomap
+```{r}
+network_object <- create_monolayer_object(wedgelist_2015, directed = F, bipartite = F)
+res_dir <- run_infomap_monolayer(network_object, 
+                                 infomap_executable='Infomap',
+                                 flow_model = 'undirected',
+                                 silent=T,
+                                 trials=500) 
+                                 #two_level=-2)
+
+res_rawdir <- run_infomap_monolayer(network_object, 
+                                    infomap_executable='Infomap',
+                                    flow_model = 'rawdir',
+                                    silent=T,
+                                    trials=500, 
+                                    #two_level=-1, 
+                                    signif=F)
+
+
+res_dir_modules <- res_dir$modules %>% drop_na()
+res_rawdir_modules <- res_rawdir$modules %>% drop_na()
+#create_infomap_linklist(network_object)
+```
+
+### link_rank (calcular modularidad)
+
+El "LinkRank modularity" se diferencia de otras medidas porque también considera la dirección y la fuerza de las conexiones. Puedes pensar en ello como si tuvieras una persona caminando al azar por la red. La medida compara cuánto tiempo pasa esta persona en diferentes grupos de conexiones en comparación con lo que esperaríamos si simplemente se moviera sin rumbo fijo. Si pasa más tiempo del esperado en ciertos grupos, eso significa que hay comunidades reales en la red.
+
+En resumen, el "LinkRank modularity" nos ayuda a ver cómo las conexiones en una red se agrupan en comunidades, considerando su dirección y fuerza. Esto es útil para entender cómo las cosas están conectadas en redes más complejas. (Referencias: Leicht y Newman, 2008; Fortunato, 2010; Kim et al., 2012).
+
+
+```{r}
+memb<-res_dir$modules
+memb<-memb%>%dplyr::select(node_name, module_level1)
+
+# join con membresía 
+wedgelist_2015<-as_tbl_graph(wedgelist_2015, directed = T)
+
+wedgelist_2015 <- wedgelist_2015 %>%
+  left_join(memb, by = c("name" = "node_name"))
+
+#borrar nodos sin memb
+wedgelist_2015<-wedgelist_2015%>%activate(nodes)%>%filter(!is.na(module_level1))
+
+# link_rank
+mod_15<-lr.modularity(wedgelist_2015,
+              V(wedgelist_2015)$module_level1, 
+              damping = .85, 
+              pr.algo = 'prpack',
+              weights = E(wedgelist_2015)$exchange)
+```
+
+
+```{r}
+data_ocup_cluster_2015_4 <- data.frame(type="infomap", 
+                                n = max(res_dir$modules$module_level1, na.rm=TRUE), 
+                                modularity=mod_15,
+                                ano=2015)
+```
+
+```{r}
+data_ocup_cluster_2015<-rbind(data_ocup_cluster_2015_1, 
+                              data_ocup_cluster_2015_2, 
+                              data_ocup_cluster_2015_3,
+                              data_ocup_cluster_2015_4)
+
+data_ocup_cluster_2015
+```
+
+
+## 2020
+```{r}
+hlaboral_2020 <- read_dta(here("data/EPS/2020/Bases_EPS2020_continuidad/01_Vivos_continuidad/MODULO_Historia Laboral_VIVOS_in.dta"))
+ind_attr_2020 <- read_dta(here("data/EPS/2020/Bases_EPS2020_continuidad/01_Vivos_continuidad/MODULO_Entrevistado_VIVOS_in.dta"))
+
+ind_2020 <- ind_attr_2020 %>% select(folio_n20,a8,a9,a12_n) #sexo,edad,nivel educativo
+s_2020<-hlaboral_2020%>%dplyr::select(folio_n20, CIUO_08_4dig, b12, b13, orden) #ingreso,horas semanales
+# Repetor para el 2012, 2015 y 2019
+```
+
+
+
+##### overlap ocupaciones
+```{r}
+# edgelist to 
+m1 <- netmem::edgelist_to_matrix(cbind(s_2020$folio_n20,s_2020$CIUO_08_4dig), bipartite = T)
+m1t <-t(m1)
+overlap_2020 <- m1t%*%t(m1t)
+
+# borrar x en nombres de filas
+rownames(overlap_2020) <- gsub('X', '', rownames(overlap_2020))
+
+# Eliminar las filas y columnas de nombre NA 
+filas_a_eliminar <- 352
+overlap_2020 <- overlap_2020[-filas_a_eliminar, ]
+overlap_2020 <- overlap_2020[,-filas_a_eliminar]
+```
+
+
+```{r}
+# Extracción de los nombres de filas y columnas 
+occupation_names <- rownames(overlap_2020)
+
+# Calcular los marginales (tamaños de ocupaciones)
+calculate_occupation_margins <- function(overlap_2020) {
+  row_margins <- rowSums(overlap_2020)
+  col_margins <- colSums(overlap_2020)
+  return(list(row_margins, col_margins))
+}
+
+# Calcula la matriz de vínculos ponderados no dirigidos
+calculate_weighted_adjacency <- function(overlap_2020, occupation_names) {
+  n <- nrow(overlap_2020)
+  weighted_adjacency <- matrix(0, nrow = n, ncol = n)
+  
+  margins <- calculate_occupation_margins(overlap_2020)
+  row_margins <- margins[[1]]
+  col_margins <- margins[[2]]
+  
+  rownames(weighted_adjacency) <- occupation_names
+  colnames(weighted_adjacency) <- occupation_names
+  
+  for (i in 1:n) {
+    for (j in 1:n) {
+      c_ijp <- overlap_2020[i, j]
+      c_jip <- overlap_2020[j, i]
+      o_i <- row_margins[i]
+      o_j <- col_margins[j]
+      
+      # Calcula E_ijp utilizando la fórmula
+      e_ijp <- (c_ijp + c_jip) / (o_i + o_j)
+      
+      weighted_adjacency[i, j] <- e_ijp
+    }
+  }
+  
+  return(weighted_adjacency)
+}
+
+# Aplicar función
+weighted_matrix <- calculate_weighted_adjacency(overlap_2020, occupation_names)
+
+# Revisar matriz. 
+#print(weighted_matrix)
+
+# Proporción de casillas que son 0 en la matriz de adyacencia
+proportion_zero_edges <- sum(weighted_matrix == 0) / length(weighted_matrix) *100
+print(paste("Proporción de casillas que son 0:", round(proportion_zero_edges, 2), "%"))
+```
+
+### edgelist
+```{r}
+# to edgelist con igraph 
+wedgelist_2020 <- graph.adjacency(weighted_matrix, weighted=TRUE)
+wedgelist_2020 <- get.data.frame(wedgelist_2020)
+wedgelist_2020 <- wedgelist_2020%>%filter(from!=to) # Remove self loops
+
+#save(wedgelist_2009, file="wedgelist_2009.RData")
+#wedgelist_2009<-wedgelist_2009%>%filter(from!=to) # Remove self loops
+#cl<-wedgelist_2009 %>% select(from, to)
+#wgraph_2009<-graph_from_adjacency_matrix(overlap_2009, weighted=TRUE, diag=F)
+#wgraph_2009
+```
+
+
+###  Distribuciones del intercambio a nivel de díadas
+```{r, message=FALSE}
+# Calcula el intercambio a nivel de díadas (suma de las dos direcciones)
+wedgelist_2020 <- wedgelist_2020 %>%
+  group_by(from, to) %>%
+  summarise(exchange = sum(weight)) 
+
+# Calcula la media del intercambio
+mean_non_zero_edges <- mean(wedgelist_2020$exchange)
+
+# Transformación logarítmica 
+wedgelist_2020$log_exchange <- log(wedgelist_2020$exchange)
+
+# Gráfico de la distribución del intercambio a nivel de díadas (histograma de densidad)
+ggplot(wedgelist_2020, aes(x = log_exchange)) +
+  geom_density(fill = "blue", alpha = 0.5,  adjust = 2) +
+  geom_label(aes(x = Inf, y = Inf,
+                 label = paste("Porcentaje de vínculos = 0:", round(proportion_zero_edges, 3), "%",
+                               "\nMedia de intercambio si E>0:", round(mean_non_zero_edges, 3))),
+             size = 4, hjust = 1.1, vjust = 1.2, label.padding = unit(0.5, "lines"),
+             color = "black") +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "lines")) +
+  labs(title = "Distribución del Intercambio en díadas ocupacionales 2020",
+       x = "(Log) Intercambio",
+       y = "Densidad")
+```
+
+
+### Average shortest distance
+```{r, message=FALSE}
+# Crear un objeto de grafo ponderado a partir del edgelist
+weighted_graph <- graph_from_data_frame(wedgelist_2020, directed = FALSE) %>%
+  set_edge_attr("weight", value = wedgelist_2020$exchange)
+
+# Calcular las distancias más cortas ponderadas entre todas las parejas de nodos
+shortest_distances <- distances(weighted_graph, mode = "all", weights = E(weighted_graph)$weight, algorithm = "dijkstra")
+
+# Filtrar los valores Inf
+filtered_distances <- log(shortest_distances[is.finite(shortest_distances)])
+
+# Calcular la media de las distancias más cortas
+average_shortest_distance<-mean(filtered_distances[is.finite(filtered_distances)])
+
+# plot
+ggplot() + 
+  aes(filtered_distances)+ 
+  #geom_histogram(aes(y = ..density..),
+  #               colour = 1, fill = "white", bins=30) +
+  geom_density(fill = "blue", alpha = 0.5, adjust = 5) +
+  geom_label(aes(x = Inf, y = Inf,
+                 label = paste("Average shortest distance :", round(average_shortest_distance, 2))),
+             size = 4, hjust = 1.1, vjust = 1.3, label.padding = unit(0.5, "lines"),
+             color = "black") +
+  labs(title = "Distribución `shortest distance` en diadas ocupacionales 2020",
+       x = "(Log) Shortest distance",
+       y = "Densidad")
+  theme_grey()
+
+```
+
+
+## clusters 2020
+
+- `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar. 
+
+
+### Louvain
+```{r}
+# Crear un objeto de grafo ponderado a partir del edgelist
+weighted_graph <- graph_from_data_frame(wedgelist_2020, directed = FALSE) %>%
+  set_edge_attr("weight", value = wedgelist_2020$exchange)
+
+
+# Aplicar el algoritmo Louvain para encontrar comunidades
+louvain_communities <- cluster_louvain(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(louvain_communities)
+
+# Calcular la modularidad del resultado
+modularity_value <- modularity(louvain_communities)
+#modularity_value
+
+data_ocup_cluster_2020_1 <- data.frame(type="louvain", 
+                                n = length(unique(membership(louvain_communities))), 
+                                modularity=modularity_value,
+                                ano=2020)
+```
+
+### leading_eigen
+
+```{r}
+# Aplicar el algoritmo Leading Eigenvector para encontrar comunidades
+leading_eigen_communities <- cluster_leading_eigen(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(leading_eigen_communities)
+
+# Calcular la modularidad del resultado
+modularity_value <- modularity(leading_eigen_communities)
+#modularity_value
+
+data_ocup_cluster_2020_2 <- data.frame(type="leading_eigen", 
+                                n = length(unique(membership(leading_eigen_communities))), 
+                                modularity=modularity_value,
+                                ano=2020)
+```
+
+
+- `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
+
+### Walktrap. 
+```{r}
+# Aplicar el algoritmo Walktrap 
+walktrap_communities <- cluster_walktrap(weighted_graph)
+
+# Obtener la membresía de las comunidades para cada nodo
+community_membership <- membership(walktrap_communities)
+
+# Calcular la modularidad
+modularity_value <- modularity(walktrap_communities)
+#modularity_value
+
+data_ocup_cluster_2020_3 <- data.frame(type="walktrap", 
+                                n = length(unique(membership(walktrap_communities))), 
+                                modularity=modularity_value,
+                                ano=2020)
+```
+
+
+
+### Infomap
+```{r}
+network_object <- create_monolayer_object(wedgelist_2020, directed = F, bipartite = F)
+res_dir <- run_infomap_monolayer(network_object, 
+                                 infomap_executable='Infomap',
+                                 flow_model = 'undirected',
+                                 silent=T,
+                                 trials=500) 
+                                 #two_level=-2)
+
+res_rawdir <- run_infomap_monolayer(network_object, 
+                                    infomap_executable='Infomap',
+                                    flow_model = 'rawdir',
+                                    silent=T,
+                                    trials=500, 
+                                    #two_level=-1, 
+                                    signif=F)
+
+
+res_dir_modules <- res_dir$modules %>% drop_na()
+res_rawdir_modules <- res_rawdir$modules %>% drop_na()
+#create_infomap_linklist(network_object)
+```
+
+### link_rank (calcular modularidad)
+
+El "LinkRank modularity" se diferencia de otras medidas porque también considera la dirección y la fuerza de las conexiones. Puedes pensar en ello como si tuvieras una persona caminando al azar por la red. La medida compara cuánto tiempo pasa esta persona en diferentes grupos de conexiones en comparación con lo que esperaríamos si simplemente se moviera sin rumbo fijo. Si pasa más tiempo del esperado en ciertos grupos, eso significa que hay comunidades reales en la red.
+
+En resumen, el "LinkRank modularity" nos ayuda a ver cómo las conexiones en una red se agrupan en comunidades, considerando su dirección y fuerza. Esto es útil para entender cómo las cosas están conectadas en redes más complejas. (Referencias: Leicht y Newman, 2008; Fortunato, 2010; Kim et al., 2012).
+
+
+```{r}
+memb<-res_dir$modules
+memb<-memb%>%dplyr::select(node_name, module_level1)
+
+# join con membresía 
+wedgelist_2020<-as_tbl_graph(wedgelist_2020, directed = F)
+
+wedgelist_2020 <- wedgelist_2020 %>%
+  left_join(memb, by = c("name" = "node_name"))
+
+#borrar nodos sin memb
+wedgelist_2020<-wedgelist_2020%>%activate(nodes)%>%filter(!is.na(module_level1))
+
+# link_rank
+mod_20<-lr.modularity(wedgelist_2020,
+              V(wedgelist_2020)$module_level1, 
+              damping = .85, 
+              pr.algo = 'prpack',
+              weights = E(wedgelist_2020)$exchange)
+```
+
+
+```{r}
+data_ocup_cluster_2020_4 <- data.frame(type="infomap", 
+                                n = max(res_dir$modules$module_level1, na.rm=TRUE), 
+                                modularity=mod_20,
+                                ano=2020)
+```
+
+```{r}
+data_ocup_cluster_2020<-rbind(data_ocup_cluster_2020_1, 
+                              data_ocup_cluster_2020_2, 
+                              data_ocup_cluster_2020_3,
+                              data_ocup_cluster_2020_4)
+```
+
+
+```{r}
+data_ocup_cluster<-rbind(data_ocup_cluster_2009,
+                         data_ocup_cluster_2012,
+                         data_ocup_cluster_2015,
+                         data_ocup_cluster_2020)
+
+glimpse(data_ocup_cluster)
+```
+
+
+## plot cluster tendencies
+
+```{r}
+# Gráfico 1: Número de clusters por año y tipo
+plot_clusters <- ggplot(data_ocup_cluster, aes(x = as.factor(ano), y = n, group = type, color = type)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Número de Clusters por Año",
+       x = "Año",
+       y = "Número de Clusters") +
+  theme_minimal() +
+ scale_color_viridis(discrete = TRUE) 
+
+# Gráfico 2: Modularity por año y tipo
+plot_modularity <- ggplot(data_ocup_cluster, aes(x = as.factor(ano), y = modularity, group = type, color = type)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Modularity por Año",
+       x = "Año",
+       y = "Modularity") +
+  theme_minimal() +
+ scale_color_viridis(discrete = TRUE) 
+
+# Mostrar los gráficos
+print(plot_clusters)
+print(plot_modularity)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

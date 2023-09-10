@@ -1,0 +1,840 @@
+---
+title: "case control regression enacoes 2014"
+author: "redesLab"
+date: "octubre 2021"
+output: 
+   rmarkdown::html_document:
+     theme: lumen
+     toc: true 
+     toc_depth: 2  
+     number_sections: true
+     toc_float: true
+     toc_collapsed: true
+     highlight: pygments
+---
+
+# Librerías
+```{r}
+library(haven)
+library(car)
+library(dplyr)
+library(tidyr)
+```
+
+# ENACOES 2014 
+```{r,warning=FALSE, message=FALSE}
+coes<-load("C:/Users/rober/Downloads/ENACOES_2014_V5.RData")
+coes<-enacoes
+```
+
+# Recodifcamos variables 
+
+## Ego
+
+### Ego Sexo
+```{r}
+coes = coes[sort.list(coes$FOLIO),]
+#names(coes)
+
+coes$ego_sexo = as.numeric(coes$P1==1)
+#table(coes$ego_sexo)
+```
+
+### Ego Edad (continua)
+```{r}
+coes$ego_edad = coes$P2
+#summary(coes$ego_edad)
+#coes$ego_edad <- recode(coes$edad,"18:24=1; 25:34=2; 35:44=3; 45:54=4; 55:64=5; 65:75=6")
+```
+
+### Ego Educación 
+```{r}
+coes$ego_educ = coes$P4
+#coes$educa[coes$P4==1] = 2      #Juntar sin estudios con básica incompleta
+#coes$educa[coes$P4==10] = 9      #Juntar Uni completa + posgrado
+#coes$educa[coes$P4>=88] = NA
+
+#Educacion categorica
+coes$ego_educ[coes$ego_educ=="88"] <- NA
+coes$ego_educ[coes$ego_educ=="99"] <- NA
+coes$ego_educ[coes$ego_educ<=3] = 1                     # - que básica
+coes$ego_educ[coes$ego_educ>=4 & coes$ego_educ<=5] = 2  # Secundaria
+coes$ego_educ[coes$ego_educ>=6 & coes$ego_educ<=7] = 3  # Técnica
+coes$ego_educ[coes$ego_educ>=8 & coes$ego_educ<=10] = 4 # Universitaria
+
+coes$ego_educ<-as.factor(coes$ego_educ)
+table(coes$ego_educ)
+prop.table(table(coes$ego_educ))
+```
+
+### Ego Religión
+```{r}
+coes$S24[coes$S24=="88"] <- NA
+coes$S24[coes$S24=="99"] <- NA
+coes$ego_relig = as.numeric(coes$S24)         
+coes$ego_relig[coes$ego_relig==1] = 1                  #Catolico
+coes$ego_relig[coes$ego_relig==2] = 2                  #Evangélico
+coes$ego_relig[coes$ego_relig>=3 & coes$S24<=8] = 3    #Otra relig
+coes$ego_relig[coes$ego_relig>=9 & coes$S24<=11] = 4   #Ninguna+Ate+Agnostico+Ns
+#coes$ego_relig = factor(coes$religid, labels=c("Catolico", "Evangelico",
+#                                             "Otra Religion", "Irreligioso"))
+prop.table(table(coes$ego_relig))
+```
+
+### Ego ideol
+```{r}
+table(coes$F6) #ideol
+
+coes$F6[coes$F6 == 1 | coes$F6 == 2 ] <- 'leftwinger' 
+coes$F6[coes$F6 == 3 | coes$F6 == 4 ] <- 'center-left' 
+coes$F6[coes$F6 == 5 | coes$F6 == 6 ] <- 'center'
+coes$F6[coes$F6 == 7 | coes$F6 == 8 ] <- 'center-riht'
+coes$F6[coes$F6 == 9 | coes$F6 == 10] <- 'rightwinger'
+
+coes$ego_ideol<-coes$F6
+coes$ego_ideol[coes$ego_ideol==99] <- "none"
+coes$ego_ideol[coes$ego_ideol==88] <- "none"
+table(coes$ego_ideol)
+```
+
+### Ego Barrio
+```{r}
+coes$ego_barrio<-1
+
+#Estado Civil
+#coes$estcivil = coes$P5
+#coes$estcivil[coes$P5==9] = NA
+#coes$estcivil[coes$P5==6] = 5
+#coes$estcivil[coes$P5==7] = 5
+#coes$estcivil = factor(coes$estcivil, labels=c("Casado","Conviviente","Soltero/a",
+#                                               "Viudo/a","Sepa/Divor/Anu"))
+```
+
+### Ego Grupo étnico
+```{r}
+coes$etmino = as.numeric(coes$S1<=9)
+table(coes$etmino)
+```
+
+### Ego Grado
+```{r}
+coes$tamred = as.numeric(coes$A10_A1!="") + as.numeric(coes$A10_A2!="") + 
+  as.numeric(coes$A10_A3!="") + as.numeric(coes$A10_A4!="") + 
+  as.numeric(coes$A10_A5!="")
+table(coes$tamred)
+print(prop.table(table(coes$tamred)), 2)
+```
+
+## Alter
+
+### Alter sexo
+```{r}
+coes$alter_sexo1 = as.numeric(coes$A10_B1==1)
+coes$alter_sexo2 = as.numeric(coes$A10_B2==1)
+coes$alter_sexo3 = as.numeric(coes$A10_B3==1)
+coes$alter_sexo4 = as.numeric(coes$A10_B4==1)
+coes$alter_sexo5 = as.numeric(coes$A10_B5==1)
+prop.table(table(coes$alter_sexo1[coes$tamred>=1], exclude=NULL))
+prop.table(table(coes$alter_sexo1[coes$tamred>=4], exclude=NULL))
+```
+
+### Alter edad
+```{r}
+coes$alter_edad1<-coes$A10_C1
+coes$alter_edad1[coes$A10_C1=="99"] <- NA
+coes$alter_edad2<-coes$A10_C2
+coes$alter_edad2[coes$A10_C2=="99"] <- NA
+coes$alter_edad3<-coes$A10_C3
+coes$alter_edad3[coes$A10_C3=="99"] <- NA
+coes$alter_edad4<-coes$A10_C4
+coes$alter_edad4[coes$A10_C4=="99"] <- NA
+coes$alter_edad5<-coes$A10_C5
+coes$alter_edad5[coes$A10_C5=="99"] <- NA
+```
+
+### Alter religión
+```{r}
+table(coes$A10_G1)
+coes$alter_relig1 = car::recode(coes$A10_G1, "1=1; 2=2; 3=3; 4:6=4; 8:9=NA")
+coes$alter_relig2 = car::recode(coes$A10_G2, "1=1; 2=2; 3=3; 4:6=4; 8:9=NA")
+coes$alter_relig3 = car::recode(coes$A10_G3, "1=1; 2=2; 3=3; 4:6=4; 8:9=NA")
+coes$alter_relig4 = car::recode(coes$A10_G4, "1=1; 2=2; 3=3; 4:6=4; 8:9=NA")
+coes$alter_relig5 = car::recode(coes$A10_G5, "1=1; 2=2; 3=3; 4:6=4; 8:9=NA")
+str(coes$alter_relig1)
+prop.table(table(coes$alter_relig1[coes$tamred>=1], exclude=NULL))
+prop.table(table(coes$alter_relig3[coes$tamred>=3], exclude=NULL))
+```
+
+### Alter educación 
+```{r}
+coes$alter_educ1 = car::recode(coes$A10_H1,"1:3=1; 4:5=2; 6:7=3; 8:10=4; 99=NA")
+coes$alter_educ2 = car::recode(coes$A10_H2,"1:3=1; 4:5=2; 6:7=3; 8:10=4; 99=NA")
+coes$alter_educ3 = car::recode(coes$A10_H3,"1:3=1; 4:5=2; 6:7=3; 8:10=4; 99=NA")
+coes$alter_educ4 = car::recode(coes$A10_H4,"1:3=1; 4:5=2; 6:7=3; 8:10=4; 99=NA")
+coes$alter_educ5 = car::recode(coes$A10_H5,"1:3=1; 4:5=2; 6:7=3; 8:10=4; 99=NA")
+str(coes$alter_educ1)
+prop.table(table(coes$alter_educ1[coes$tamred>=1], exclude=NULL))
+prop.table(table(coes$alter_educ3[coes$tamred>=3], exclude=NULL))
+```
+
+
+### Alter ideología 
+```{r}
+## ideol alter, derecha, centro derecha, centro, centro izquierda, izquierda, ninguno (6)
+table(coes$A10_I1) #
+
+for (i in 1:5){
+  eval(parse(text=paste('coes$A10_I',i,'[coes$A10_I',i,'==1 & !is.na(coes$A10_I',i,')]<-\'rightwinger\' ;',
+                        'coes$A10_I',i,'[coes$A10_I',i,'==2 & !is.na(coes$A10_I',i,')]<-\'center-right\' ;',
+                        'coes$A10_I',i,'[coes$A10_I',i,'==3 & !is.na(coes$A10_I',i,')]<-\'center\' ;',
+                        'coes$A10_I',i,'[coes$A10_I',i,'==4 & !is.na(coes$A10_I',i,')]<-\'center-left\' ;',
+                        'coes$A10_I',i,'[coes$A10_I',i,'==5 & !is.na(coes$A10_I',i,')]<-\'leftwinger\'; ',
+                        'coes$A10_I',i,'[coes$A10_I',i,'==8 & !is.na(coes$A10_I',i,')]<-\'none\'; ',
+                        'coes$A10_I',i,'[coes$A10_I',i,'==9 & !is.na(coes$A10_I',i,')]<-\'none\' ', sep='')))
+}
+
+coes$alter_ideol1<-coes$A10_I1
+table(coes$alter_ideol1)
+
+coes$alter_ideol2<-coes$A10_I2
+table(coes$alter_ideol2)                                    
+
+coes$alter_ideol3<-coes$A10_I3
+table(coes$alter_ideol3)
+
+coes$alter_ideol4<-coes$A10_I4
+table(coes$alter_ideol4)
+
+coes$alter_ideol5<-coes$A10_I5
+table(coes$alter_ideol5)
+```
+
+### Alter barrio
+```{r}
+coes<-coes%>%
+dplyr::mutate(alter_barrio1=ifelse(A10_D1==5,1,0)) %>%
+dplyr::mutate(alter_barrio2=ifelse(A10_D2==5,1,0)) %>%
+dplyr::mutate(alter_barrio3=ifelse(A10_D3==5,1,0)) %>%
+dplyr::mutate(alter_barrio4=ifelse(A10_D4==5,1,0)) %>%
+dplyr::mutate(alter_barrio5=ifelse(A10_D5==5,1,0))
+
+coes$alter_barrio1[coes$A10_D1==99] = NA
+coes$alter_barrio2[coes$A10_D2==99] = NA
+coes$alter_barrio3[coes$A10_D3==99] = NA
+coes$alter_barrio4[coes$A10_D4==99] = NA
+coes$alter_barrio5[coes$A10_D5==99] = NA
+
+# crear variable proporción del total de vecinos
+coes<-coes %>% 
+  rowwise() %>% 
+  mutate(barrio_total = sum(alter_barrio1,alter_barrio2,alter_barrio3,
+                   alter_barrio4,alter_barrio5, na.rm=TRUE))%>%
+  mutate(barrio_prop = barrio_total/tamred)
+
+mean(coes$barrio_prop, na.rm=TRUE)
+#[1] 0.0892339
+
+#table(coes$alter_barrio1)
+#Guardar base de datos
+#save(coes, file = "coesHomofilia.Rdata")
+```
+
+### Alter relación
+```{r}
+coes$alter_relacion1<-coes$A10_D1
+coes$alter_relacion1[coes$A10_D1==99] = NA
+coes$alter_relacion2<-coes$A10_D2
+coes$alter_relacion2[coes$A10_D2==99] = NA
+coes$alter_relacion3<-coes$A10_D3
+coes$alter_relacion3[coes$A10_D3==99] = NA
+coes$alter_relacion4<-coes$A10_D4
+coes$alter_relacion4[coes$A10_D4==99] = NA
+coes$alter_relacion5<-coes$A10_D5
+coes$alter_relacion5[coes$A10_D5==99] = NA
+table(coes$alter_relacion1)
+```
+
+## Select data ENACOES
+```{r}
+ego_network_enacoes_2014<-coes%>%
+  dplyr::select(FOLIO,
+                ego_sexo,
+                ego_edad,
+                ego_educ,
+                ego_relig,
+                ego_ideol,
+                ego_barrio,
+                etmino,
+                tamred,
+                alter_sexo1,
+                alter_sexo2,
+                alter_sexo3,
+                alter_sexo4,
+                alter_sexo5,
+                alter_edad1,
+                alter_edad2,
+                alter_edad3,
+                alter_edad4,
+                alter_edad5,
+                alter_relig1,
+                alter_relig2,
+                alter_relig3,
+                alter_relig4,
+                alter_relig5,
+                alter_educ1,
+                alter_educ2,
+                alter_educ3,
+                alter_educ4,
+                alter_educ5,
+                alter_ideol1,
+                alter_ideol2,
+                alter_ideol3,
+                alter_ideol4,
+                alter_ideol5,
+                alter_barrio1,
+                alter_barrio2,
+                alter_barrio3,
+                alter_barrio4,
+                alter_barrio5, 
+                alter_relacion1, 
+                alter_relacion2,
+                alter_relacion3,
+                alter_relacion4,
+                alter_relacion5,
+                POND_MUESTRAL)
+
+save(ego_network_enacoes_2014, file='ego_network_enacoes_2014.RData')
+```
+
+# Creación bbdd a partir de ENACOEs 2014
+## Cargar data y crear subset
+```{r}
+## Ego barrio
+ego_network_enacoes_2014$ego_barrio <-rep('same', length(coes[,1]))
+```
+
+## 2b Sexo 
+```{r}
+## sexo egos
+table(ego_network_enacoes_2014$ego_sexo)
+ego_network_enacoes_2014$ego_sexo<-ifelse(ego_network_enacoes_2014$ego_sexo==1 & !is.na(ego_network_enacoes_2014$ego_sexo), 'male', 'female')
+
+## sexo alter
+for (j in 1:5){
+  eval(parse(text=paste('ego_network_enacoes_2014$alter_sexo',j,' <- ifelse(ego_network_enacoes_2014$alter_sexo',j,'==1, \'male\', ifelse(ego_network_enacoes_2014$alter_sexo',j,'==0, \'female\', ego_network_enacoes_2014$alter_sexo',j,'))', sep='')))
+}
+
+table(ego_network_enacoes_2014$alter_sexo5)
+```
+
+## 2c educación 
+```{r}
+table(ego_network_enacoes_2014$ego_educ) #educ
+
+ego_network_enacoes_2014$ego_educ<-ifelse(!is.na(ego_network_enacoes_2014$ego_educ) & (ego_network_enacoes_2014$ego_educ==1), 'lt.secondary', ifelse(!is.na(ego_network_enacoes_2014$ego_educ) & ego_network_enacoes_2014$ego_educ==2, 'secondary', ifelse(!is.na(ego_network_enacoes_2014$ego_educ) & ego_network_enacoes_2014$ego_educ==3, 'technical.ed',  ifelse(!is.na(ego_network_enacoes_2014$ego_educ) & (ego_network_enacoes_2014$ego_educ==4), 'college.ed', ego_network_enacoes_2014$ego_educ))))
+
+## educ alter
+table(ego_network_enacoes_2014$alter_educ1)
+
+for (j in 1:5){
+  eval(parse(text=(paste('ego_network_enacoes_2014$alter_educ',j, ' <-ifelse(!is.na(ego_network_enacoes_2014$alter_educ',j, ') & ego_network_enacoes_2014$alter_educ',j,'==1, \'lt.secondary\',  ifelse(!is.na(ego_network_enacoes_2014$alter_educ',j,') & ego_network_enacoes_2014$alter_educ',j,'==2, \'secondary\', ifelse(!is.na(ego_network_enacoes_2014$alter_educ',j,') & ego_network_enacoes_2014$alter_educ',j,'==3, \'technical.ed\', ifelse(!is.na(ego_network_enacoes_2014$alter_educ',j,') & ego_network_enacoes_2014$alter_educ',j,'==4, \'college.ed\', ego_network_enacoes_2014$alter_educ',j,'))))', sep=''))))
+}
+```
+
+## 2d religión
+```{r}
+table(ego_network_enacoes_2014$ego_relig) #relig
+
+ego_network_enacoes_2014$ego_relig<- ifelse(!is.na(ego_network_enacoes_2014$ego_relig) & ego_network_enacoes_2014$ego_relig==1, 'catholic', ifelse(!is.na(ego_network_enacoes_2014$ego_relig) & (ego_network_enacoes_2014$ego_relig==2), 'evangelical', ifelse(!is.na(ego_network_enacoes_2014$ego_relig) & (ego_network_enacoes_2014$ego_relig==3), 'other', ifelse(!is.na(ego_network_enacoes_2014$ego_relig) & (ego_network_enacoes_2014$ego_relig==4), 'none', ego_network_enacoes_2014$ego_relig))))
+
+## Alter: relig, católico, evangélico, ninguno, ateo/agn, otro
+table(ego_network_enacoes_2014$alter_relig5)
+
+for (i in 1:5){
+  eval(parse(text=(paste('ego_network_enacoes_2014$alter_relig',i,'[ego_network_enacoes_2014$alter_relig',i,'==1 & !is.na(ego_network_enacoes_2014$alter_relig',i,')]<-\'catholic\' ;', 
+                         'ego_network_enacoes_2014$alter_relig',i,'[ego_network_enacoes_2014$alter_relig',i,'==2 & !is.na(ego_network_enacoes_2014$alter_relig',i,')]<-\'evangelical\' ;',
+                         'ego_network_enacoes_2014$alter_relig',i,'[ego_network_enacoes_2014$alter_relig',i,'==3 & !is.na(ego_network_enacoes_2014$alter_relig',i,')]<-\'other\' ;',
+                         'ego_network_enacoes_2014$alter_relig',i,'[ego_network_enacoes_2014$alter_relig',i,'==4 & !is.na(ego_network_enacoes_2014$alter_relig',i,')]<-\'none\' ', sep=''))))
+}
+```
+
+## 2f barrio
+```{r}
+## ego_network_elsoc2017$barrio.ego_02<-'same'
+table(ego_network_enacoes_2014$ego_barrio)
+
+## barrio alter
+for (i in 1:5){
+  eval(parse(text=paste('ego_network_enacoes_2014$alter_barrio',i,'[ego_network_enacoes_2014$alter_barrio',i,'==1]<-\'same\' ;',
+                        'ego_network_enacoes_2014$alter_barrio',i,'[ego_network_enacoes_2014$alter_barrio',i,'==0]<-\'another\' ', sep='')))
+}
+
+table(ego_network_enacoes_2014$alter_barrio5)
+```
+
+## relación 
+```{r}
+for (i in 1:5){
+  eval(parse(text=paste('ego_network_enacoes_2014$alter_relacion',i,'[ego_network_enacoes_2014$alter_relacion',i,'==1  & !is.na(ego_network_enacoes_2014$alter_relacion',i,')]<-\'fam\' ;',
+                        'ego_network_enacoes_2014$alter_relacion',i,'[ego_network_enacoes_2014$alter_relacion',i,'==2  & !is.na(ego_network_enacoes_2014$alter_relacion',i,')]<-\'fam\' ;',
+                        'ego_network_enacoes_2014$alter_relacion',i,'[ego_network_enacoes_2014$alter_relacion',i,'==3  & !is.na(ego_network_enacoes_2014$alter_relacion',i,')]<-\'fam\' ;',
+                        'ego_network_enacoes_2014$alter_relacion',i,'[ego_network_enacoes_2014$alter_relacion',i,'==4  & !is.na(ego_network_enacoes_2014$alter_relacion',i,')]<-\'fam\' ;',
+                        'ego_network_enacoes_2014$alter_relacion',i,'[ego_network_enacoes_2014$alter_relacion',i,'==5  & !is.na(ego_network_enacoes_2014$alter_relacion',i,')]<-\'fam\' ;',
+                        'ego_network_enacoes_2014$alter_relacion',i,'[ego_network_enacoes_2014$alter_relacion',i,'==6  & !is.na(ego_network_enacoes_2014$alter_relacion',i,')]<-\'nofam\' ;',
+                        'ego_network_enacoes_2014$alter_relacion',i,'[ego_network_enacoes_2014$alter_relacion',i,'==7  & !is.na(ego_network_enacoes_2014$alter_relacion',i,')]<-\'nofam\' ;',
+                        'ego_network_enacoes_2014$alter_relacion',i,'[ego_network_enacoes_2014$alter_relacion',i,'==8  & !is.na(ego_network_enacoes_2014$alter_relacion',i,')]<-\'nofam\' ;',
+                        'ego_network_enacoes_2014$alter_relacion',i,'[ego_network_enacoes_2014$alter_relacion',i,'==9  & !is.na(ego_network_enacoes_2014$alter_relacion',i,')]<-\'nofam\' ;',
+                        'ego_network_enacoes_2014$alter_relacion',i,'[ego_network_enacoes_2014$alter_relacion',i,'==10 & !is.na(ego_network_enacoes_2014$alter_relacion',i,')]<-\'nofam\' ;',
+                        'ego_network_enacoes_2014$alter_relacion',i,'[ego_network_enacoes_2014$alter_relacion',i,'==11 & !is.na(ego_network_enacoes_2014$alter_relacion',i,')]<-\'nofam\' ',sep='')))
+}
+
+table(ego_network_enacoes_2014$alter_relacion1)
+table(ego_network_enacoes_2014$alter_relacion5)
+```
+
+## Reordenar variables
+```{r}
+ego_network_enacoes_2014<-ego_network_enacoes_2014%>%
+  dplyr::select(FOLIO, 
+                ego_sexo, alter_sexo1, alter_sexo2, alter_sexo3, alter_sexo4, alter_sexo5, 
+                ego_edad, alter_edad1, alter_edad2, alter_edad3, alter_edad4, alter_edad5,
+                ego_educ, alter_educ1, alter_educ2, alter_educ3, alter_educ4, alter_educ5, 
+                ego_relig, alter_relig1, alter_relig2, alter_relig3, alter_relig4, alter_relig5,
+                ego_ideol, alter_ideol1, alter_ideol2, alter_ideol3, alter_ideol4, alter_ideol5,
+                ego_barrio, alter_barrio1, alter_barrio2, alter_barrio3, alter_barrio4, alter_barrio5, 
+                alter_relacion1, alter_relacion2, alter_relacion3, alter_relacion4, alter_relacion5,
+                tamred, POND_MUESTRAL)
+```
+
+
+
+## 2g cambiar nombres y guardar
+```{r}
+n<-paste(paste('sexo',   1:5, collapse=',', sep=''), ',', 
+         paste('edad',   1:5, collapse=',', sep=''), ',',
+         paste('barrio', 1:5, collapse=',', sep=''), ',',
+         paste('educ',   1:5, collapse=',', sep=''), ',',
+         paste('ideol',  1:5, collapse=',', sep=''), ',',
+         paste('relig',  1:5, collapse=',', sep=''), ',',
+         
+         paste('relacion', 1:5, collapse=',', sep=''), collapse=',', sep='')
+gsub(',', '\',\'' ,n  )
+
+names(ego_network_enacoes_2014)<- c('id',
+                                    'sexo','sexo1','sexo2','sexo3','sexo4','sexo5', 
+                                    'edad','edad1','edad2','edad3','edad4','edad5',
+                                    'educ','educ1', 'educ2', 'educ3','educ4','educ5',
+                                    'relig','relig1', 'relig2','relig3','relig4','relig5',
+                                    
+                                    'ideol','ideol1', 'ideol2','ideol3','ideol4','ideol5',
+                                    'barrio','barrio1','barrio2','barrio3', 'barrio4','barrio5',
+                                    'relacion1','relacion2','relacion3', 'relacion4','relacion5', 
+                                    'tamred','POND_MUESTRAL')
+
+#save(ego_network_enacoes_2014, file='ego_network_enacoes_2014.RData')
+#
+#load('ego_network_enacoes_2014.RData')
+#head(ego_network_enacoes_2014)
+```
+
+```{r}
+
+#
+#
+#ego_network_enacoes_2014$sexo <-as.character(ego_network_enacoes_2014$sexo)
+#ego_network_enacoes_2014$sexo1<-as.character(ego_network_enacoes_2014$sexo1)
+#ego_network_enacoes_2014$sexo2<-as.character(ego_network_enacoes_2014$sexo2)
+#ego_network_enacoes_2014$sexo3<-as.character(ego_network_enacoes_2014$sexo3)
+#ego_network_enacoes_2014$sexo4<-as.character(ego_network_enacoes_2014$sexo4)
+#ego_network_enacoes_2014$sexo5<-as.character(ego_network_enacoes_2014$sexo5)
+#
+#ego_network_enacoes_2014$educ  <-as.character(ego_network_enacoes_2014$educ)
+#ego_network_enacoes_2014$educ1 <-as.character(ego_network_enacoes_2014$educ1)
+#ego_network_enacoes_2014$educ2 <-as.character(ego_network_enacoes_2014$educ2)
+#ego_network_enacoes_2014$educ3 <-as.character(ego_network_enacoes_2014$educ3)
+#ego_network_enacoes_2014$educ4 <-as.character(ego_network_enacoes_2014$educ4)
+#ego_network_enacoes_2014$educ5 <-as.character(ego_network_enacoes_2014$educ5)
+#
+#ego_network_enacoes_2014$relig  <-as.character(ego_network_enacoes_2014$relig)
+#ego_network_enacoes_2014$relig1 <-as.character(ego_network_enacoes_2014$relig1)
+#ego_network_enacoes_2014$relig2 <-as.character(ego_network_enacoes_2014$relig2)
+#ego_network_enacoes_2014$relig3 <-as.character(ego_network_enacoes_2014$relig3)
+#ego_network_enacoes_2014$relig4 <-as.character(ego_network_enacoes_2014$relig4)
+#ego_network_enacoes_2014$relig5 <-as.character(ego_network_enacoes_2014$relig5)
+#
+#ego_network_enacoes_2014$ideol  <-as.character(ego_network_enacoes_2014$ideol)
+#ego_network_enacoes_2014$ideol1 <-as.character(ego_network_enacoes_2014$ideol1)
+#ego_network_enacoes_2014$ideol2 <-as.character(ego_network_enacoes_2014$ideol2)
+#ego_network_enacoes_2014$ideol3 <-as.character(ego_network_enacoes_2014$ideol3)
+#ego_network_enacoes_2014$ideol4 <-as.character(ego_network_enacoes_2014$ideol4)
+#ego_network_enacoes_2014$ideol5 <-as.character(ego_network_enacoes_2014$ideol5)
+#
+#ego_network_enacoes_2014$barrio  <-as.character(ego_network_enacoes_2014$barrio)
+#ego_network_enacoes_2014$barrio1 <-as.character(ego_network_enacoes_2014$barrio1)
+#ego_network_enacoes_2014$barrio2 <-as.character(ego_network_enacoes_2014$barrio2)
+#ego_network_enacoes_2014$barrio3 <-as.character(ego_network_enacoes_2014$barrio3)
+#ego_network_enacoes_2014$barrio4 <-as.character(ego_network_enacoes_2014$barrio4)
+#ego_network_enacoes_2014$barrio5 <-as.character(ego_network_enacoes_2014$barrio5)
+#
+#ego_network_enacoes_2014$relacion1 <-as.character(ego_network_enacoes_2014$relacion1)
+#ego_network_enacoes_2014$relacion2 <-as.character(ego_network_enacoes_2014$relacion2)
+#ego_network_enacoes_2014$relacion3 <-as.character(ego_network_enacoes_2014$relacion3)
+#ego_network_enacoes_2014$relacion4 <-as.character(ego_network_enacoes_2014$relacion4)
+#ego_network_enacoes_2014$relacion5 <-as.character(ego_network_enacoes_2014$relacion5)
+
+ego_network_enacoes_2014$tamred<-as.numeric(ego_network_enacoes_2014$tamred)
+ego_network_enacoes_2014$POND_MUESTRAL<-as.numeric(ego_network_enacoes_2014$POND_MUESTRAL)
+
+ego_network_enacoes_2014<-ego_network_enacoes_2014 %>% drop_na(relig)
+ego_network_enacoes_2014<-ego_network_enacoes_2014 %>% drop_na(sexo)
+ego_network_enacoes_2014<-ego_network_enacoes_2014 %>% drop_na(educ)
+ego_network_enacoes_2014<-ego_network_enacoes_2014 %>% drop_na(ideol)
+#ego_network_enacoes_2014<-ego_network_enacoes_2014 %>% drop_na(edad)
+
+
+ego_network_enacoes_2014<-as.matrix(ego_network_enacoes_2014)
+ego_network_enacoes_2014<-as.data.frame(ego_network_enacoes_2014)
+
+ego_network_enacoes_2014$edad  <-as.numeric(ego_network_enacoes_2014$edad)
+ego_network_enacoes_2014$edad1 <-as.numeric(ego_network_enacoes_2014$edad1)
+ego_network_enacoes_2014$edad2 <-as.numeric(ego_network_enacoes_2014$edad2)
+ego_network_enacoes_2014$edad3 <-as.numeric(ego_network_enacoes_2014$edad3)
+ego_network_enacoes_2014$edad4 <-as.numeric(ego_network_enacoes_2014$edad4)
+ego_network_enacoes_2014$edad5 <-as.numeric(ego_network_enacoes_2014$edad5)
+
+```
+
+
+# 3. Desarrollo análisis Case-control con datos ELSOC 2017
+
+```{r warning=FALSE, message=FALSE}
+#cargar paquetes necesarios del codigo de Smith
+library(biglm)
+library(ergm)
+library(doParallel)
+
+#cargar funciones de smith
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/ego_net_case_control_model.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/output_glm_formula.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/prepare_case_control_logistic_data_function_create_vars.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/prepare_case_control_logistic_data_function.R")
+
+head(ego_network_enacoes_2014)
+```
+
+
+## Replicación
+
+Crearemos una lista, donde cada segmento es un atributo diferente,
+
+```{r}
+#name of degree column on data frame:
+var.name.degree="tamred"
+
+#names of key ego attribute columns in data frame:
+var.name.characs=c("educ", "relig", "sexo", "edad", "ideol") 
+
+var.name.characs.alter=list()
+
+for (p in 1:length(var.name.characs)){
+  var.name.characs.alter[[p]]=paste(var.name.characs[[p]],1:5,sep="")
+}
+
+#Let's take a look:
+var.name.characs.alter
+```
+
+## Fórmula
+
+Ahora vamos a fijar la fórmula de interés. Los posibles términos son los siguientes:
+
+`nodematch` = un término de coincidencia/sin coincidencia (¿ego y alter coinciden en un atributo?)
+`nodemix` = incluye términos para todos los pares de categorías en el atributo de interés.
+`absdiff` = incluye un término para mostrar la diferencia absoluta entre ego y alter (apropiado para variables continuas.
+`nodefactor` =controla el grado de los diferentes grupos (ajustando las estimaciones de homofilia el hecho de que algunos grupos, por ejemplo, los hombres, tienen más vínculos que otros grupos, como las mujeres).
+`nodecov` = similar a nodefactor pero apropiado para variables continuas. Como nota general, es que el algoritmo puede incluir una lista de formulas.
+
+
+```{r}
+formula_ego_enacoes<- as.formula(~ nodematch("sexo", diff=TRUE) + 
+                                   nodefactor("sexo")+
+                                   nodematch("educ", diff=TRUE) + 
+                                   nodematch("relig", diff=TRUE) + 
+                                   nodematch("ideol", diff=TRUE) +
+                                   absdiff("edad"))
+```
+
+
+Ahora estamos en condiciones de ejecutar la regresión logística de casos y controles para estimar la fuerza de la homofilia. La función es egonet_case_control_model. Las entradas principales son la fórmula, los datos de egoredes, los vectores que definen las variables en el marco de datos y una serie de especificaciones que determinan cómo ejecutar el modelo de control de casos.
+
+Aquí enumeramos las entradas de uso común:
+
+`formula` = fórmula para usar en la regresión logística (lo especificamos arriba)
+
+`ego_data` = ingresar datos de la red ego (leer arriba)
+
+`var.name.degree` = nombre de la variable en los datos que tiene el grado de los encuestados (establecido arriba)
+
+`var.name.characs` = vector de nombres de atributos para ego (establecido arriba)
+
+`var.name.characs.alter` = lista de nombres de columna para atributos alter, mismo orden que var.name.charac (establecido arriba)
+
+`case.control.type` = tipo de hipótesis nula utilizada para construir la parte de control del marco de datos (los 0 en la regresión), uno de:
+"weighted.random.matching", "one_one_matching", "one_one_pair_matching", "case.case.matching",
+
+"weighted.random.matching" si desea emparejar a los encuestados al azar en función de las ponderaciones de probabilidad
+"case.case.matching" si desea simplemente hacer coincidir a todos los encuestados con todos los demás encuestados para formar controles
+"one_one_matching" si desea hacer coincidir cada caso con solo otro caso para la parte de control del conjunto de datos
+"one_one_pair_matching" si solo quiere que cada encuestado de un par tenga la parte de control, ya sea como remitente o receptor, pero no ambos
+"weighted.random.matching" es la opción predeterminada, emparejando aleatoriamente a los encuestados juntos para formar la parte de control (no vinculada) del marco de datos.
+
+`max.control.data.N` = tamaño máximo usado al construir la porción de control del marco de datos  cuando se establece en NULL (como en este ejemplo), se establecerá en el número de posibles diadas, según el número de encuestados: N * (N-1) / 2 cuando la base de datos de entrada tiene N grande y, por lo tanto, el número de díadas es bastante grande puede ser útil configurar esto para limitar el tamaño de la parte de control del marco de datos;
+por ejemplo, establecido en 100000 (o algo similarmente grande pero menor que el número de posibles díadas).
+
+`max.alter` = número máximo de alters que los encuestados pudieron nombrar (aquí establecido en 5)
+
+`remove.isolates.control` = ¿deberían eliminarse los aislamientos de la parte de control del conjunto de datos? T / F (aquí establecemos esto en T)
+
+`weight.var.name` = nombre de la variable que especifica el vector de ponderación para crear una población representativa (o NULL)
+Esta variable se utilizará al realizar el muestreo de bootstrap, de modo que el bootstrap
+muestras se seleccionan en función de los pesos de entrada. Si es NULL, asume igual probabilidad de selección de cada encuestado. Aquí los configuramos en NULL, por lo que el mismo peso para cada encuestado
+
+`weight.var.name.control` = nombre de la variable para las ponderaciones de los encuestados (si no es NULL) esta variable se utilizará al emparejar personas para formar la parte de control del marco de datos (los 0), cuando se usa la comparación aleatoria ponderada.
+
+Mayores pesos significan que tendrán más posibilidades de ser
+seleccionado en el proceso de emparejamiento. Si es NULL, el valor predeterminado es usar weight.var.name.
+Aquí establecemos esto en NULL.
+
+`num.iterations` = número de veces diferentes del algoritmo debería reconstruir la porción de control y reestimar el modelo (en este ejemplo, esto es 2, pero en un análisis real sería mucho más alto, digamos 100).
+Tenga en cuenta que solo necesitaríamos 1 iteración si configuramos case.control.typea case.case.matching.
+
+`bootstrap.sample` = T / F, si el algoritmo ejecuta el modelo varias veces utilizando diferentes muestras cada vez? (aquí lo ponemos en T) El muestreo de bootstrap es necesario para estimar los SE en las estimaciones.
+
+`num.bootstrap.samples` = ¿cuántas muestras de bootstrap tomar? solo es relevante si bootstrap.sample = T
+(aquí hacemos 10 muestras de bootstrap; en un análisis real, esto sería mucho más alto)
+
+`useparallel` = ¿T / F debería emplear varias CPU al ejecutar análisis? (aquí lo ponemos en T)
+
+`num.cores` = ¿cuántos núcleos utilizar? solo es relevante si useparallel = T (aquí usamos procesamiento paralelo y 5 núcleos)
+
+`maxit` = número de iteraciones máximas para usar en la función bigglm (aquí establecido en 20)
+
+`nodemix.reference` = vector que especifica la categoría de referencia si se utilizan términos de nodemix (aquí establecemos "C.Some College.C.Some College" como referencia para los términos de combinación de nodos educativos
+
+`adjust.intercept` = ¿T / F debería intentar ajustar la intersección para mapear en el tamaño real conocido de la población completa? (aquí se establece en F; si T también necesita establecer true.pop.size)
+
+
+## Análisis 1: Todos los confidentes (Weighted random matching)
+
+En este primer procedimiento se parea a los respondientes en base a los pesos de probabilidad
+
+```{r}
+egonet_case_control_output<-egonet_case_control_model(formula=formula_ego_enacoes,
+                                                     ego_data=ego_network_enacoes_2014,
+                                                     var.name.degree=var.name.degree, 
+                                                     var.name.characs=var.name.characs,
+                                                     var.name.characs.alter=var.name.characs.alter, 
+                                                     case.control.type="weighted.random.matching", 
+                                                     max.alter=5,
+                                                     max.control.data.N=100000,
+                                                     remove.isolates.control=T, 
+                                                     weight.var.name="POND_MUESTRAL", 
+                                                     weight.var.name.control="POND_MUESTRAL", 
+                                                     num.iterations=100,
+                                                     bootstrap.sample=T, 
+                                                     num.bootstrap.samples=10,
+                                                     useparallel=T, 
+                                                     num.cores=8,
+                                                     maxit=20,
+                                                     adjust.intercept=F)
+
+```
+
+
+
+```{r}
+names(egonet_case_control_output)
+coefs=egonet_case_control_output$coefs
+bic=egonet_case_control_output$fit["bic"]
+aic=egonet_case_control_output$fit["aic"]
+head(coefs)
+#rm(mean)
+
+coefs_sample=aggregate(.~sample, data=coefs, mean)
+coefs_sample
+coefs_sample=coefs_sample[,-which(colnames(coefs_sample) %in% c("sample","iteration"))]
+coefs_sample
+
+
+apply(coefs_sample, 2, mean)
+apply(coefs_sample, 2, sd)
+apply(coefs_sample, 2, quantile, c(.025, .975))
+
+apply(bic,2,mean)
+apply(aic,2,mean)
+
+```
+
+### Estimar SE
+```{r}
+std_mean <- function(x) sd(x)/sqrt(length(x))
+std_mean(coefs_sample$nodematch.ideol.rightwinger)
+```
+
+## Test Wald 
+```{r}
+z <- (2.542 - 0.1) / 0.073
+pnorm(q=z, lower.tail=FALSE) 
+
+```
+
+
+Para el caso de "todos los alteris", los resultados sugieren, que dos actores que coinciden en el nivel educativo, el tipo de religión, y sexo tienen más probabilidades de tener un empate que dos que no lo hacen, ya que hay un coeficiente positivo y significativo. Vale indicar que el efecto más fuerte en la probabilidad de empate lo generan el nivel educativo y el tipo de 
+profesada por los actores. De manera inversa, para el caso de la edad los resultados sugieren que los actores que coinciden en su edad, tienen menos probabilidades de tener un empate, en relación a aquellos que no lo hacen.  
+
+
+## Análisis 2: no familiares (Weighted random matching)
+
+## Análisis 2: No familiares 
+
+### Select data
+```{r}
+library(panelr)
+
+ego_network_enacoes_2014_ego<-ego_network_enacoes_2014%>%
+  dplyr::select(id,sexo,edad,educ,relig,ideol,tamred,POND_MUESTRAL)
+
+ego_network_enacoes_2014_alter<-ego_network_enacoes_2014%>%
+  dplyr::select(id,
+                sexo1,sexo2,sexo3,sexo4,sexo5,
+                edad1,edad2,edad3,edad4,edad5,
+                educ1,educ2,educ3,educ4,educ5,
+                relig1,relig2,relig3,relig4,relig5,
+                ideol1,ideol2,ideol3,ideol4,ideol5,
+                relacion1,relacion2,relacion3,relacion4,relacion5)
+
+# reshape
+ego_network_enacoes_2014_alter_long<-long_panel(ego_network_enacoes_2014_alter, 
+                                                prefix="", 
+                                                begin=1, 
+                                                end=5, 
+                                                label_location="end")
+
+# filter
+ego_network_enacoes_2014_alter_long_nofam<-ego_network_enacoes_2014_alter_long%>%
+  dplyr::filter(relacion =="nofam")
+
+# to wide
+ego_network_enacoes_2014_alter_nofam<-widen_panel(ego_network_enacoes_2014_alter_long_nofam, separator = "") # problemas con la función de panelr
+ego_network_enacoes_2014_alter_nofam<-ego_network_enacoes_2014_alter_nofam%>%
+  select(-contains("."))
+
+
+ego_network_enacoes_2014_alter_nofam<-as.matrix(ego_network_enacoes_2014_alter_nofam)
+ego_network_enacoes_2014_alter_nofam<-as.data.frame(ego_network_enacoes_2014_alter_nofam)
+#ego_network_enacoes_2014_alter_nofam$id<-NULL
+
+# join
+ego_network_enacoes_2014_nofam<-dplyr::left_join(ego_network_enacoes_2014_alter_nofam, 
+                                     ego_network_enacoes_2014_ego, 
+                                     by="id")%>%
+  dplyr::select(id,tamred,
+                sexo,sexo1,sexo2,sexo3,sexo4,sexo5,
+                edad,edad1,edad2,edad3,edad4,edad5,
+                educ,educ1,educ2,educ3,educ4,educ5,
+                relig,relig1,relig2,relig3,relig4,relig5,
+                ideol,ideol1,ideol2,ideol3,ideol4,ideol5,
+                relacion1,relacion2,relacion3,relacion4,relacion5,
+                POND_MUESTRAL)
+# to numeric
+ego_network_enacoes_2014_nofam$edad  <-as.numeric(ego_network_enacoes_2014_nofam$edad)
+ego_network_enacoes_2014_nofam$edad1 <-as.numeric(ego_network_enacoes_2014_nofam$edad1)
+ego_network_enacoes_2014_nofam$edad2 <-as.numeric(ego_network_enacoes_2014_nofam$edad2)
+ego_network_enacoes_2014_nofam$edad3 <-as.numeric(ego_network_enacoes_2014_nofam$edad3)
+ego_network_enacoes_2014_nofam$edad4 <-as.numeric(ego_network_enacoes_2014_nofam$edad4)
+ego_network_enacoes_2014_nofam$edad5 <-as.numeric(ego_network_enacoes_2014_nofam$edad5)
+
+```
+
+
+```{r}
+egonet_case_control_output_nf<-egonet_case_control_model(formula=formula_ego_enacoes,
+                                                     ego_data=ego_network_enacoes_2014_nofam,
+                                                     var.name.degree=var.name.degree, 
+                                                     var.name.characs=var.name.characs,
+                                                     var.name.characs.alter=var.name.characs.alter, 
+                                                     case.control.type="weighted.random.matching", 
+                                                     max.alter=5,
+                                                     max.control.data.N=100000,
+                                                     remove.isolates.control=T, 
+                                                     weight.var.name="POND_MUESTRAL", 
+                                                     weight.var.name.control="POND_MUESTRAL", 
+                                                     num.iterations=100,
+                                                     bootstrap.sample=T, 
+                                                     num.bootstrap.samples=100,
+                                                     useparallel=T, 
+                                                     num.cores=6,
+                                                     maxit=20,
+                                                     adjust.intercept=F)
+
+
+
+```
+
+
+```{r}
+names(egonet_case_control_output_nf)
+coefs=egonet_case_control_output_nf$coefs
+bic=egonet_case_control_output_nf$fit["bic"]
+aic=egonet_case_control_output_nf$fit["aic"]
+head(coefs)
+#rm(mean)
+
+coefs_sample=aggregate(.~sample, data=coefs, mean)
+coefs_sample
+coefs_sample=coefs_sample[,-which(colnames(coefs_sample) %in% c("sample","iteration"))]
+coefs_sample
+
+
+apply(coefs_sample, 2, mean)
+apply(coefs_sample, 2, sd)
+apply(coefs_sample, 2, quantile, c(.025, .975))
+
+apply(bic,2,mean)
+apply(aic,2,mean)
+
+```
+
+### Estimar SE
+```{r}
+std_mean <- function(x) sd(x)/sqrt(length(x))
+std_mean(coefs_sample$nodematch.ideol.rightwinger)
+```
+
+## Test Wald 
+```{r}
+z <- (2.451 - 0.1) / 0.032
+pnorm(q=z, lower.tail=FALSE) 
+
+```
+
+
+Ahora bien, para el caso de los alteris "no familiares" los resultados sugieren algunas diferencias con respecto a "todos los alteris": a saber, los actores que coinciden en el nivel educativo, tipo de religión, y sexo, tienen más pronbabilidades de tener un empate que dos actores que no lo hacen. Todas estas cetgorías son importantes y tienen un coeficiente positivo y significativo. A diferencia de si consideramos a todos los alteris, para el caso de los no familiares las categorías de mayor relevancia son el sexo, y la educación, aunque la educación mantiene un coeficiente muy similar. De manera inversa, y al igual que para el modelo de "todos los alteris", los actores que coinciden en su edad, tienen menos probabilidades de tener un empate, en relación a aquellos que no lo hacen. 
+
+## Tareas pendientes
+
+- incluir variables a nivel de ego
+
+- ver cómo estimar errores estandar clusterizados
+
+- ver cómo meter el diseño muestral complejo en el analisis (suplemento parte A)
+
+
+# Bibliografía 
+
+- Hunter, D. R., Handcock, M. S., Butts, C. T., Goodreau, S. M., & Morris, M. (2008). ergm: A Package to Fit, Simulate and Diagnose Exponential-Family Models for Networks. Journal of Statistical Software, 24(3). https://doi.org/10.18637/jss.v024.i03
+
+- Smith, J. A. (2012). Macrostructure from Microstructure: Generating Whole Systems from Ego Networks. Sociological Methodology, 42(1), 155-205. https://doi.org/10.1177/0081175012455628
+
+- Smith, J. A., McPherson, M., & Smith-Lovin, L. (2014). Social Distance in the United States: Sex, Race, Religion, Age, and Education Homophily among Confidants, 1985 to 2004. American Sociological Review, 79(3), 432-456. https://doi.org/10.1177/0003122414531776
+

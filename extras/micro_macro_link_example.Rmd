@@ -1,0 +1,195 @@
+---
+title: "micro_macro_link"
+author: "R. Cantillan"
+date: "2022-11-06"
+output: html_document
+---
+
+
+```{r}
+install.packages("installr")  #you  first install packages
+require(installr)  #then you will need to activate packages. 
+#updateR()  #run the function to start the update process
+```
+
+```{r}
+# cleanup workspace
+rm(list = ls())
+```
+
+
+```{r}
+# install packages
+library("lavaan")  # to estimate the micro-macro model
+library("psych")  # to describe our dataset
+library("nlme")  # for the multilevel models
+```
+
+
+
+
+```{r}
+set.seed(13789876)
+# simulate the true network characteristic
+LX <- rnorm(1000, 0, 2)
+# this network characteristic is latent, not measured. We have six indicators for this latent
+# variable: 2 per alter; 3 alters.
+
+# a good indicator
+x1 <- alt1_xa <- LX + rnorm(1000, 0, 1)
+x2 <- alt2_xa <- LX + rnorm(1000, 0, 1)
+x3 <- alt3_xa <- LX + rnorm(1000, 0, 1)
+
+# a messy indicator
+alt1_xb <- 0.3 * LX + 0.1 * x1 + rnorm(1000, 0, 1) + 0.1 * x1 * rnorm(1000, 0, 1)
+alt2_xb <- 0.3 * LX + 0.1 * x2 + rnorm(1000, 0, 1) + 0.1 * x3 * rnorm(1000, 0, 1)
+alt3_xb <- 0.3 * LX + 0.1 * x3 + rnorm(1000, 0, 1) + 0.1 * x3 * rnorm(1000, 0, 1)
+
+# we also have missingness (MCAR)
+n1 <- rbinom(1000, 1, 0.95)
+n2 <- rbinom(1000, 1, 0.85)
+n3 <- rbinom(1000, 1, 0.75)
+
+alt1_xa <- ifelse(n1, alt1_xa, NA)
+alt2_xa <- ifelse(n2, alt2_xa, NA)
+alt3_xa <- ifelse(n3, alt3_xa, NA)
+
+alt1_xb <- ifelse(n1, alt1_xb, NA)
+alt2_xb <- ifelse(n2, alt2_xb, NA)
+alt3_xb <- ifelse(n3, alt3_xb, NA)
+
+# lets calculate network size.
+ns <- rowSums(cbind(n1, n2, n3))
+
+# simulate two dependnt variables to play with.  mean alter effect
+Y1 <- 5 * LX + rnorm(1000, 0, 5)
+
+# total alter effect
+Y2 <- 3 * LX * ns + rnorm(1000, 0, 5)
+
+ID <- 1:length(Y1)
+
+
+data_wide <- data.frame(ID, Y1, Y2, alt1_xa, alt2_xa, alt3_xa, alt1_xb, alt2_xb, alt3_xb)
+
+data_long <- reshape(data_wide, direction = "long", varying = c("alt1_xa", "alt1_xb", "alt2_xa", "alt2_xb", 
+    "alt3_xa", "alt3_xb"), timevar = "alter", v.names = c("xa", "xb"), times = c("alt1", "alt2", "alt3"), 
+    idvar = "ID")
+```
+
+# lm 
+```{r}
+# using one alter observation
+summary(lm(Y1 ~ alt1_xa, data = data_wide))
+```
+
+# Aggregation method
+```{r}
+# aggregation first calculate the mean score of the alters.
+data_wide$xam <- rowMeans(cbind(data_wide$alt1_xa, data_wide$alt2_xa, data_wide$alt3_xa), na.rm = TRUE)
+summary(lm(Y1 ~ xam, data = data_wide))
+```
+
+# Disaggregation method
+```{r}
+summary(lm(Y1 ~ xa, data = data_long))
+```
+
+
+```{r}
+library(lavaan)
+
+model1 <- '
+  Y1 ~ alt1_xa
+  Y1 ~ 1
+  Y1 ~~ Y1
+  '
+
+fit1 <- lavaan(model1, data = data_wide)
+summary(fit1)
+```
+
+
+
+```{r}
+model1 <- "
+  Y1 ~ xam
+  Y1 ~ 1
+  Y1 ~~ Y1
+  "
+
+fit1 <- lavaan(model1, data = data_wide)
+summary(fit1)
+```
+
+
+```{r}
+model1 <- "
+  Y1 ~ xa
+  Y1 ~ 1
+  Y1 ~~ Y1
+  "
+
+fit1 <- lavaan(model1, data = data_long)
+summary(fit1)
+```
+
+```{r}
+# one individual-level predictor, one latent variable at group level
+model2 <- "
+  
+  FX =~ 1*alt1_xa
+  FX =~ 1*alt2_xa
+  FX =~ 1*alt3_xa
+  
+  alt1_xa ~~ a*alt1_xa
+  alt2_xa ~~ a*alt2_xa
+  alt3_xa ~~ a*alt3_xa
+  FX ~~ FX
+  Y1 ~~ Y1
+  
+  Y1 ~ FX
+  Y1 ~ 1
+  alt1_xa ~ c*1
+  alt2_xa ~ c*1
+  alt3_xa ~ c*1
+"
+
+fit <- lavaan(model2, data = data_wide)
+summary(fit)
+```
+
+
+
+```{r}
+# one individual-level predictor, one latent variable at group level
+model2 <- "
+  
+  FX =~ 1*alt1_xa
+  FX =~ 1*alt2_xa
+  FX =~ 1*alt3_xa
+  
+  alt1_xa ~~ a*alt1_xa
+  alt2_xa ~~ a*alt2_xa
+  alt3_xa ~~ a*alt3_xa
+  FX ~~ FX
+  Y1 ~~ Y1
+  
+  Y1 ~ FX 
+  Y1 ~ 1
+  alt1_xa ~ c*1
+  alt2_xa ~ c*1
+  alt3_xa ~ c*1
+"
+
+fit <- lavaan(model2, data = data_wide, missing = "fiml", fixed.x = FALSE)
+summary(fit)
+```
+
+
+
+
+
+
+
+

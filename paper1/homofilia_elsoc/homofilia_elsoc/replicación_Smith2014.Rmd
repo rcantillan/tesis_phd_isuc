@@ -1,0 +1,536 @@
+---
+title: "Replicacion Smith (2014)"
+author: "redesLab"
+date: "agosto, 2021"
+output: 
+   rmarkdown::html_document:
+     theme: lumen
+     toc: true 
+     toc_depth: 2  
+     number_sections: true
+     toc_float: true
+     toc_collapsed: true
+     highlight: pygments
+---
+
+# 1. Introducción
+
+El siguiente documento es una reproducción de parte de los análisis de la investigación de Smith, McPherson y Smith-Lovin (2014) "Social Disntance in the United States: Sex, Race, Religion, Age and Education", con los datos de ELSOC. Primero, describimos los objetivos de la investigación y desmenuzamos la metodología, enfatizando en las restricciones y ventajas de cada una de las técnicas utiizadas. Luego desarrollamos el análisis "case-control" de datos ELSOC w2 (2017).  
+
+## 1a. Objetivo del análisis de Smith, et al.(2014): 
+
+El objetivo de la investigación de Smith y asociados (2014) es evaluar los cambios en los patrones de interacción homofílica entre 1984 y 2004. Por una parte, analizan los cambios de la *homofilia en un sentido absoluto o crudo* (¿Hay más vínculos entre negros y blancos?), es decir, sin controles para las distribuciones marginales de las características demográficas. Y, por otro lado, se analiza la homofilia considerando su *prominencia interaccional* (¿Los negros interactúan con los blancos más o menos de lo que se esperaría por casualidad?), lo cual implica considerar el valor neto de los marginales, en relación con la probabilidad de un empate dentro del grupo. En ambos casos, se discuten dos conjuntos de resultados: uno en el que se incluyen todos los confidentes y otro en el que solo se incluyen los confidentes que no son parientes (donde el pariente se define como cualquier miembro de la familia).
+
+
+## 1b. Metodología de Smith, et. al. (2014)
+
+Los autores usan una variante del metodo caso-control para estimar la homofilia. El método de caso-control es un método comunmente usado en la investigación medica para estudiar condiciones relativamente "raras" que son dificiles de capturar a partir de un muestreo aleatorio. Este método compara casos observados, que tienen una condición, con controles que no tienen la condición. La aproximación analitica es una versión de la regresión logística aplicada a datos muestreadas a partir de una variable dependiente.
+
+La aproximación de caso-control tiene un ajuste natural a la data de redes egocentricas. En vez de tomar un muestreo aleatorios de diadas o de pares de personas, las redes egocentricas capturan una rara condición de interés, "una relación de confianza entre individuos". En este caso comparamos casos, los pares con un vínculo de confianza, con controles, pares sin vínculos de confianza. La condición de interés prexistente es la distancia demografica entre personas en una diada.
+
+El modelo facilita el control de los cambios en el tamaño de las categorías sociales a lo largo del tiempo y, de manera simultánea, estima el impacto de la distancia sociodemográfica sobre la probabilidad de que dos miembros de la población tengan un vínculo (empate).
+
+### Muestreando las redes egocentricas: los casos
+
+Los autores muestrean individuos y recuperan la información de las conexiones entre los contactos reportados por cada individuo (a partir del instrumento de generador de nombres). 
+
+**Sin embargo, los autores asumen un problema con la muestra de casos: existe interdependencia entre los lazos de confianza generados por el mismo encuestado. Para abordar este problema, los autores solo ponen entre paréntesis el análisis. En las tablas y figuras, se informa el análisis de casos y controles de todos los vínculos reportados, aceptando la interdependencia en la muestra como una compensación razonable contra la cobertura más completa de vínculos** 
+
+Adicionalmente, Smith y colegas presentan un análisis suplementarios (parte B) que elimina la interdependencia. En este los casos se forman seleccionando al azar a un confidente de cada encuestado que informaba un empate. El análisis acepta cierta heterogeneidad en la fueza de los vinculos (porque un vinculo puede estar en cualquier lugar, del primero al quinto alteri mencionado) y menos poder estadístico para evitar la interdependencia. Los autores enfatizan que los hallazgos son consistentes con los analisis presentados en el artículo. 
+
+### Muestreando los no-vinculos: los controles.
+
+Los casos no vinculados, los controles, son los encuestados reportados en la GSS, en dónde los autores asumen que dos encuestados seleccionados al azar dentro de la GSS es extremadamente improbable que se conozcan y sean confidentes (los autores estiman que la probabilidad de que dos encuestados se conozcan es del orden de p<.001). De esta manera las no conexiones que existen entre los encuestados muestreados en la GSS, son pareados aleatoriamentes y se les define como la muestra de control.
+
+La muestra de control es creada con los encuestados que reportan al menos un confidente, y se construyen los vinculos entre los $[N*(N-1)]/2$ pares de respondientes por  año. De manera más técnica, encuestados con al menos un confidente se emparejan al azar $[N*(N-1)]/2$ veces según el peso de la población.
+
+En el análisis principal, se asume que la probabilidad de emparejar al azar a dos personas sigue una distribución binomial con probabilidad basada en los pesos de la población. La construcción de los controles y, por lo tanto, las expectativas al azar, solo se limita a la distribución de las características demográficas en la población y todos tienen el mismo número de vínculos. Específicamente, puede pensar en el proceso de emparejamiento aleatorio como la creación de una red de línea de base con $N*(N-1)/2$ vínculos. Implícitamente no está restringido a (1) el volumen de vínculos; (2) la distribución de títulos (es decir, vínculos por persona); y (3) grado diferencial (es decir, algunos grupos tienen más vínculos que otros).
+
+Esto también sigue los modelos log-lineales tradicionales, que condicionan los marginales en el resultado de interés. Realizamos un análisis complementario en el que construimos los controles utilizando redes simuladas (Handcock et al. 2008; Smith 2012). Este análisis está restringido a (1) el volumen de vínculos; (2) la distribución de grado (es decir, vínculos por persona); y (3) grado diferencial (es decir, algunos grupos tienen más vínculos que otros).
+
+
+## 1c. Cuadro resumen de la estrategía de análisis 
+| objetivo 	| Detalle 	| Técnica  	| Detalle técnica 	| Ubicación  	|
+|-:	|-:	|-:	|-:	|-	|
+| Homofilia Absoluta 	| No considera controles <br>para las distribuciones <br>marginales de las <br>características demográficas 	| MISSMATCH <br>Análisis de todos <br>los confidentes y <br>de los no familiares 	| Los resultados incluyen la tasa observada de MISSMATCH para cada dimensión demográfica categórica; También incluye la tasa esperada por casualidad, donde emparejamos a los encuestados al azar y vemos si no coinciden en raza, sexo o religión. La tabla 1 mide la diferencia absoluta entre un encuestado y un confidente para nuestras variables de intervalo, edad y educación. 	| Texto paper 	|
+|  	|  	| Modelo alternativo <br>(modelo más formal de cambio <br>en la homofilia absoluta) 	| Los modelos predicen el año (2004 versus 1985) como una función de la distancia demográfica en los pares de confidentes encuestados. El modelo esta condicionado a todas las dimensiones demográficas simultáneamente y arroja las mismas conclusiones generales que en la tabla 1 	| Parte A <br>Complemento <br>online 	|
+| Homofilia relativa<br>(random mixing) 	| Valor neto de los <br>marginales, en relación <br>con la probabilidad de <br>un empate dentro del <br>grupo 	| CASE CONTROL <br>LOGISTIC REGRESSION <br>Análisis de todos <br>los confidentes y <br>de los no familiares 	| Casos= Todos los lazos informados, Controles= no lazos. <br>Los controles se construyen emparejando a los egos que informan a lo menos un confidente. Estos se emparejan al azar [Nx(N-1)]/2 veces según los pesos de la población 	| Texto paper 	|
+|  	|  	| Análisis alternativo <br>"construcción casos" 	| En este los casos se forman seleccionando al azar a un confidente de cada encuestado que informaba un empate. El análisis acepta cierta heterogeneidad en la fuerza de los vínculos (porque un vinculo puede estar en cualquier lugar, del primero al quinto alteri mencionado) y menos poder estadístico para evitar la interdependencia.<br> 	| Parte B<br>Complemento<br>online 	|
+|  	|  	| Análisis alternativo<br>"construcción controles"<br>ERGM 	| Los controles se construyen utilizando redes simuladas (Handcock et al. 2008; Smith 2012). Este análisis está restringido a (1) el volumen de vínculos; (2) la distribución de grado (es decir, vínculos por persona); y (3) grado diferencial (es decir, algunos grupos tienen más vínculos que otros). 	| Parte C<br>Complemento <br>online 	|
+
+## 1d. Detalle de los procedimientos suplmentarios para la construcción de controles simulados 
+
+Se comienza generando redes restringidas a la distribución de grados observada empíricamente. Luego se siembra la red con los encuestados incluidos en la muestra. **Las características demográficas de los encuestados muestreados se mapearon en los nodos de la red con el mismo grado que el encuestado (ver Smith 2012). Esto mantiene la correlación entre características demográficas y grado**. Por lo tanto, las personas con un alto nivel educativo en la red simulada tendrán un alto grado si los encuestados de la muestra con un alto grado tienen un alto nivel educativo. Este proceso de siembra también asegura que la red generada reflejará la composición demográfica en los datos. 
+
+Así, **la simulación generará una red que representa la mezcla aleatoria en la población, dada la distribución de grados, el grado diferencial y la composición demográfica de la población**. Se repite este proceso tanto para 1985 como para 2004. En cada caso, las redes simuladas tienen un tamaño de 10,000 (es imposible simular una red del tamaño real, 200 millones aproximadamente).
+
+Los autores toman una muestra de redes ego de la red simulada del mismo tamaño que la muestra original de GSS para ese año, imitando así el verdadero proceso de muestreo. Luego toman todos los pares $ij$ de las redes del ego extraídas de la red simulada y calculan  la distancia demográfica entre i y j (por ejemplo, emparejamiento racial o religioso). Se compara la distancia demográfica en los datos observados con la distancia demográfica desde la red simulada, capturando expectativas de azar.
+
+
+*(Lo siguiente esta textual del texto suplmentario del papaer Smith et al. 2014)*
+Para la raza, la religión y el sexo (las variables categóricas), se comparan las probabilidades de un empate que coincida demográficamente en los datos observados con las probabilidades de un empate que coincida en la red simulada. Se informa cuántas veces la razón de 1985 (log (probabilidades observadas / probabilidades aleatorias)) es mayor que la razón de 2004, lo que indica una disminución en el sesgo “dentro del grupo” (en relación con la probabilidad). Este análisis refleja una prueba CUG (gráfica uniforme condicional) simple, y reportamos los resultados de 1,000 muestras de bootstrap. También se informa una segunda medida de resumen alternativa, basada en la relación de recuentos de frecuencia: log ((# de empates observados coincidentes) / (# de empates observados que no coinciden)). Esta razón se calcula neta de expectativas de azar, con base en la red simulada, y se compara entre 1985 y 2004. Nuevamente se informa cuántas veces la razón de 1985 es mayor que la razón de 2004. 
+
+Para las medidas continuas, edad y educación, se calcula la razón: log (# Ties Observed Distance = x / # Ties Chance Distance = x). La razón compara el número de vínculos en las redes ego observadas con el número de vínculos en la red simulada, a una determinada distancia en educación o distancia de edad, x. Luego vemos cuánto un aumento en la distancia demográfica reduce la relación entre los conteos de frecuencia observada y aleatoria. Las disminuciones más grandes, en promedio, significan efectos más fuertes del aumento de la distancia demográfica. Formalmente, nos enfocamos en el efecto marginal (o promedio) de aumentar la distancia demográfica calculando la relación a medida que la distancia demográfica aumenta en 1 y luego promediando esos efectos marginales. Nuevamente, se informa cuántas veces la razón de 1985 es mayor que la razón de 2004. Valores de 1985 absolutamente mayores significan una disminución de la homofilia.
+
+
+# 2. Creación bbdd a partir de ELSOC 2017
+
+## 2a cargar data y crear subset
+```{r}
+
+library(haven)
+elsoc_wide_2016_2018 <- sjlabelled::read_stata("ELSOC_Wide_2016_2018_v1.00_Stata14.dta")
+#View(elsoc_wide_2016_2018)
+
+## solamente ola 2 (2017)
+elsoc2017<-subset(elsoc_wide_2016_2018, elsoc_wide_2016_2018$tipo_atricion==1 | elsoc_wide_2016_2018$tipo_atricion==2)
+save(elsoc2017, file='Elsoc2017.RData')
+
+#names(elsoc2017)
+#load('Elsoc2017.RData')
+
+# selecionar variables (por n?columna) para data
+## dar con el n?mero de la comuna del ponderador 2017
+#which(colnames(elsoc2017)=="ponderador02_w02" )
+
+
+elsoc2017$barrio.ego_02 <-rep('same', length(elsoc2017[,1]))
+ego_network_elsoc2017<-elsoc2017[,c(814,530,539,548,557,566,817,531,540,549,558,
+                                    567,1054,534,543,552,561,570,820,535,544,553,
+                                    562,571,918,536,545,554,563,572,144,537,546,
+                                    555,564,573,532,541,550,559,568,529,1043)]
+
+save(ego_network_elsoc2017, file='ego_network_elsoc2017.RData')
+
+load('ego_network_elsoc2017.RData')
+names(ego_network_elsoc2017)
+```
+
+
+## 2b Sexo 
+```{r}
+## sexo egos
+table(ego_network_elsoc2017$m0_sexo_w02)
+ego_network_elsoc2017$m0_sexo_w02<-ifelse(elsoc2017$m0_sexo_w02==1 & !is.na(elsoc2017$m0_sexo_w02), 'male', 'female')
+
+## sexo alter
+for (j in 1:5){
+  eval(parse(text=paste('ego_network_elsoc2017$r13_sexo_0',j,'_w02 <- ifelse(elsoc2017$r13_sexo_0',j,'_w02==1, \'male\', ifelse(elsoc2017$r13_sexo_0',j,'_w02==2, \'female\', elsoc2017$r13_sexo_0',j,'_w02))', sep='')))
+}
+
+table(ego_network_elsoc2017$r13_sexo_02_w02)
+```
+
+## 2c educación 
+```{r}
+## educaci?n ego m01_w02 823
+## 1, 2, 3|4|5|6,7|8,9,10
+
+table(ego_network_elsoc2017$m01_w02) #educ
+
+ego_network_elsoc2017$m01_w02<-ifelse(!is.na(elsoc2017$m01_w02) & (elsoc2017$m01_w02==1 | elsoc2017$m01_w02==2 | elsoc2017$m01_w02==3), 'lt.secondary', ifelse(!is.na(elsoc2017$m01_w02) & ego_network_elsoc2017$m01_w02==4, 'some.secondary', ifelse(!is.na(elsoc2017$m01_w02) & elsoc2017$m01_w02==5, 'secondary',
+                                                                                                                                                                                                                                                      ifelse(!is.na(elsoc2017$m01_w02) & (elsoc2017$m01_w02==6 | elsoc2017$m01_w02==7), 'technical.ed',  ifelse(!is.na(elsoc2017$m01_w02) & (elsoc2017$m01_w02==8 | elsoc2017$m01_w02==9 | elsoc2017$m01_w02==10), 'college.ed', elsoc2017$m01_w02)))))
+## educ alter
+table(ego_network_elsoc2017$r13_educ_03_w02)
+
+for (j in 1:5){
+  eval(parse(text=(paste('ego_network_elsoc2017$r13_educ_0',j, '_w02 <-ifelse(!is.na(elsoc2017$r13_educ_0',j, '_w02) & elsoc2017$r13_educ_0',j,'_w02==1, \'lt.secondary\', ifelse(!is.na(elsoc2017$r13_educ_0',j,'_w02) & elsoc2017$r13_educ_0',j,'_w02==2, \'some.secondary\', ifelse(!is.na(elsoc2017$r13_educ_0',j,'_w02) & elsoc2017$r13_educ_0',j,'_w02==3, \'secondary\', ifelse(!is.na(elsoc2017$r13_educ_0',j,'_w02) & elsoc2017$r13_educ_0',j,'_w02==4, \'technical.ed\', ifelse(!is.na(elsoc2017$r13_educ_0',j,'_w02) & elsoc2017$r13_educ_0',j,'_w02==5, \'college.ed\', elsoc2017$r13_educ_0',j,'_w02)))))', sep=''))))
+}
+```
+
+## 2d religión
+```{r}
+## religi?n
+## relig ego: m38_w02 918
+## 1. cat| 2. evan, 3. protes|9.ninguna|5 no adherente|7. ateo, 8. agnóstico|4.judío 6.otra
+table(ego_network_elsoc2017$m38_w02) #relig
+ego_network_elsoc2017$m38_w02<- ifelse(!is.na(elsoc2017$m38_w02) & elsoc2017$m38_w02==1, 'catholic', ifelse(!is.na(elsoc2017$m38_w02) & (elsoc2017$m38_w02==2 | ego_network_elsoc2017$m38_w02==3), 'evangelical', ifelse(!is.na(elsoc2017$m38_w02) & (elsoc2017$m38_w02==5 | elsoc2017$m38_w02==9), 'none', ifelse(!is.na(elsoc2017$m38_w02) & (elsoc2017$m38_w02==7 | elsoc2017$m38_w02==8), 'atheist', ifelse(!is.na(elsoc2017$m38_w02) & (elsoc2017$m38_w02==4 | elsoc2017$m38_w02==6), 'other', elsoc2017$m38_w02)))))
+
+## Alter: relig, católico, evangélico, ninguno, ateo/agn, otro
+table(ego_network_elsoc2017$r13_relig_03_w02)
+
+for (i in 1:5){
+  eval(parse(text=(paste('ego_network_elsoc2017$r13_relig_0',i,'_w02[elsoc2017$r13_relig_0',i,'_w02==1 & !is.na(elsoc2017$r13_relig_0',i,'_w02)]<-\'catholic\' ;', 
+                         'ego_network_elsoc2017$r13_relig_0',i,'_w02[elsoc2017$r13_relig_0',i,'_w02==2 & !is.na(elsoc2017$r13_relig_0',i,'_w02)]<-\'evangelical\' ;',
+                         'ego_network_elsoc2017$r13_relig_0',i,'_w02[elsoc2017$r13_relig_0',i,'_w02==3 & !is.na(elsoc2017$r13_relig_0',i,'_w02)]<-\'none\' ;',
+                         'ego_network_elsoc2017$r13_relig_0',i,'_w02[elsoc2017$r13_relig_0',i,'_w02==4 & !is.na(elsoc2017$r13_relig_0',i,'_w02)]<-\'atheist\' ;',
+                         'ego_network_elsoc2017$r13_relig_0',i,'_w02[elsoc2017$r13_relig_0',i,'_w02==5 & !is.na(elsoc2017$r13_relig_0',i,'_w02)]<-\'other\' ', sep=''))))
+}
+```
+
+## 2e ideología 
+```{r}
+
+## ideolog?a
+## ideol ego: c15_w02 144
+## 0,1,2. izq,3,4 centro izq, 5 centro, 6,7 centro der, 8,9,10 derecha, ninguno(12)
+
+table(ego_network_elsoc2017$c15_w02) #ideol
+
+ego_network_elsoc2017$c15_w02[elsoc2017$c15_w02 == 0 | elsoc2017$c15_w02 == 1 | elsoc2017$c15_w02 == 2]<- 'rightwinger'
+ego_network_elsoc2017$c15_w02[elsoc2017$c15_w02 == 3 | elsoc2017$c15_w02 == 4] <- 'center-right' 
+ego_network_elsoc2017$c15_w02[elsoc2017$c15_w02 == 5] <- 'center'
+ego_network_elsoc2017$c15_w02[elsoc2017$c15_w02 == 11] <- 'independent'
+ego_network_elsoc2017$c15_w02[elsoc2017$c15_w02 == 12] <- 'none'
+ego_network_elsoc2017$c15_w02[elsoc2017$c15_w02 == 6 | elsoc2017$c15_w02 == 7]<- 'center-left'
+ego_network_elsoc2017$c15_w02[elsoc2017$c15_w02 == 8 | elsoc2017$c15_w02 == 9 | elsoc2017$c15_w02 == 10] <- 'leftwinger'
+
+## ideol alter, derecha, centro derecha, centro, centro izquierda, izquierda, ninguno (6)
+table(ego_network_elsoc2017$r13_ideol_03_w02) #
+
+for (i in 1:5){
+  eval(parse(text=paste('ego_network_elsoc2017$r13_ideol_0',i,'_w02[elsoc2017$r13_ideol_0',i,'_w02==1 & !is.na(elsoc2017$r13_ideol_0',i,'_w02)]<-\'rightwinger\' ;',
+                        'ego_network_elsoc2017$r13_ideol_0',i,'_w02[elsoc2017$r13_ideol_0',i,'_w02==2 & !is.na(elsoc2017$r13_ideol_0',i,'_w02)]<-\'center-right\' ;',
+                        'ego_network_elsoc2017$r13_ideol_0',i,'_w02[elsoc2017$r13_ideol_0',i,'_w02==3 & !is.na(elsoc2017$r13_ideol_0',i,'_w02)]<-\'center\' ;',
+                        'ego_network_elsoc2017$r13_ideol_0',i,'_w02[elsoc2017$r13_ideol_0',i,'_w02==6 & !is.na(elsoc2017$r13_ideol_0',i,'_w02)]<-\'none\' ;',
+                        'ego_network_elsoc2017$r13_ideol_0',i,'_w02[elsoc2017$r13_ideol_0',i,'_w02==4 & !is.na(elsoc2017$r13_ideol_0',i,'_w02)]<-\'center-left\' ;',
+                        'ego_network_elsoc2017$r13_ideol_0',i,'_w02[elsoc2017$r13_ideol_0',i,'_w02==5 & !is.na(elsoc2017$r13_ideol_0',i,'_w02)]<-\'leftwinger\' ', sep='')))
+}
+```
+
+## 2f barrio
+```{r}
+## ego_network_elsoc2017$barrio.ego_02<-'same'
+table(ego_network_elsoc2017$barrio.ego_02)
+
+## barrio alter
+for (i in 1:5){
+  eval(parse(text=paste('ego_network_elsoc2017$r13_barrio_0',i,'_w02[elsoc2017$r13_barrio_0',i,'_w02==1]<-\'same\' ;',
+                        'ego_network_elsoc2017$r13_barrio_0',i,'_w02[elsoc2017$r13_barrio_0',i,'_w02==2]<-\'another\' ', sep='')))
+}
+
+table(ego_network_elsoc2017$r13_barrio_03_w02)
+names(ego_network_elsoc2017)
+
+## relaci?n alter
+for (i in 1:5){
+  eval(parse(text=paste('ego_network_elsoc2017$r13_relacion_0',i,'_w02[elsoc2017$r13_relacion_0',i,'_w02==1 & !is.na(elsoc2017$r13_relacion_0',i,'_w02)]<-\'fam\' ;',
+                        'ego_network_elsoc2017$r13_relacion_0',i,'_w02[elsoc2017$r13_relacion_0',i,'_w02==2 & !is.na(elsoc2017$r13_relacion_0',i,'_w02)]<-\'fam\' ;',
+                        'ego_network_elsoc2017$r13_relacion_0',i,'_w02[elsoc2017$r13_relacion_0',i,'_w02==3 & !is.na(elsoc2017$r13_relacion_0',i,'_w02)]<-\'fam\' ;',
+                        'ego_network_elsoc2017$r13_relacion_0',i,'_w02[elsoc2017$r13_relacion_0',i,'_w02==4 & !is.na(elsoc2017$r13_relacion_0',i,'_w02)]<-\'nofam\' ;',
+                        'ego_network_elsoc2017$r13_relacion_0',i,'_w02[elsoc2017$r13_relacion_0',i,'_w02==5 & !is.na(elsoc2017$r13_relacion_0',i,'_w02)]<-\'nofam\' ', sep='')))
+}
+
+```
+
+## 2g cambiar nombres y guardar
+```{r}
+n<-paste(paste('sex', 1:5, collapse=',', sep=''), ',', 
+         paste('age', 1:5, collapse=',', sep=''), ',',
+         paste('barrio', 1:5, collapse=',', sep=''), ',',
+         paste('educ', 1:5, collapse=',', sep=''), ',',
+         paste('relig', 1:5, collapse=',', sep=''), ',',
+         paste('ideol', 1:5, collapse=',', sep=''), ',',
+         paste('relacion', 1:5, collapse=',', sep=''), collapse=',', sep='')
+gsub(',', '\',\'' ,n  )
+names(ego_network_elsoc2017)<- c('sex', 'sex1','sex2','sex3','sex4','sex5', 
+                                 'age', 'age1','age2','age3','age4','age5', 
+                                 'barrio', 'barrio1','barrio2','barrio3','barrio4','barrio5', 
+                                 'educ', 'educ1','educ2','educ3','educ4','educ5', 
+                                 'relig', 'relig1','relig2','relig3','relig4','relig5', 
+                                 'ideol', 'ideol1','ideol2','ideol3','ideol4','ideol5',
+                                 'relacion1','relacion2','relacion3','relacion4','relacion5',
+                                 'deg',
+                                 'pondera')
+
+save(ego_network_elsoc2017, file='ego_network_elsoc2017.RData')
+
+load('ego_network_elsoc2017.RData')
+head(ego_network_elsoc2017)
+
+## NA
+ego_network_elsoc2017[ego_network_elsoc2017=="-999"] <- NA
+ego_network_elsoc2017[ego_network_elsoc2017=="-888"] <- NA
+```
+
+
+# 3. Desarrollo análisis Case-control con datos ELSOC 2017
+
+```{r warning=FALSE, message=FALSE}
+#cargar paquetes (de matias)
+library(readstata13)
+library(lme4)
+library(gnm)
+library(car)
+library(dplyr)
+library(polycor)
+library(ggplot2)
+library(texreg)
+library(xtable)
+library(tidyverse)
+library(remotes)
+library(kableExtra)
+
+
+#cargar paquetes necesarios del codigo de Smith
+library(biglm)
+library(ergm)
+library(doParallel)
+
+#cargar funciones de smith
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/ego_net_case_control_model.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/output_glm_formula.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/prepare_case_control_logistic_data_function_create_vars.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/prepare_case_control_logistic_data_function.R")
+
+#setear el working directory
+setwd("C:/Users/rober/Desktop/homofilia_elsoc")
+
+#cargar base de datos de Vicente
+load("C:/Users/rober/Desktop/homofilia_elsoc/ego_network_elsoc2017.RData")
+head(ego_network_elsoc2017)
+```
+
+
+## Replicación
+
+Aquí vamos a crear una lista que describe los nombres de las columnas de los atributos alter en el marco de datos de la red ego.  Las columnas de atributo alter tienen la forma de race1 race2 ...
+
+Crearemos una lista, donde cada segmento es un atributo diferente,
+
+```{r}
+
+#name of degree column on data frame:
+var.name.degree="deg"
+
+#names of key ego attribute columns in data frame:
+var.name.characs=c("educ", "relig", "sex", "age", "ideol", "barrio") 
+
+var.name.characs.alter=list()
+
+for (p in 1:length(var.name.characs)){
+  var.name.characs.alter[[p]]=paste(var.name.characs[[p]],1:5,sep="")
+}
+
+#Let's take a look:
+var.name.characs.alter
+```
+
+## Fórmula
+
+Ahora vamos a fijar la fórmula de interés. Los posibles términos son los siguientes:
+
+`nodematch` = un término de coincidencia/sin coincidencia (¿ego y alter coinciden en un atributo?)
+`nodemix` = incluye términos para todos los pares de categorías en el atributo de interés.
+`absdiff` = incluye un término para mostrar la diferencia absoluta entre ego y alter (apropiado para variables continuas.
+`nodefactor` =controla el grado de los diferentes grupos (ajustando las estimaciones de homofilia el hecho de que algunos grupos, por ejemplo, los hombres, tienen más vínculos que otros grupos, como las mujeres).
+`nodecov` = similar a nodefactor pero apropiado para variables continuas. Como nota general, es que el algoritmo puede incluir una lista de formulas.
+
+
+```{r}
+formula_ego_elsoc<- as.formula(~ nodematch("sex", diff=TRUE) +
+                                 nodefactor("sex")+
+                                 nodematch("educ", diff=TRUE)+ 
+                                 nodematch("relig", diff=TRUE)+
+                                 nodematch("ideol", diff=TRUE)+
+                                 nodematch("barrio", diff=TRUE) +
+                                 absdiff("age"))
+```
+
+
+Ahora estamos en condiciones de ejecutar la regresión logística de casos y controles para estimar la fuerza de la homofilia. La función es egonet_case_control_model. Las entradas principales son la fórmula, los datos de egoredes, los vectores que definen las variables en el marco de datos y una serie de especificaciones que determinan cómo ejecutar el modelo de control de casos.
+
+Aquí enumeramos las entradas de uso común:
+
+`formula` = fórmula para usar en la regresión logística (lo especificamos arriba)
+
+`ego_data` = ingresar datos de la red ego (leer arriba)
+
+`var.name.degree` = nombre de la variable en los datos que tiene el grado de los encuestados (establecido arriba)
+
+`var.name.characs` = vector de nombres de atributos para ego (establecido arriba)
+
+`var.name.characs.alter` = lista de nombres de columna para atributos alter, mismo orden que var.name.charac (establecido arriba)
+
+`case.control.type` = tipo de hipótesis nula utilizada para construir la parte de control del marco de datos (los 0 en la regresión), uno de:
+"weighted.random.matching", "one_one_matching", "one_one_pair_matching", "case.case.matching",
+
+"weighted.random.matching" si desea emparejar a los encuestados al azar en función de las ponderaciones de probabilidad
+"case.case.matching" si desea simplemente hacer coincidir a todos los encuestados con todos los demás encuestados para formar controles
+"one_one_matching" si desea hacer coincidir cada caso con solo otro caso para la parte de control del conjunto de datos
+"one_one_pair_matching" si solo quiere que cada encuestado de un par tenga la parte de control, ya sea como remitente o receptor, pero no ambos
+"weighted.random.matching" es la opción predeterminada, emparejando aleatoriamente a los encuestados juntos para formar la parte de control (no vinculada) del marco de datos.
+
+`max.control.data.N` = tamaño máximo usado al construir la porción de control del marco de datos  cuando se establece en NULL (como en este ejemplo), se establecerá en el número de posibles diadas, según el número de encuestados: N * (N-1) / 2 cuando la base de datos de entrada tiene N grande y, por lo tanto, el número de díadas es bastante grande puede ser útil configurar esto para limitar el tamaño de la parte de control del marco de datos;
+por ejemplo, establecido en 100000 (o algo similarmente grande pero menor que el número de posibles díadas).
+
+`max.alter` = número máximo de alters que los encuestados pudieron nombrar (aquí establecido en 5)
+
+`remove.isolates.control` = ¿deberían eliminarse los aislamientos de la parte de control del conjunto de datos? T / F (aquí establecemos esto en T)
+
+`weight.var.name` = nombre de la variable que especifica el vector de ponderación para crear una población representativa (o NULL)
+Esta variable se utilizará al realizar el muestreo de bootstrap, de modo que el bootstrap
+muestras se seleccionan en función de los pesos de entrada. Si es NULL, asume igual probabilidad de selección de cada encuestado. Aquí los configuramos en NULL, por lo que el mismo peso para cada encuestado
+
+`weight.var.name.control` = nombre de la variable para las ponderaciones de los encuestados (si no es NULL) esta variable se utilizará al emparejar personas para formar la parte de control del marco de datos (los 0), cuando se usa la comparación aleatoria ponderada.
+
+Mayores pesos significan que tendrán más posibilidades de ser
+seleccionado en el proceso de emparejamiento. Si es NULL, el valor predeterminado es usar weight.var.name.
+Aquí establecemos esto en NULL.
+
+`num.iterations` = número de veces diferentes del algoritmo debería reconstruir la porción de control y reestimar el modelo (en este ejemplo, esto es 2, pero en un análisis real sería mucho más alto, digamos 100).
+Tenga en cuenta que solo necesitaríamos 1 iteración si configuramos case.control.typea case.case.matching.
+
+`bootstrap.sample` = T / F, si el algoritmo ejecuta el modelo varias veces utilizando diferentes muestras cada vez? (aquí lo ponemos en T) El muestreo de bootstrap es necesario para estimar los SE en las estimaciones.
+
+`num.bootstrap.samples` = ¿cuántas muestras de bootstrap tomar? solo es relevante si bootstrap.sample = T
+(aquí hacemos 10 muestras de bootstrap; en un análisis real, esto sería mucho más alto)
+
+`useparallel` = ¿T / F debería emplear varias CPU al ejecutar análisis? (aquí lo ponemos en T)
+
+`num.cores` = ¿cuántos núcleos utilizar? solo es relevante si useparallel = T (aquí usamos procesamiento paralelo y 5 núcleos)
+
+`maxit` = número de iteraciones máximas para usar en la función bigglm (aquí establecido en 20)
+
+`nodemix.reference` = vector que especifica la categoría de referencia si se utilizan términos de nodemix (aquí establecemos "C.Some College.C.Some College" como referencia para los términos de combinación de nodos educativos
+
+`adjust.intercept` = ¿T / F debería intentar ajustar la intersección para mapear en el tamaño real conocido de la población completa? (aquí se establece en F; si T también necesita establecer true.pop.size)
+
+
+## Análisis 1: Todos los confidentes (Weighted random matching)
+
+En este primer procedimiento se parea a los respondientes en base a los pesos de probabilidad
+
+```{r}
+egonet_case_control_output<-egonet_case_control_model(formula=formula_ego_elsoc,
+                                                     ego_data=ego_network_elsoc2017,
+                                                     var.name.degree=var.name.degree, 
+                                                     var.name.characs=var.name.characs,
+                                                     var.name.characs.alter=var.name.characs.alter, 
+                                                     case.control.type="weighted.random.matching", 
+                                                     max.alter=5,
+                                                     max.control.data.N=100000,
+                                                     remove.isolates.control=T, 
+                                                     weight.var.name="pondera", 
+                                                     weight.var.name.control="pondera", 
+                                                     num.iterations=100,
+                                                     bootstrap.sample=T, 
+                                                     num.bootstrap.samples=100,
+                                                     useparallel=T, 
+                                                     num.cores=8,
+                                                     maxit=20,
+                                                     adjust.intercept=F)
+
+```
+
+
+```{r}
+#load(file = "output_weightedRandomMatching.RData")
+coefs=egonet_case_control_output$coefs
+head(coefs)
+
+#We can see that we have estimated logistic regression coefficients predicting 
+#a tie as a function of matching on race and gender, and nodemix terms for education.
+#We also have a nodefactor term for gender. 
+
+#We can take this data and summarize over all the samples (or iterations).
+#Here we take the mean over the iterations for each sample.
+
+coefs_sample=aggregate(.~sample, data=coefs, mean)
+
+#Let's take a look at the results: 
+coefs_sample
+
+#We see there is a 1 row per sample now. 
+
+#Now, we will take out the columns for sample and iteration
+coefs_sample=coefs_sample[,-which(colnames(coefs_sample) %in% c("sample","iteration"))]
+
+#At this point we can calculate means, SEs, and so on to summarize 
+#the coefficients across the different samples:
+apply(coefs_sample, 2, mean)
+apply(coefs_sample, 2, sd)
+apply(coefs_sample, 2, quantile, c(.025, .975))
+```
+
+Para el caso de "todos los alteris", los resultados sugieren, que dos actores que coinciden en el nivel educativo, el tipo de religión, y sexo tienen más probabilidades de tener un empate que dos que no lo hacen, ya que hay un coeficiente positivo y significativo. Vale indicar que el efecto más fuerte en la probabilidad de empate lo generan el nivel educativo y el tipo de religión profesada por los actores. De manera inversa, para el caso de la edad los resultados sugieren que los actores que coinciden en su edad, tienen menos probabilidades de tener un empate, en relación a aquellos que no lo hacen.  
+
+
+## Análisis 2: no familiares (Weighted random matching)
+
+### Filtrar bbdd incluyendo solo los no familiares
+```{r}
+ego_network_elsoc2017nf<-ego_network_elsoc2017%>%
+  dplyr::filter(relacion1 != "fam" | is.na(relacion1))%>%
+  dplyr::filter(relacion2 != "fam" | is.na(relacion2))%>%
+  dplyr::filter(relacion3 != "fam" | is.na(relacion3))%>%
+  dplyr::filter(relacion4 != "fam" | is.na(relacion4))%>%
+  dplyr::filter(relacion5 != "fam" | is.na(relacion5))
+```
+
+```{r}
+egonet_case_control_output_nf<-egonet_case_control_model(formula=formula_ego_elsoc,
+                                                     ego_data=ego_network_elsoc2017nf,
+                                                     var.name.degree=var.name.degree, 
+                                                     var.name.characs=var.name.characs,
+                                                     var.name.characs.alter=var.name.characs.alter, 
+                                                     case.control.type="weighted.random.matching", 
+                                                     max.alter=5,
+                                                     max.control.data.N=100000,
+                                                     remove.isolates.control=T, 
+                                                     weight.var.name="pondera", 
+                                                     weight.var.name.control="pondera", 
+                                                     num.iterations=100,
+                                                     bootstrap.sample=T, 
+                                                     num.bootstrap.samples=10,
+                                                     useparallel=T, 
+                                                     num.cores=8,
+                                                     #nodemix.reference=c("C.Some College.C.Some College"),
+                                                     maxit=20,
+                                                     adjust.intercept=F)
+
+```
+
+
+```{r}
+#load(file = "output_weightedRandomMatching.RData")
+coefs=egonet_case_control_output_nf$coefs
+
+head(coefs)
+
+#We can see that we have estimated logistic regression coefficients predicting 
+#a tie as a function of matching on race and gender, and nodemix terms for education.
+#We also have a nodefactor term for gender. 
+
+#We can take this data and summarize over all the samples (or iterations).
+#Here we take the mean over the iterations for each sample.
+
+coefs_sample=aggregate(.~sample, data=coefs, mean)
+
+#Let's take a look at the results: 
+coefs_sample
+
+#We see there is a 1 row per sample now. 
+
+#Now, we will take out the columns for sample and iteration
+coefs_sample=coefs_sample[,-which(colnames(coefs_sample) %in% c("sample","iteration"))]
+
+#At this point we can calculate means, SEs, and so on to summarize 
+#the coefficients across the different samples:
+apply(coefs_sample, 2, mean)
+apply(coefs_sample, 2, sd)
+apply(coefs_sample, 2, quantile, c(.025, .975))
+
+```
+
+Ahora bien, para el caso de los alteris "no familiares" los resultados sugieren algunas diferencias con respecto a "todos los alteris": a saber, los actores que coinciden en el nivel educativo, tipo de religión, y sexo, tienen más pronbabilidades de tener un empate que dos actores que no lo hacen. Todas estas cetgorías son importantes y tienen un coeficiente positivo y significativo. A diferencia de si consideramos a todos los alteris, para el caso de los no familiares las categorías de mayor relevancia son el sexo, y la educación, aunque la educación mantiene un coeficiente muy similar. De manera inversa, y al igual que para el modelo de "todos los alteris", los actores que coinciden en su edad, tienen menos probabilidades de tener un empate, en relación a aquellos que no lo hacen. 
+
+
+## Tareas pendientes
+
+- incluir variables a nivel de ego
+
+- ver cómo estimar errores estandar clusterizados
+
+- ver cómo meter el diseño muestral complejo en el analisis (suplemento parte A)
+
+
+# Bibliografía 
+
+- Hunter, D. R., Handcock, M. S., Butts, C. T., Goodreau, S. M., & Morris, M. (2008). ergm: A Package to Fit, Simulate and Diagnose Exponential-Family Models for Networks. Journal of Statistical Software, 24(3). https://doi.org/10.18637/jss.v024.i03
+
+- Smith, J. A. (2012). Macrostructure from Microstructure: Generating Whole Systems from Ego Networks. Sociological Methodology, 42(1), 155-205. https://doi.org/10.1177/0081175012455628
+
+- Smith, J. A., McPherson, M., & Smith-Lovin, L. (2014). Social Distance in the United States: Sex, Race, Religion, Age, and Education Homophily among Confidants, 1985 to 2004. American Sociological Review, 79(3), 432-456. https://doi.org/10.1177/0003122414531776
+
+

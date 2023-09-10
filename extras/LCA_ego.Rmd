@@ -1,0 +1,700 @@
+---
+title: "Latent class ego network"
+author: "Cantillan, R."
+date: "Febrero, 2022"
+output: 
+   rmarkdown::html_document:
+     theme: lumen
+     toc: true 
+     toc_depth: 2  
+     number_sections: true
+     toc_float: true
+     toc_collapsed: true
+     highlight: pygments
+---
+
+
+# Librerías
+```{r}
+rm(list = ls(all = TRUE))   # Clean objects
+pacman::p_load(ggplot2,ggthemes,tidyverse,sjlabelled,sjPlot,vcd,texreg,ordinal,
+               nnet,MASS,mlogit,matrixStats,expss,sjlabelled,sjmisc,tidyverse,
+               survey,egor,haven,dplyr,stargazer,janitor,gridExtra,ggeffects,
+               haven,summarytools,skimr,weights,ggcorrplot,ggridges,panelr,
+               GLMMadaptive,survival,R.utils,questionr,car,corrplot,hrbrthemes,
+               viridis,extrafont,JWileymisc,scales, naniar, data.table, memisc)
+
+```
+
+# data
+```{r}
+load("/home/rober/Escritorio/ELSOC/ELSOC_W02_v3.00_R.RData")
+load("/home/rober/Escritorio/ELSOC/ELSOC_W04_v2.01_R.RData")
+```
+
+# 2017
+```{r}
+a<-elsoc_2017 %>% dplyr:: rename(.egoID = idencuesta)
+```
+
+
+```{r}
+alter_1<-a %>%
+        dplyr::select(.egoID, 
+                      alter_sexo=r13_sexo_01, 
+                      alter_edad=r13_edad_01, 
+                      alter_rel=r13_relacion_01,
+                      alter_tiempo=r13_tiempo_01,
+                      alter_barrio=r13_barrio_01, 
+                      alter_educ=r13_educ_01, 
+                      alter_relig=r13_relig_01, 
+                      alter_ideol=r13_ideol_01)
+
+alter_2<-a %>%
+        dplyr::select(.egoID, 
+                      alter_sexo=r13_sexo_02, 
+                      alter_edad=r13_edad_02, 
+                      alter_rel=r13_relacion_02,
+                      alter_tiempo=r13_tiempo_02,
+                      alter_barrio=r13_barrio_02, 
+                      alter_educ=r13_educ_02, 
+                      alter_relig=r13_relig_02, 
+                      alter_ideol=r13_ideol_02)
+
+alter_3<-a %>%
+        dplyr::select(.egoID, 
+                      alter_sexo=r13_sexo_03, 
+                      alter_edad=r13_edad_03, 
+                      alter_rel=r13_relacion_03,
+                      alter_tiempo=r13_tiempo_03,
+                      alter_barrio=r13_barrio_03, 
+                      alter_educ=r13_educ_03, 
+                      alter_relig=r13_relig_03, 
+                      alter_ideol=r13_ideol_03)
+
+alter_4<- a %>%
+        dplyr::select(.egoID, 
+                      alter_sexo=r13_sexo_04, 
+                      alter_edad=r13_edad_04, 
+                      alter_rel=r13_relacion_04,
+                      alter_tiempo=r13_tiempo_04, 
+                      alter_barrio=r13_barrio_04, 
+                      alter_educ=r13_educ_04, 
+                      alter_relig=r13_relig_04, 
+                      alter_ideol=r13_ideol_04)
+
+alter_5<-a %>%
+        dplyr::select(.egoID, 
+                      alter_sexo=r13_sexo_05, 
+                      alter_edad=r13_edad_05, 
+                      alter_rel=r13_relacion_05,
+                      alter_tiempo=r13_tiempo_05, 
+                      alter_barrio=r13_barrio_05, 
+                      alter_educ=r13_educ_05, 
+                      alter_relig=r13_relig_05, 
+                      alter_ideol=r13_ideol_05)
+```
+
+
+```{r}
+alter_1$n<-1
+alter_2$n<-2
+alter_3$n<-3
+alter_4$n<-4
+alter_5$n<-5
+```
+
+
+```{r}
+alteris<-rbind(alter_1,alter_2,alter_3,alter_4,alter_5)
+alteris<-arrange(alteris, .egoID)
+```
+
+
+
+```{r}
+alteris   <- rowid_to_column(alteris, var = ".altID")
+alteris   <- as_tibble(alteris)
+```
+
+
+
+```{r}
+alteris$alter_educ <-factor(Recode(alteris$alter_educ ,"1=1;2:3=2;4=3;5=4;-999=NA"))
+alteris$alter_relig<-factor(Recode(alteris$alter_relig,"1=1;2=2;3=3;4=4;5=5;-999=NA"))
+alteris$alter_ideol<-factor(Recode(alteris$alter_ideol,"1:2=1;3=2;4:5=3;6=4;-999=NA"))
+alteris$alter_edad <-factor(Recode(alteris$alter_edad ,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+alteris$alter_sexo <-factor(Recode(alteris$alter_sexo ,"1=1;2=2"))
+#alteris<-na.omit(alteris)
+```
+
+
+```{r}
+egos <-a %>%
+       dplyr::select(.egoID, 
+                     ego_sexo=m0_sexo, 
+                     ego_edad=m0_edad, 
+                     ego_ideol=c15, 
+                     ego_educ=m01, 
+                     ego_relig=m38, 
+                     ego_ideol=c15)
+
+egos <- as_tibble(egos)
+```
+
+
+```{r}
+egos$ego_educ <-factor(Recode(egos$ego_educ,"1:3=1;4:5=2;6:7=3;8:10=4;-999:-888=NA"))
+egos$ego_relig<-factor(Recode(egos$ego_relig,"1=1;2=2;9=3;7:8=4;3:6=5;-999:-888=NA"))
+egos$ego_ideol<-factor(Recode(egos$ego_ideol,"9:10=1;6:8=2;5=3;2:4=4;0:1=5;11:12=6;-999:-888=NA"))
+egos$ego_edad <-factor(Recode(egos$ego_edad,"18:29=1;30:40=2;41:51=3;52:62=4;63:100=5"))
+egos$ego_sexo <-factor(Recode(egos$ego_sexo,"1=1;2=2"))
+```
+
+
+```{r}
+obs<-left_join(alteris,egos, by=".egoID")
+obs$case<-1
+
+obs[obs=="-999"] <- NA
+obs[obs=="-888"] <- NA
+
+obs<-obs%>%drop_na(alter_sexo,alter_edad,alter_rel,alter_tiempo,alter_barrio,
+                   alter_educ,alter_relig,alter_ideol)
+
+```
+
+
+```{r}
+ego_lca<-obs %>%
+  mutate(alter_sexo  =case_when(alter_sexo  ==1~1,TRUE~2))%>%
+#  mutate(alter_mujer   =case_when(alter_sexo  ==2~1,TRUE~2))%>%
+  mutate(alter_0_18        =case_when(alter_edad  ==1~1,TRUE~2))%>%
+  mutate(alter_19_29       =case_when(alter_edad  ==2~1,TRUE~2))%>%
+  mutate(alter_30_40       =case_when(alter_edad  ==3~1,TRUE~2))%>%
+  mutate(alter_41_51       =case_when(alter_edad  ==4~1,TRUE~2))%>%
+  mutate(alter_52_62       =case_when(alter_edad  ==5~1,TRUE~2))%>%
+  mutate(alter_63_100      =case_when(alter_edad  ==6~1,TRUE~2))%>%
+  mutate(alter_vecino      =case_when(alter_barrio==1~1,TRUE~2))%>%
+#  mutate(alter_novecino=case_when(alter_barrio==2~1,TRUE~2))%>%
+  mutate(alter_basica      =case_when(alter_educ  ==1~1,TRUE~2))%>%
+  mutate(alter_media       =case_when(alter_educ  ==2~1,TRUE~2))%>%
+  mutate(alter_tecnica     =case_when(alter_educ  ==3~1,TRUE~2))%>%
+  mutate(alter_univers     =case_when(alter_educ  ==4~1,TRUE~2))%>%
+  mutate(alter_catolico    =case_when(alter_relig ==1~1,TRUE~2))%>%
+  mutate(alter_evangelico  =case_when(alter_relig ==2~1,TRUE~2))%>%
+  mutate(alter_ninguna     =case_when(alter_relig ==3~1,TRUE~2))%>%
+  mutate(alter_ateo        =case_when(alter_relig ==4~1,TRUE~2))%>%
+  mutate(alter_otra        =case_when(alter_relig ==5~1,TRUE~2))%>%
+  mutate(alter_derecha     =case_when(alter_ideol ==1~1,TRUE~2))%>%
+  mutate(alter_centro      =case_when(alter_ideol ==2~1,TRUE~2))%>%
+  mutate(alter_izquierd    =case_when(alter_ideol ==3~1,TRUE~2))%>%
+  mutate(alter_sinideol    =case_when(alter_ideol ==4~1,TRUE~2))%>%
+  dplyr::select(.egoID,alter_sexo,alter_0_18,alter_19_29,alter_30_40,alter_41_51,
+                alter_52_62,alter_63_100,alter_vecino,alter_basica,alter_media,
+                alter_tecnica,alter_univers,alter_catolico,alter_evangelico,
+                alter_ninguna,alter_ateo,alter_otra,alter_derecha,alter_centro,
+                alter_izquierd,alter_sinideol,alter_rel)
+  
+save(ego_lca, file = "ego_lca.RData")
+
+```
+
+
+
+```{r}
+ego_lca_nofam<-ego_lca%>%dplyr::filter(alter_rel==4 | alter_rel==5)
+```
+
+
+
+
+# 2019
+```{r}
+b<-elsoc_2019 %>% dplyr:: rename(.egoID = idencuesta)
+```
+
+
+```{r}
+alter_1<-b %>%
+        dplyr::select(.egoID, 
+                      alter_sexo=r13_sexo_01, 
+                      alter_edad=r13_edad_01, 
+                      alter_rel=r13_relacion_01,
+                      alter_tiempo=r13_tiempo_01,
+                      alter_barrio=r13_barrio_01, 
+                      alter_educ=r13_educ_01, 
+                      alter_relig=r13_relig_01, 
+                      alter_ideol=r13_ideol_01)
+alter_2<-b %>%
+        dplyr::select(.egoID, 
+                      alter_sexo=r13_sexo_02, 
+                      alter_edad=r13_edad_02, 
+                      alter_rel=r13_relacion_02,
+                      alter_tiempo=r13_tiempo_02,
+                      alter_barrio=r13_barrio_02, 
+                      alter_educ=r13_educ_02, 
+                      alter_relig=r13_relig_02, 
+                      alter_ideol=r13_ideol_02)
+
+alter_3<-b %>%
+        dplyr::select(.egoID, 
+                      alter_sexo=r13_sexo_03, 
+                      alter_edad=r13_edad_03, 
+                      alter_rel=r13_relacion_03,
+                      alter_tiempo=r13_tiempo_03,
+                      alter_barrio=r13_barrio_03, 
+                      alter_educ=r13_educ_03, 
+                      alter_relig=r13_relig_03, 
+                      alter_ideol=r13_ideol_03)
+
+alter_4<- b %>%
+        dplyr::select(.egoID, 
+                      alter_sexo=r13_sexo_04, 
+                      alter_edad=r13_edad_04, 
+                      alter_rel=r13_relacion_04,
+                      alter_tiempo=r13_tiempo_04, 
+                      alter_barrio=r13_barrio_04, 
+                      alter_educ=r13_educ_04, 
+                      alter_relig=r13_relig_04, 
+                      alter_ideol=r13_ideol_04)
+
+alter_5<-b %>%
+        dplyr::select(.egoID, 
+                      alter_sexo=r13_sexo_05, 
+                      alter_edad=r13_edad_05, 
+                      alter_rel=r13_relacion_05,
+                      alter_tiempo=r13_tiempo_05, 
+                      alter_barrio=r13_barrio_05, 
+                      alter_educ=r13_educ_05, 
+                      alter_relig=r13_relig_05, 
+                      alter_ideol=r13_ideol_05)
+```
+
+
+```{r}
+alter_1$n<-1
+alter_2$n<-2
+alter_3$n<-3
+alter_4$n<-4
+alter_5$n<-5
+```
+
+
+```{r}
+alteris<-rbind(alter_1,alter_2,alter_3,alter_4,alter_5)
+alteris<-arrange(alteris, .egoID)
+```
+
+
+
+```{r}
+alteris   <- rowid_to_column(alteris, var = ".altID")
+alteris   <- as_tibble(alteris)
+```
+
+
+
+```{r}
+alteris$alter_educ <-factor(Recode(alteris$alter_educ ,"1=1;2:3=2;4=3;5=4;-999=NA"))
+alteris$alter_relig<-factor(Recode(alteris$alter_relig,"1=1;2=2;3=3;4=4;5=5;-999=NA"))
+alteris$alter_ideol<-factor(Recode(alteris$alter_ideol,"1=1;2=2;3=3;4=4;5=5;6=6;-999=NA"))
+alteris$alter_edad <-factor(Recode(alteris$alter_edad ,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+alteris$alter_sexo <-factor(Recode(alteris$alter_sexo ,"1=1;2=2"))
+#alteris<-na.omit(alteris)
+```
+
+
+```{r}
+egos <-b %>%
+       dplyr::select(.egoID, 
+                     ego_sexo=m0_sexo, 
+                     ego_edad=m0_edad, 
+                     ego_ideol=c15, 
+                     ego_educ=m01, 
+                     ego_relig=m38, 
+                     ego_ideol=c15)
+
+egos <- as_tibble(egos)
+```
+
+
+```{r}
+egos$ego_educ <-factor(Recode(egos$ego_educ,"1:3=1;4:5=2;6:7=3;8:10=4;-999:-888=NA"))
+egos$ego_relig<-factor(Recode(egos$ego_relig,"1=1;2=2;9=3;7:8=4;3:6=5;-999:-888=NA"))
+egos$ego_ideol<-factor(Recode(egos$ego_ideol,"9:10=1;6:8=2;5=3;2:4=4;0:1=5;11:12=6;-999:-888=NA"))
+egos$ego_edad <-factor(Recode(egos$ego_edad,"18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+egos$ego_sexo <-factor(Recode(egos$ego_sexo,"1=1;2=2"))
+```
+
+
+```{r}
+obs<-left_join(alteris,egos, by=".egoID")
+obs$case<-1
+
+obs[obs=="-999"] <- NA
+obs[obs=="-888"] <- NA
+
+obs<-obs%>%drop_na(alter_sexo,alter_edad,alter_rel,alter_tiempo,alter_barrio,
+                   alter_educ,alter_relig,alter_ideol)
+
+```
+
+
+```{r}
+ego_lca2<-obs %>%
+  mutate(alter_sexo=case_when(alter_sexo==1~1,TRUE~0))%>%
+ # mutate(alter_mujer =case_when(alter_sexo==2~1,TRUE~0))%>%
+  mutate(alter_edad1 =case_when(alter_edad==1~1,TRUE~0))%>%
+  mutate(alter_edad2 =case_when(alter_edad==2~1,TRUE~0))%>%
+  mutate(alter_edad3 =case_when(alter_edad==3~1,TRUE~0))%>%
+  mutate(alter_edad4 =case_when(alter_edad==4~1,TRUE~0))%>%
+  mutate(alter_edad5 =case_when(alter_edad==5~1,TRUE~0))%>%
+  mutate(alter_edad6 =case_when(alter_edad==6~1,TRUE~0))%>%
+  mutate(alter_vecino=case_when(alter_barrio==1~1,TRUE~0))%>%
+#  mutate(alter_novecino=case_when(alter_barrio==2~1,TRUE~0))%>%
+  mutate(alter_educ1 =case_when(alter_educ==1~1,TRUE~0))%>%
+  mutate(alter_educ2 =case_when(alter_educ==2~1,TRUE~0))%>%
+  mutate(alter_educ3 =case_when(alter_educ==3~1,TRUE~0))%>%
+  mutate(alter_educ4 =case_when(alter_educ==4~1,TRUE~0))%>%
+  mutate(alter_relig1=case_when(alter_relig==1~1,TRUE~0))%>%
+  mutate(alter_relig2=case_when(alter_relig==2~1,TRUE~0))%>%
+  mutate(alter_relig3=case_when(alter_relig==3~1,TRUE~0))%>%
+  mutate(alter_relig4=case_when(alter_relig==4~1,TRUE~0))%>%
+  mutate(alter_relig5=case_when(alter_relig==5~1,TRUE~0))%>%
+  mutate(alter_ideol1=case_when(alter_ideol==1~1,TRUE~0))%>%
+  mutate(alter_ideol2=case_when(alter_ideol==2~1,TRUE~0))%>%
+  mutate(alter_ideol3=case_when(alter_ideol==3~1,TRUE~0))%>%
+  mutate(alter_ideol4=case_when(alter_ideol==4~1,TRUE~0))%>%
+  mutate(alter_ideol5=case_when(alter_ideol==5~1,TRUE~0))%>%
+  mutate(alter_ideol6=case_when(alter_ideol==6~1,TRUE~0))%>%
+  dplyr::select(.egoID,alter_hombre,alter_mujer,alter_edad1,alter_edad2,alter_edad3,alter_edad4,
+         alter_edad5,alter_edad6,alter_vecino,alter_novecino,alter_educ1,alter_educ2,
+         alter_educ3,alter_educ4,alter_relig1,alter_relig2,alter_relig3,alter_relig4,
+         alter_relig5,alter_ideol1,alter_ideol2,alter_ideol3,alter_ideol4,alter_ideol5,
+         alter_ideol6)
+  
+
+#0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6
+```
+
+
+```{r}
+ego_lca$ola<-1
+ego_lca2$ola<-2
+```
+
+# join
+```{r}
+ego_lca_long<-rbind(ego_lca,ego_lca2)
+```
+
+
+# modelo de clases latentes con efectos aleatorios (lmest)
+
+```{r}
+library(LMest)
+modelo1 <-  lmestMixed(responsesFormula = alter_hombre+alter_mujer~NULL,
+                  latentFormula =~ NULL,
+                  index = c(".egoID","ola"),
+                  output = TRUE,
+                  out_se = TRUE,
+                  data = ego_lca_long,
+                  k = 1,
+                  start = 1,
+                  seed = 123)
+
+
+ego_lca_long <- panel_data(ego_lca_long, id = .egoID, wave = ola) %>%
+  complete_data(min.waves = 2)
+
+ego_lca_long[ego_lca_long==0]<-2
+
+
+out <- lmestMixed(responsesFormula = alter_hombre+alter_mujer~NULL,
+                  index = c(".egoID","ola"),
+                  k1 = 2,
+                  k2 = 2,
+                  data = ego_lca_long)
+
+```
+
+
+# Análisis 
+
+## librerías
+```{r}
+library(tidyverse)
+library(haven)
+library(MplusAutomation)
+library(rhdf5)
+#install.packages("here")
+library(here)
+#install.packages("glue")
+library(glue)
+library(stargazer)
+library(gt)
+library(janitor)
+library(semPlot)
+library(reshape2)
+library(cowplot)
+#install.packages("xfun")
+
+
+```
+
+
+```{r}
+#if (!require("BiocManager", quietly = TRUE))
+#    install.packages("BiocManager")
+#BiocManager::install(version = "3.14")
+#
+#BiocManager::install("rhdf5")
+```
+
+
+
+# load data
+```{r}
+load("C:/Users/rober/Desktop/homofilia_elsoc/ego_lca.RData")
+```
+
+# rename id
+```{r}
+ego_lca <- ego_lca%>%
+  mutate_if(is.numeric, as.character)%>%
+  dplyr::rename(egoid = .egoID)
+```
+
+# group id
+```{r}
+ego_lca$ego_id <- ego_lca %>% group_indices(egoid) 
+```
+
+# delete id. 
+```{r}
+ego_lca$egoid<-NULL
+
+ego_lca<-ego_lca%>%dplyr::rename(egoid = ego_id)
+ego_lca$egoid<-as.factor(ego_lca$egoid)
+```
+
+# NA
+```{r}
+ego_lca<-na.omit(ego_lca)
+```
+
+# recode
+```{r}
+ego_lca = ego_lca %>%
+  rename_with(.fn = ~ str_replace(.x, "alter_", "a"),
+              .cols = starts_with("alter_"))
+```
+
+
+  
+# descriptivos 
+```{r}
+
+ ego_summary <- ego_lca %>%
+    group_by("egoid") %>%
+    summarize(
+      mean_hombre = mean(ahombre, na.rm = TRUE),
+      mean_mujer  = mean(amujer, na.rm = TRUE),
+      mean_novecino = mean(anovecino, na.rm = TRUE),
+      mean_vecino  = mean(avecino, na.rm = TRUE),
+      sample_n = n())
+  school_summary[1:10,] %>%
+    gt()
+
+```
+ 
+
+# LCA multilevel
+```{r}
+
+lca_enum <- mplusObject(
+  TITLE = glue("C2_mlca_enum_demo"),
+  VARIABLE =
+    glue(
+      "categorical = ahombre-aideol6;
+usevar = ahombre-aideol6;
+classes = c(2);"),
+  ANALYSIS =
+    "estimator = mlr;
+type = mixture;
+starts = 500 100;",
+  MODEL = "",
+  OUTPUT = "",
+  PLOT =
+    "type = plot3;
+series = ahombre-aideol6(*);",
+  usevariables = colnames(ego_lca),
+  rdata = ego_lca)
+
+lca_enum_fit <- mplusModeler(lca_enum,
+                             dataout="c_2_mlca_enum.dat",
+                             modelout="c_2_mlca_enum.inp",
+                             check=TRUE, run = 1L, hashfilename = F)
+
+```
+
+
+
+```{r}
+
+mlca_00 <- mplusObject(
+  TITLE = "model00_basic__ICC_mlca",
+  VARIABLE =
+    "usevar = ahombre-aideol6;
+cluster = egoid;
+within = ahombre-aideol6;",
+  ANALYSIS =
+    "estimator = mlr;
+type = basic twolevel; ! ask for ICC curves
+processors = 10;",
+  MODEL = "",
+  OUTPUT = "sampstat;",
+  PLOT = "",
+  usevariables = colnames(ego_lca),
+  rdata = ego_lca)
+
+mlca_00_fit <- mplusModeler(mlca_00,
+                            dataout="model00_basic.dat",
+                            modelout="model00_basic.inp",
+                            check=TRUE, run = TRUE, hashfilename = FALSE)
+
+```
+
+
+# model06: non-parametric model with level-2 factor on latent class indicators
+
+```{r}
+mlca1 <- mplusObject(
+  TITLE = "model06_non_parametric_mlca",
+  VARIABLE =
+    "usevar =  ahombre-aideol6;
+categorical =  ahombre-aideol6;
+classes = CB(2) c(4);
+cluster = egoid; ! level 2 son los egos
+between = CB;",
+  ANALYSIS =
+      "estimator = mlr;
+      type = mixture twolevel;
+      starts = 20 10;
+  processors = 10;",
+    MODEL =
+    "%WITHIN%
+     %OVERALL%
+    
+     %BETWEEN%
+     %OVERALL%
+     FU BY ahombre-aideol6;
+     [FU@0];
+     C on CB;
+    
+     MODEL CB:
+     %BETWEEN%
+     %CB#1%
+     [FU@0];
+     %CB#2%
+     [FU];
+    
+     MODEL C:
+     %BETWEEN%
+     %C#1%
+     [ahombre$1-aideol6$1];
+     %C#2%
+     [ahombre$1-aideol6$1];
+     %C#3%
+     [ahombre$1-aideol6$1];
+     %C#4%
+     [ahombre$1-aideol6$1]; ",
+  OUTPUT = ";",
+  PLOT =
+    "type = plot3;
+    series = ahombre-aideol6(*);",
+  usevariables = colnames(ego_lca),
+  rdata = ego_lca)
+
+
+
+mlca1_fit <- mplusModeler(mlca1,
+                          dataout="model06_non_parametric.dat",
+                          modelout="model06_non_parametric.inp",
+                          check=TRUE, run = FALSE, hashfilename = FALSE)
+
+```
+
+
+
+
+
+# con poLCA
+```{r}
+plot_likert(ego_lca[,2:22],
+            geom.colors="Paired",
+            reverse.colors=T,
+            #cat.neutral=2,
+            values="sum.inside",
+            show.prc.sign=TRUE,
+            show.n = FALSE)
+```
+
+
+
+```{r}
+f<-cbind(alter_sexo,alter_vecino,alter_0_18,alter_19_29,alter_30_40,alter_41_51,
+         alter_52_62,alter_63_100,alter_basica,alter_media,alter_tecnica,
+         alter_univers,alter_catolico,alter_evangelico,alter_ninguna,
+         alter_ateo,alter_otra)~NULL
+```
+
+
+```{r}
+library(poLCA)
+lca1 <- poLCA(f,ego_lca,nclass=1,graphs=F)
+lca2 <- poLCA(f,ego_lca,nclass=2,graphs=F)
+lca3 <- poLCA(f,ego_lca,nclass=3,graphs=F)
+lca4 <- poLCA(f,ego_lca,nclass=4,graphs=T)
+lca5 <- poLCA(f,ego_lca,nclass=5,graphs=T)
+lca6 <- poLCA(f,ego_lca,nclass=6,graphs=T)
+lca7 <- poLCA(f,ego_lca,nclass=7,graphs=F)
+lca8 <- poLCA(f,ego_lca,nclass=8,graphs=F)
+```
+
+
+
+
+```{r}
+ego_lca_nofam
+
+```
+
+
+```{r}
+plot_likert(ego_lca_nofam[,2:22],
+            geom.colors="Paired",
+            reverse.colors=T,
+            #cat.neutral=2,
+            values="sum.inside",
+            show.prc.sign=TRUE,
+            show.n = FALSE)
+```
+
+
+```{r}
+library(poLCA)
+lca1 <- poLCA(f,ego_lca_nofam,nclass=1,graphs=F)
+lca2 <- poLCA(f,ego_lca_nofam,nclass=2,graphs=F)
+lca3 <- poLCA(f,ego_lca_nofam,nclass=3,graphs=F)
+lca4 <- poLCA(f,ego_lca_nofam,nclass=4,graphs=T)
+lca5 <- poLCA(f,ego_lca_nofam,nclass=5,graphs=T)
+lca6 <- poLCA(f,ego_lca_nofam,nclass=6,graphs=T)
+lca7 <- poLCA(f,ego_lca_nofam,nclass=7,graphs=F)
+lca8 <- poLCA(f,ego_lca_nofam,nclass=8,graphs=F)
+```
+
+
+
+

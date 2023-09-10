@@ -1,0 +1,502 @@
+---
+title: "Replicación Smith McPherson Smith-Lovin (2014) con ELSOC"
+author: "Alejandro Plaza y Roberto Cantillan"
+date: "11-05-2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Introducción
+
+El siguiente documento es una reproducción de la investigación de Smith, McPherson y Smith-Lovin (2014) Social Disntance in the United States: Sex, Race, Religion, Age and Education, con los datos de ELSOC.
+
+
+## 2.  Metodología
+
+Los autores usan una variante del metodo caso-control para estimar la homofilia. El método de caso-control es un método comunmente usado en la investigación medica para estudiar condiciones relativamente raras que son dificiles de capturar a partir de un muestreo aleatorio. Este método compara casos observados, que tienen una condición con controles que no tienen la condición. La aproximación analitica es una versión de la regresión logística aplicada a datos muestreadas a partir de una variable dependiente.
+
+La aproximación de caso-control tiene un ajuste natural para redes egocentricas. En vez de tomar un muestreo aleatorios de diadas o de pares de personas, las redes egocentricas capturan una rara condición de interés, una relación de confianza entre individuos. En este caso comparamos cases, pares con un vínculo de confianza, con controles, pares sin vínculos de confianza. La condición de interés prexistente es la distancia demografica entre personas en una diada.
+
+### Muestreando las redes egocentricas: los casos
+
+Los autores muestrean individuos y recuperan la información de las conexiones entre los contactos reportados por cada individuo (a partir del instrumento de generador de nombres). No obstante, esta aproximación tiene el problema de que existe interdependencia entre los vinculos de confidentes generados por el mismo encuestado. Para lidiar con este problema Smith y colegas presentan en los análisis suplementarios (parte B) que elimina la interdependencia, al seleccionar aleatoriamente un caso de los confidentes para cada uno de los vinculos reportados. 
+
+El análisis acepta cierta heterogeneidad en la fueza de los vinculos (porque un vinculo puede estar en cualquier lugar, del primero al quinto alteri mencionado) y menos poder estadístico para evitar la interdependencia. Los autores enfatizan que los hallazgos son consistentes con los analisis presentados en el artículo. **Detrás de esta lógica se encuentra la estimación case-case, que se mostrará más adelante**.
+
+### Muestreando los no-vinculos: los controles.
+
+Los casos no vinculados, los controles, son los encuestados reportados en la GSS, en dónde los autores asumen que dos encuestados seleccionados al azar dentro de la GSS es extremadamente improbable que se conozcan y sean confidentes (los autores estiman que la probabilidad de que dos encuestados se conozcan es del orden de p<.001). De esta manera las no conexiones que existen entre los encuestados muestreados en la GSS, son pareados aleatoriamentes y se les define como la muestra de control.
+
+La muestra de control es creada con los encuestados que reportan al menos un confidente, y se construyen los vinculos entre los [Nx(N-1)]/2 pares de respondientes por  año. De manera más técnica, encuestados con al menos un confidente se emparejan al azar [N x
+(N - 1)] / 2 veces según el peso de la población.
+
+En el análisis principal, se asume que la probabilidad de emparejar al azar a dos personas sigue una distribución binomial con probabilidad basada en los pesos de la población. La construcción de los controles y, por lo tanto, las expectativas al azar, solo se limita a la distribución de las características demográficas en la población y todos tienen el mismo número de vínculos. Específicamente, puede pensar en el proceso de emparejamiento aleatorio como la creación de una red de línea de base con N x (N - 1) / 2 vínculos. Implícitamente no está restringido a (1) el volumen de vínculos; (2) la distribución de títulos (es decir, vínculos por persona); y (3) grado diferencial (es decir, algunos grupos tienen más vínculos que otros).
+
+
+## Foco en los análisis suplementarios
+
+Los autores toman decisiones particulares al medir las expectativas de azar y reconocen que los resultados habrían diferido bajo diferentes supuestos. El análisis suplementario presenta una aproximación alternativa basada en modelos ERGM. Se reconsideran los supuestos del análisis principal, y se aplican restricciones a la construcción del baseline $(N*(N-1)/2)$ considerando el grado, su distribución y el grado diferencial (el grado puede ser problemático toda vez que los aislados pueden estar inflados).
+
+Se comienza generando redes restringidas a la distribución de grados observada empíricamente. Luego se siembra la red con los encuestados incluidos en la muestra. **Las características demográficas de los encuestados muestreados se mapearon en los nodos de la red con el mismo grado que el encuestado (ver Smith 2012). Esto mantiene la correlación entre características demográficas y grado**. Por lo tanto, las personas con un alto nivel educativo en la red simulada tendrán un alto grado si los encuestados de la muestra con un alto grado tienen un alto nivel educativo. Este proceso de siembra también asegura que la red generada reflejará la composición demográfica en los datos. 
+
+Así, **la simulación generará una red que representa la mezcla aleatoria en la población, dada la distribución de grados, el grado diferencial y la composición demográfica de la población**. Se repite este proceso tanto para 1985 como para 2004. En cada caso, las redes simuladas tienen un tamaño de 10,000 (es imposible simular una red del tamaño real, 200 millones aproximadamente).
+
+Los autores toman una muestra de redes ego de la red simulada del mismo tamaño que la muestra original de GSS para ese año, imitando así el verdadero proceso de muestreo. Luego toman todos los pares $ij$ de las redes del ego extraídas de la red simulada y calculan  la distancia demográfica entre i y j (por ejemplo, emparejamiento racial o religioso). Se compara la distancia demográfica en los datos observados con la distancia demográfica desde la red simulada, capturando expectativas de azar.
+
+
+*(Lo siguiente esta textual del texto suplmentario del papaer Smith et al. 2014)*
+Para la raza, la religión y el sexo (las variables categóricas), se comparan las probabilidades de un empate que coincida demográficamente en los datos observados con las probabilidades de un empate que coincida en la red simulada. Se informa cuántas veces la razón de 1985 (log (probabilidades observadas / probabilidades aleatorias)) es mayor que la razón de 2004, lo que indica una disminución en el sesgo “dentro del grupo” (en relación con la probabilidad). Este análisis refleja una prueba CUG (gráfica uniforme condicional) simple, y reportamos los resultados de 1,000 muestras de bootstrap. También se informa una segunda medida de resumen alternativa, basada en la relación de recuentos de frecuencia: log ((# de empates observados coincidentes) / (# de empates observados que no coinciden)). Esta razón se calcula neta de expectativas de azar, con base en la red simulada, y se compara entre 1985 y 2004. Nuevamente se informa cuántas veces la razón de 1985 es mayor que la razón de 2004. 
+
+Para las medidas continuas, edad y educación, se calcula la razón: log (# Ties Observed Distance = x / # Ties Chance Distance = x). La razón compara el número de vínculos en las redes ego observadas con el número de vínculos en la red simulada, a una determinada distancia en educación o distancia de edad, x. Luego vemos cuánto un aumento en la distancia demográfica reduce la relación entre los conteos de frecuencia observada y aleatoria. Las disminuciones más grandes, en promedio, significan efectos más fuertes del aumento de la distancia demográfica. Formalmente, nos enfocamos en el efecto marginal (o promedio) de aumentar la distancia demográfica calculando la relación a medida que la distancia demográfica aumenta en 1 y luego promediando esos efectos marginales. Nuevamente, se informa cuántas veces la razón de 1985 es mayor que la razón de 2004. Valores de 1985 absolutamente mayores significan una disminución de la homofilia.
+
+
+```{r warning=FALSE, message=FALSE}
+#cargar paquetes (de matias)
+library(readstata13)
+library(lme4)
+library(gnm)
+library(car)
+library(dplyr)
+library(polycor)
+library(ggplot2)
+library(texreg)
+library(xtable)
+library(tidyverse)
+library(remotes)
+
+#cargar paquetes necesarios del codigo de Smith
+library(biglm)
+library(ergm)
+library(doParallel)
+
+#cargar funciones de smith
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/ego_net_case_control_model.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/output_glm_formula.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/prepare_case_control_logistic_data_function_create_vars.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/prepare_case_control_logistic_data_function.R")
+
+#setear el working directory
+setwd("C:/Users/rober/Desktop/homofilia_elsoc")
+
+#cargar base de datos de Vicente
+load("C:/Users/rober/Desktop/homofilia_elsoc/ego_network_elsoc2017.RData")
+head(ego_network_elsoc2017)
+```
+
+
+## Replicación
+
+Aquí vamos a crear una lista que describe los nombres de las columnas de los atributos alter en el marco de datos de la red ego.  Las columnas de atributo alter tienen la forma de race1 race2 ...
+
+Crearemos una lista, donde cada segmento es un atributo diferente,
+#primera raza, luego educación, luego género. Este es el mismo orden que en var.name.characs.
+
+
+```{r}
+
+#name of degree column on data frame:
+var.name.degree="deg"
+
+#names of key ego attribute columns in data frame:
+var.name.characs=c("educ", "relig", "sex", "age") 
+
+var.name.characs.alter=list()
+for (p in 1:length(var.name.characs)){
+  var.name.characs.alter[[p]]=paste(var.name.characs[[p]],1:5,sep="")
+}
+
+#Let's take a look:
+var.name.characs.alter
+```
+
+
+## Fórmula
+
+Ahora vamos a fijar la fórmula de interés. Los posibles términos son los siguientes:
+
+`nodematch` = un término de coincidencia/sin coincidencia (¿ego y alter coinciden en un atributo?)
+`nodemix` = incluye términos para todos los pares de categorías en el atributo de interés.
+`absdiff` = incluye un término para mostrar la diferencia absoluta entre ego y alter (apropiado para variables continuas.
+`nodefactor` =controla el grado de los diferentes grupos (ajustando las estimaciones de homofilia el hecho de que algunos grupos, por ejemplo, los hombres, tienen más vínculos que otros grupos, como las mujeres).
+`nodecov` = similar a nodefactor pero apropiado para variables continuas.
+
+
+
+```{r}
+formula_ego_elsoc<- as.formula(~nodematch("sex") + nodefactor("sex")+
+                                 nodematch("educ")+nodematch("relig")+absdiff("age"))
+```
+Como nota general, es que el algoritmo puede incluir una lista de formulas.
+Ahora estamos en condiciones de ejecutar la regresión logística de casos y controles para estimar la fuerza de la homofilia. La función es egonet_case_control_model. Las entradas principales son la fórmula, los datos de egoredes, los vectores que definen las variables en el marco de datos y una serie de especificaciones que determinan cómo ejecutar el modelo de control de casos.
+ Aquí enumeramos las entradas de uso común:
+
+ `formula` = fórmula para usar en la regresión logística (lo especificamos arriba)
+
+`ego_data` = ingresar datos de la red ego (leer arriba)
+
+`var.name.degree` = nombre de la variable en los datos que tiene el grado de los encuestados (establecido arriba)
+
+`var.name.characs` = vector de nombres de atributos para ego (establecido arriba)
+
+`var.name.characs.alter` = lista de nombres de columna para atributos alter, mismo orden que var.name.charac (establecido arriba)
+
+`case.control.type` = tipo de hipótesis nula utilizada para construir la parte de control del marco de datos (los 0 en la regresión), uno de:
+"weighted.random.matching", "one_one_matching", "one_one_pair_matching", "case.case.matching",
+
+"weighted.random.matching" si desea emparejar a los encuestados al azar en función de las ponderaciones de probabilidad
+"case.case.matching" si desea simplemente hacer coincidir a todos los encuestados con todos los demás encuestados para formar controles
+"one_one_matching" si desea hacer coincidir cada caso con solo otro caso para la parte de control del conjunto de datos
+"one_one_pair_matching" si solo quiere que cada encuestado de un par tenga la parte de control, ya sea como remitente o receptor, pero no ambos
+"weighted.random.matching" es la opción predeterminada, emparejando aleatoriamente a los encuestados juntos para formar la parte de control (no vinculada) del marco de datos.
+
+`max.control.data.N` = tamaño máximo usado al construir la porción de control del marco de datos  cuando se establece en NULL (como en este ejemplo), se establecerá en el número de posibles diadas, según el número de encuestados: N * (N-1) / 2 cuando la base de datos de entrada tiene N grande y, por lo tanto, el número de díadas es bastante grande puede ser útil configurar esto para limitar el tamaño de la parte de control del marco de datos;
+por ejemplo, establecido en 100000 (o algo similarmente grande pero menor que el número de posibles díadas).
+
+`max.alter` = número máximo de alters que los encuestados pudieron nombrar (aquí establecido en 5)
+
+`remove.isolates.control` = ¿deberían eliminarse los aislamientos de la parte de control del conjunto de datos? T / F (aquí establecemos esto en T)
+
+`weight.var.name` = nombre de la variable que especifica el vector de ponderación para crear una población representativa (o NULL)
+Esta variable se utilizará al realizar el muestreo de bootstrap, de modo que el bootstrap
+muestras se seleccionan en función de los pesos de entrada. Si es NULL, asume igual probabilidad de selección de cada encuestado. Aquí los configuramos en NULL, por lo que el mismo peso para cada encuestado
+
+`weight.var.name.control` = nombre de la variable para las ponderaciones de los encuestados (si no es NULL) esta variable se utilizará al emparejar personas para formar la parte de control del marco de datos (los 0), cuando se usa la comparación aleatoria ponderada.
+
+Mayores pesos significan que tendrán más posibilidades de ser
+seleccionado en el proceso de emparejamiento. Si es NULL, el valor predeterminado es usar weight.var.name.
+Aquí establecemos esto en NULL.
+
+`num.iterations` = número de veces diferentes del algoritmo debería reconstruir la porción de control y reestimar el modelo (en este ejemplo, esto es 2, pero en un análisis real sería mucho más alto, digamos 100).
+Tenga en cuenta que solo necesitaríamos 1 iteración si configuramos case.control.typea case.case.matching.
+
+`bootstrap.sample` = T / F, si el algoritmo ejecuta el modelo varias veces utilizando diferentes muestras cada vez? (aquí lo ponemos en T) El muestreo de bootstrap es necesario para estimar los SE en las estimaciones.
+
+`num.bootstrap.samples` = ¿cuántas muestras de bootstrap tomar? solo es relevante si bootstrap.sample = T
+(aquí hacemos 10 muestras de bootstrap; en un análisis real, esto sería mucho más alto)
+
+`useparallel` = ¿T / F debería emplear varias CPU al ejecutar análisis? (aquí lo ponemos en T)
+
+`num.cores` = ¿cuántos núcleos utilizar? solo es relevante si useparallel = T (aquí usamos procesamiento paralelo y 5 núcleos)
+
+`maxit` = número de iteraciones máximas para usar en la función bigglm (aquí establecido en 20)
+
+`nodemix.reference` = vector que especifica la categoría de referencia si se utilizan términos de nodemix (aquí establecemos "C.Some College.C.Some College" como referencia para los términos de combinación de nodos educativos
+
+`adjust.intercept` = ¿T / F debería intentar ajustar la intersección para mapear en el tamaño real conocido de la población completa? (aquí se establece en F; si T también necesita establecer true.pop.size)
+
+
+## Análisis 1: Weighted random matching
+
+En este primer procedimiento se parea a los respondientes en base a los pesos de probabilidad
+
+```{r eval=FALSE}
+egonet_case_control_output<-egonet_case_control_model(formula=formula_ego_elsoc,
+                                                     ego_data=ego_network_elsoc2017,
+                                                     var.name.degree=var.name.degree, 
+                                                     var.name.characs=var.name.characs,
+                                                     var.name.characs.alter=var.name.characs.alter, 
+                                                     case.control.type="weighted.random.matching", 
+                                                     max.alter=5,
+                                                     max.control.data.N=NULL,
+                                                     remove.isolates.control=T, 
+                                                     weight.var.name=NULL, 
+                                                     weight.var.name.control=NULL, 
+                                                     num.iterations=100,
+                                                     bootstrap.sample=T, 
+                                                     num.bootstrap.samples=10,
+                                                     useparallel=T, 
+                                                     num.cores=6,
+                                                     #nodemix.reference=c("C.Some College.C.Some College"),
+                                                     maxit=20,
+                                                     adjust.intercept=F)
+
+```
+
+
+```{r}
+load(file = "output_weightedRandomMatching.RData")
+coefs=egonet_case_control_output$coefs
+
+head(coefs)
+
+#We can see that we have estimated logistic regression coefficients predicting 
+#a tie as a function of matching on race and gender, and nodemix terms for education.
+#We also have a nodefactor term for gender. 
+
+#We can take this data and summarize over all the samples (or iterations).
+#Here we take the mean over the iterations for each sample.
+
+coefs_sample=aggregate(.~sample, data=coefs, mean)
+
+#Let's take a look at the results: 
+coefs_sample
+
+#We see there is a 1 row per sample now. 
+
+#Now, we will take out the columns for sample and iteration
+coefs_sample=coefs_sample[,-which(colnames(coefs_sample) %in% c("sample","iteration"))]
+
+#At this point we can calculate means, SEs, and so on to summarize 
+#the coefficients across the different samples:
+apply(coefs_sample, 2, mean)
+apply(coefs_sample, 2, sd)
+apply(coefs_sample, 2, quantile, c(.025, .975))
+
+```
+
+
+
+## Análisis 2: case case matching
+
+Se parean a todos los respondientes con todos los respondientes para formar los controles.
+
+
+```{r eval=FALSE}
+egonet_case_control_output2<-egonet_case_control_model(formula=formula_ego_elsoc,
+                                                     ego_data=ego_network_elsoc2017,
+                                                     var.name.degree=var.name.degree, 
+                                                     var.name.characs=var.name.characs
+                                                     ,var.name.characs.alter=var.name.characs.alter, 
+                                                     case.control.type="case.case.matching", max.alter=5,
+                                                     max.control.data.N=NULL,
+                                                     remove.isolates.control=T, 
+                                                     weight.var.name=NULL, weight.var.name.control=NULL, 
+                                                     num.iterations=2,
+                                                     bootstrap.sample=T, num.bootstrap.samples=10,
+                                                     useparallel=T, num.cores=5,
+                                                     nodemix.reference=c("C.Some College.C.Some College"),
+                                                     maxit=20,
+                                                     adjust.intercept=F)
+```
+
+
+```{r eval=FALSE}
+coefs=egonet_case_control_output2$coefs
+
+head(coefs)
+
+#We can see that we have estimated logistic regression coefficients predicting 
+#a tie as a function of matching on race and gender, and nodemix terms for education.
+#We also have a nodefactor term for gender. 
+
+#We can take this data and summarize over all the samples (or iterations).
+#Here we take the mean over the iterations for each sample.
+
+coefs_sample=aggregate(.~sample, data=coefs, mean)
+
+#Let's take a look at the results: 
+coefs_sample
+
+#We see there is a 1 row per sample now. 
+
+#Now, we will take out the columns for sample and iteration
+coefs_sample=coefs_sample[,-which(colnames(coefs_sample) %in% c("sample","iteration"))]
+
+#At this point we can calculate means, SEs, and so on to summarize 
+#the coefficients across the different samples:
+apply(coefs_sample, 2, mean)
+apply(coefs_sample, 2, sd)
+apply(coefs_sample, 2, quantile, c(.025, .975))
+```
+
+
+
+## Análisis 3: one one matching
+
+Se parea cada caso con solo un solo caso para las parte de control,
+
+
+```{r eval=FALSE}
+egonet_case_control_output3<-egonet_case_control_model(formula=formula_ego_elsoc,
+                                                     ego_data=ego_network_elsoc2017,
+                                                     var.name.degree=var.name.degree, 
+                                                     var.name.characs=var.name.characs
+                                                     ,var.name.characs.alter=var.name.characs.alter, 
+                                                     case.control.type="one_one_matching", max.alter=5,
+                                                     max.control.data.N=NULL,
+                                                     remove.isolates.control=T, 
+                                                     weight.var.name=NULL, weight.var.name.control=NULL, 
+                                                     num.iterations=2,
+                                                     bootstrap.sample=T, num.bootstrap.samples=10,
+                                                     useparallel=T, num.cores=5,
+                                                     nodemix.reference=c("C.Some College.C.Some College"),
+                                                     maxit=20,
+                                                     adjust.intercept=F)
+```
+
+
+```{r eval=FALSE}
+coefs=egonet_case_control_output3$coefs
+
+head(coefs)
+
+#We can see that we have estimated logistic regression coefficients predicting 
+#a tie as a function of matching on race and gender, and nodemix terms for education.
+#We also have a nodefactor term for gender. 
+
+#We can take this data and summarize over all the samples (or iterations).
+#Here we take the mean over the iterations for each sample.
+
+coefs_sample=aggregate(.~sample, data=coefs, mean)
+
+#Let's take a look at the results: 
+coefs_sample
+
+#We see there is a 1 row per sample now. 
+
+#Now, we will take out the columns for sample and iteration
+coefs_sample=coefs_sample[,-which(colnames(coefs_sample) %in% c("sample","iteration"))]
+
+#At this point we can calculate means, SEs, and so on to summarize 
+#the coefficients across the different samples:
+apply(coefs_sample, 2, mean)
+apply(coefs_sample, 2, sd)
+apply(coefs_sample, 2, quantile, c(.025, .975))
+
+```
+
+
+## Análisis 4: one one pair matching
+
+Se parea un sólo respondiente en un parte de control (como sender o receiver pero no las dos)
+
+
+```{r eval=FALSE}
+egonet_case_control_output4<-egonet_case_control_model(formula=formula_ego_elsoc,
+                                                     ego_data=ego_network_elsoc2017,
+                                                     var.name.degree=var.name.degree, 
+                                                     var.name.characs=var.name.characs,
+                                                     var.name.characs.alter=var.name.characs.alter, 
+                                                     case.control.type="one_one_pair_matching", 
+                                                     max.alter=5,
+                                                     max.control.data.N=NULL,
+                                                     remove.isolates.control=T, 
+                                                     weight.var.name=NULL, 
+                                                     weight.var.name.control=NULL, 
+                                                     num.iterations=2,
+                                                     bootstrap.sample=T, 
+                                                     num.bootstrap.samples=10,
+                                                     useparallel=T, 
+                                                     num.cores=5,
+                                                     nodemix.reference=c("C.Some College.C.Some College"),
+                                                     maxit=20,
+                                                     adjust.intercept=F)
+
+```
+
+
+```{r eval=FALSE}
+coefs=egonet_case_control_output3$coefs
+
+head(coefs)
+
+#We can see that we have estimated logistic regression coefficients predicting 
+#a tie as a function of matching on race and gender, and nodemix terms for education.
+#We also have a nodefactor term for gender. 
+
+#We can take this data and summarize over all the samples (or iterations).
+#Here we take the mean over the iterations for each sample.
+
+coefs_sample=aggregate(.~sample, data=coefs, mean)
+
+#Let's take a look at the results: 
+coefs_sample
+
+#We see there is a 1 row per sample now. 
+
+#Now, we will take out the columns for sample and iteration
+coefs_sample=coefs_sample[,-which(colnames(coefs_sample) %in% c("sample","iteration"))]
+
+#At this point we can calculate means, SEs, and so on to summarize 
+#the coefficients across the different samples:
+apply(coefs_sample, 2, mean)
+apply(coefs_sample, 2, sd)
+apply(coefs_sample, 2, quantile, c(.025, .975))
+
+```
+
+
+## Tareas pendientes
+
+- volver a armar base de datos con el ponderador
+
+- ver como meter variable barrio
+
+- ver como meter variables a nivel de ego
+
+- partionar el analisis kin-nokin
+
+- ver cómo estimar errores estandar clusterizados
+
+- ver cómo meter el diseño muestral complejo en el analisis (suplemento parte A)
+
+
+
+## Anexo con datos simulados por smith
+
+
+```{r}
+load(url("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/example_ego_network_data/egonet_data.Rdata"))
+
+```
+
+##Analisis varios
+
+```{r eval=FALSE}
+egonet_case_control_outputx<-egonet_case_control_model(formula=formula_ego_elsoc,
+                                                     ego_data=ego_network_elsoc2017,
+                                                     var.name.degree=var.name.degree, 
+                                                     var.name.characs=var.name.characs
+                                                     ,var.name.characs.alter=var.name.characs.alter, 
+                                                     case.control.type="weighted.random.matching", max.alter=5,
+                                                     max.control.data.N=NULL,
+                                                     remove.isolates.control=T, 
+                                                     weight.var.name=NULL, weight.var.name.control=NULL, 
+                                                     num.iterations=2,
+                                                     bootstrap.sample=T, num.bootstrap.samples=10,
+                                                     useparallel=T, num.cores=5,
+                                                     nodemix.reference=c("C.Some College.C.Some College"),
+                                                     maxit=20,
+                                                     adjust.intercept=F)
+
+
+
+
+coefs=egonet_case_control_outputx$coefs
+
+head(coefs)
+
+#We can see that we have estimated logistic regression coefficients predicting 
+#a tie as a function of matching on race and gender, and nodemix terms for education.
+#We also have a nodefactor term for gender. 
+
+#We can take this data and summarize over all the samples (or iterations).
+#Here we take the mean over the iterations for each sample.
+
+coefs_sample=aggregate(.~sample, data=coefs, mean)
+
+#Let's take a look at the results: 
+coefs_sample
+
+#We see there is a 1 row per sample now. 
+
+#Now, we will take out the columns for sample and iteration
+coefs_sample=coefs_sample[,-which(colnames(coefs_sample) %in% c("sample","iteration"))]
+
+#At this point we can calculate means, SEs, and so on to summarize 
+#the coefficients across the different samples:
+apply(coefs_sample, 2, mean)
+apply(coefs_sample, 2, sd)
+apply(coefs_sample, 2, quantile, c(.025, .975))
+
+
+
+```
+
+
+
+
+

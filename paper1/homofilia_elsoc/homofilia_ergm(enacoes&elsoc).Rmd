@@ -1,0 +1,1188 @@
+---
+title: "homofilia_ergm (enacoes&elsoc)"
+author: "Cantillan, Roberto."
+date: ""
+output: 
+ rmarkdown::html_document:
+     theme: lumen
+     toc: true # table of content true
+     toc_depth: 2  # upto three depths of headings (specified by #, ## and ###)
+     number_sections: true  ## if you want number sections at each table header
+     toc_float: true
+     toc_collapsed: true
+     highlight: pygments
+---
+
+
+# ENACOES 
+
+## Librerías
+```{r, message=FALSE}
+library(ergm)
+library(ergm.ego)
+library(car)
+library(egor)
+library(tidyverse)
+library(tibble)
+library(texreg)
+library(prioritizr)
+library(questionr)
+```
+
+## Cargamos data 
+```{r}
+load("/home/rober/Documentos/ELSOC/ELSOC_W02_v3.00_R.RData")
+load("/home/rober/Documentos/ELSOC/ELSOC_W04_v2.01_R.RData")
+load("/home/rober/Documentos/ELSOC/ELSOC_W01_v4.01_R.RData")
+```
+
+
+# Análisis ENACOES 2014
+```{r,warning=FALSE, message=FALSE}
+load("/home/rober/Documentos/ELSOC/ENACOES_2014_V5.RData")
+```
+
+```{r}
+c<-enacoes %>% dplyr::rename(.egoID = FOLIO)
+```
+
+## Crear data de alteris
+```{r}
+alter_1<-c %>%
+        dplyr::select(.egoID, 
+                      sexo=A10_B1, 
+                      edad=A10_C1, 
+                      educ=A10_H1,
+                      relig=A10_G1, 
+                      ideol=A10_I1,
+                      rel=A10_D1)
+#View(alter_1)
+alter_2<-c %>%
+        dplyr::select(.egoID, 
+                      sexo=A10_B2, 
+                      edad=A10_C2, 
+                      educ=A10_H2,
+                      relig=A10_G2, 
+                      ideol=A10_I2,
+                      rel=A10_D2)
+
+alter_3<-c %>%
+        dplyr::select(.egoID, 
+                      sexo=A10_B3, 
+                      edad=A10_C3, 
+                      educ=A10_H3,
+                      relig=A10_G3, 
+                      ideol=A10_I3,
+                      rel=A10_D3)
+
+alter_4<- c %>%
+        dplyr::select(.egoID, 
+                      sexo=A10_B4, 
+                      edad=A10_C4, 
+                      educ=A10_H4,
+                      relig=A10_G4, 
+                      ideol=A10_I4,
+                      rel=A10_D4)
+
+alter_5<-c %>%
+        dplyr::select(.egoID, 
+                      sexo=A10_B5, 
+                      edad=A10_C5, 
+                      educ=A10_H5,
+                      relig=A10_G5, 
+                      ideol=A10_I5,
+                      rel=A10_D5)
+```
+
+## setear
+
+Creamos un vector adicional en cada subset de alteris con un número constante que identifica a que alter representa la data. 
+```{r}
+alter_1$n<-1
+alter_2$n<-2
+alter_3$n<-3
+alter_4$n<-4
+alter_5$n<-5
+```
+
+## Crear base de alteris en formato *long*
+
+Con la función `rbind` agregamos la data hacia abajo en relación al orden establecido por los vectores númericos creados anteriormente. Es necesario que todas las columnas (variables) tengan los mismos nombres. Posteriormente con la función `arrange`, ordenamos la data en orden descendente en función del vector identificador de los egos (respondentes).  
+
+```{r}
+alteris<-rbind(alter_1,alter_2,alter_3,alter_4,alter_5)
+alteris<-arrange(alteris, .egoID)
+```
+
+## Crear vector alter id
+
+En el siguiente chunk creamos un vector identificador para cada uno de los alteris presentes en la data "alteris". Lo identificamos como objeto `tibble` y eliminamos el vector "n". 
+```{r}
+alteris   <- rowid_to_column(alteris, var = ".alterID")
+alteris   <- as_tibble(alteris)
+alteris$n <- NULL
+```
+
+## Recod alteris
+
+Recodificamos los valores de los atributos de los alteris. 
+```{r}
+
+# Educación 
+#edulab<-c('ltsecondary', 'secondary', 'technicaled', 'collegeed')
+alteris$educ <-factor(Recode(alteris$educ ,"1:3=1;4:5=2;6:7=3;8:10=4;99=NA"))
+table(alteris$educ)
+
+# Religión 
+#relilab<-c('catholic','evangelical','other','none')
+alteris$relig<-factor(Recode(alteris$relig,"1=1;2=2;3=3;4:6=4;8=4;9=NA"))
+table(alteris$relig)
+
+# Ideología 
+#ideolab<-c('rightwinger','centerright','center','centerleft','leftwinger','none')
+alteris$ideol<-factor(Recode(alteris$ideol,"1=1;2=2;3=3;4=4;5=5;8=6;9=6"))
+table(alteris$ideol)
+
+# Edad 
+alteris$edad<-as.numeric(alteris$edad)
+#alteris$edad <-factor(Recode(alteris$edad ,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+
+# Sexo 
+#sexolab<-c('male','female')
+alteris$sexo <-factor(Recode(alteris$sexo ,"1=1;2=2"))
+table(alteris$sexo)
+
+# Relación
+alteris<-alteris%>%
+  dplyr::mutate(rel=case_when(rel%in%1:5~"fam",
+                              rel%in%6:11~"nofam"))
+table(alteris$rel)
+```
+
+
+## Data Frame Ego’s
+
+Creamos un subset con la data de ego equivalente a la data de los alteris. Las nombramos de la misma manera. 
+```{r}
+egos <-c %>%
+       dplyr::select(.egoID, 
+                     sexo=P1, 
+                     edad=P2,
+                     educ=P4,
+                     relig=S24, 
+                     ideol=F6,
+                     educp=S22,
+                     educm=S21,
+                     etnia=S1,
+                     w=POND_MUESTRAL)
+
+egos <- as_tibble(egos)
+```
+
+## Recod data Ego's
+
+Recodificamos las variables de la data de ego siguiendo el patrón de la data de alteris. 
+```{r}
+# Educación
+egos$educ <-factor(Recode(egos$educ,"1:3=1;4:5=2;6:7=3;8:10=4;88:99=NA"))
+table(egos$educ)
+
+# Religión
+egos$relig<-factor(Recode(egos$relig,"1=1;2=2;3:8=3;9:11=4;88:99=NA"))
+table(egos$relig)
+
+# Ideología
+#ideolab2<-c('leftwinger','centerleft','center','centerright','rightwinger','none')
+egos$ideol<-factor(Recode(egos$ideol,"1:2=5;3:4=4;5:6=3;7:8=2;9:10=1;88:99=6"))
+table(egos$ideol)
+
+# Edad
+egos$edad<-as.numeric(egos$edad)
+#egos$edad <-factor(Recode(egos$edad,"18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+
+# Sexo
+egos$sexo <-factor(Recode(egos$sexo,"1=1;2=2"))
+table(egos$sexo)
+
+# educ madre y padre
+egos$educp<-Recode(egos$educp,"1:3=1;4:5=2;6:7=3;8:10=4;99=NA")
+table(egos$educp)
+egos$educm<-Recode(egos$educm,"1:3=1;4:5=2;6:7=3;8:10=4;99=NA")
+table(egos$educm)
+
+egos$educmpmax <-factor(pmax(egos$educm,  egos$educp))
+summary(egos$educmpmax)
+
+# etnia 
+egos$etnia<-factor(Recode(egos$etnia,"1:9=1;10=2;99=NA"))
+table(egos$etnia)
+
+# round weights
+w<-egos%>%
+  dplyr::select(w)#%>%
+  #mutate(w=round(egos$w, digits = 2))
+
+
+egos$w<-NULL
+#egos$educm<-NULL
+#egos$educp<-NULL
+#egos$calentorno<-NULL
+
+egos$educm<-NULL
+egos$educp<-NULL
+```
+
+# Crear objeto Egor (requerido para trabajar con función `ergm.ego`)
+
+### Borrar alteris con 5 parámetros con NA
+```{r}
+## Función para borrar casos con un número determinado de NA's. 
+#delete.na <- function(DF, n=0) {
+#  DF[rowSums(is.na(DF)) <= n,]
+#}
+#
+#alteris<-delete.na(alteris, 4) #borro los casos que tienen más de 4 NA.  
+```
+
+```{r}
+alteriss<-alteris%>%
+  dplyr::select(.alterID,.egoID,sexo,educ,relig,ideol,edad)
+
+egoss<-egos%>%
+  dplyr::select(.egoID,sexo,educ,relig,ideol,edad)
+
+enaego_sexo <- egor(alters = alteriss, 
+                      egos = egoss,
+                   ID.vars = list(ego   = ".egoID",
+                                  alter = ".alterID"))
+
+enaego_sexo<-as.egor(enaego_sexo)
+#View(elsoc_ego$ego)
+#View(elsoc_ego$alter)
+
+#enaego_sexo[["ego"]]  <-enaego_sexo[["ego"]]%>%drop_na(sexo)
+#enaego_sexo[["alter"]]<-enaego_sexo[["alter"]]%>%drop_na(sexo)
+
+enaego_sexo[["ego"]]  <-enaego_sexo[["ego"]]%>%drop_na(educ)
+enaego_sexo[["alter"]]<-enaego_sexo[["alter"]]%>%drop_na(educ)
+
+enaego_sexo[["ego"]]  <-enaego_sexo[["ego"]]%>%drop_na(relig)
+enaego_sexo[["alter"]]<-enaego_sexo[["alter"]]%>%drop_na(relig)
+```
+
+
+# Modelos
+
+## Modelo 1
+```{r, message=FALSE}
+modelo1<-ergm.ego(enaego_sexo~
+                    nodematch("sexo",diff=TRUE),
+                    control=control.ergm.ego(ppopsize="samp",
+                                            ppop.wt="sample",
+                                            stats.wt="data",
+                                            stats.est="survey"),
+                    ignore.max.alters=F,
+                    boot.R = 1000000,
+                    ergm = control.ergm(init.method = "MPLE",
+                                        init.MPLE.samplesize = 5e7,
+                                        MPLE.constraints.ignore = TRUE,
+                                        MCMLE.effectiveSize = NULL,
+                                        MCMC.burnin = 5e4,
+                                        MCMC.interval = 5e4,
+                                        MCMC.samplesize = 1000000,
+                                        parallel = 16,
+                                        SAN.nsteps = 5e7))
+
+
+summary(modelo1)
+
+```
+
+## Modelo 2
+```{r, message=FALSE}
+modelo2<-ergm.ego(enaego_sexo~
+                    nodematch("sexo",  diff=TRUE)
+                  + nodematch("educ", diff=TRUE), 
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=TRUE,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo2)
+```
+
+
+## Modelo 3
+```{r, message=FALSE}
+modelo3<-ergm.ego(enaego_sexo~
+                    nodematch("sexo",  diff=TRUE)
+                  + nodematch("educ", diff=TRUE)
+                  + nodematch("relig", diff=TRUE), 
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=TRUE,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo3)
+```
+
+## Modelo 4
+```{r, message=FALSE}
+modelo4<-ergm.ego(enaego_sexo~
+                    nodematch("sexo",  diff=TRUE)
+                  + nodematch("educ", diff=TRUE)
+                  + nodematch("relig", diff=TRUE)
+                  + nodematch("ideol", diff=TRUE), 
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=FALSE,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo4)
+```
+
+## Modelo 5
+```{r, message=FALSE}
+modelo5<-ergm.ego(enaego_sexo~
+                    nodematch("sexo",  diff=TRUE)
+                  + nodematch("educ", diff=TRUE)
+                  + nodematch("relig", diff=TRUE)
+                  + nodematch("ideol", diff=TRUE)
+                  + absdiff("edad"), 
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=FALSE,
+                  boot.R = 10000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 7500,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo5)
+```
+
+# ELSOC 2017
+
+```{r}
+#load("C:/Users/rober/Downloads/ELSOC_W04_v2.01_R.RData")
+```
+
+### Renombrar ID
+```{r}
+a<-elsoc_2017 %>% dplyr::rename(.egoID = idencuesta)
+```
+
+# Análisis ELSOC 2017
+## Crear data frame alteris para 2017=a
+
+Creamos subset con data de cada uno de los alteris mencionados, manteniendo el ID de cada ego en el cual están anidados. Las columnas de cada uno de los subset deben tener los mismos nombres. 
+```{r}
+alter_1<-a %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_01, 
+                      edad=r13_edad_01, 
+                      educ=r13_educ_01,
+                      relig=r13_relig_01, 
+                      ideol=r13_ideol_01,
+                      barrio=r13_barrio_01,
+                      rel=r13_relacion_01)
+#View(alter_1)
+alter_2<-a %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_02, 
+                      edad=r13_edad_02, 
+                      educ=r13_educ_02, 
+                      relig=r13_relig_02, 
+                      ideol=r13_ideol_02,
+                      barrio=r13_barrio_02,
+                      rel=r13_relacion_02)
+
+alter_3<-a %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_03, 
+                      edad=r13_edad_03, 
+                      educ=r13_educ_03, 
+                      relig=r13_relig_03, 
+                      ideol=r13_ideol_03,
+                      barrio=r13_barrio_03,
+                      rel=r13_relacion_03)
+
+alter_4<- a %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_04, 
+                      edad=r13_edad_04, 
+                      educ=r13_educ_04, 
+                      relig=r13_relig_04, 
+                      ideol=r13_ideol_04,
+                      barrio=r13_barrio_04,
+                      rel=r13_relacion_04)
+
+alter_5<-a %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_05, 
+                      edad=r13_edad_05, 
+                      educ=r13_educ_05, 
+                      relig=r13_relig_05, 
+                      ideol=r13_ideol_05,
+                      barrio=r13_barrio_05,
+                      rel=r13_relacion_05)
+```
+
+## setear
+
+Creamos un vector adicional en cada subset de alteris con un número constante que identifica a que alter representa la data. 
+```{r}
+alter_1$n<-1
+alter_2$n<-2
+alter_3$n<-3
+alter_4$n<-4
+alter_5$n<-5
+```
+
+## Crear base de alteris en formato *long*
+
+Con la función `rbind` agregamos la data hacia abajo en relación al orden establecido por los vectores númericos creados anteriormente. Es necesario que todas las columnas (variables) tengan los mismos nombres. Posteriormente con la función `arrange`, ordenamos la data en orden descendente en función del vector identificador de los egos (respondentes).  
+
+```{r}
+alteris<-rbind(alter_1,alter_2,alter_3,alter_4,alter_5)
+alteris<-arrange(alteris, .egoID)
+```
+
+## Crear vector alter id
+
+En el siguiente chunk creamos un vector identificador para cada uno de los alteris presentes en la data "alteris". Lo identificamos como objeto `tibble` y eliminamos el vector "n". 
+```{r}
+alteris   <- rowid_to_column(alteris, var = ".alterID")
+alteris   <- as_tibble(alteris)
+alteris$n <- NULL
+```
+
+## Recod alteris
+
+Recodificamos los valores de los atributos de los alteris. 
+```{r}
+# NA
+alteris[alteris=="-999"]<-NA
+alteris[alteris=="-888"]<-NA
+
+# Educación 
+#edulab<-c('ltsecondary', 'secondary', 'technicaled', 'collegeed')
+alteris$educ <-factor(Recode(alteris$educ ,"1=1;2:3=2;4=3;5=4"))
+table(alteris$educ)
+
+# Religión 
+#relilab<-c('catholic','evangelical','other','none')
+alteris$relig<-factor(Recode(alteris$relig,"1=1;2=2;3:4=4;5=3"))
+table(alteris$relig)
+
+# Ideología 
+#ideolab<-c('rightwinger','centerright','center','centerleft','leftwinger','none')
+alteris$ideol<-factor(Recode(alteris$ideol,"1=1;2=2;3=3;4=4;5=5;6=6"))
+table(alteris$ideol)
+
+# Edad 
+alteris$edad<-as.numeric(alteris$edad)
+#alteris$edad <-factor(Recode(alteris$edad ,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+
+# Sexo 
+#sexolab<-c('male','female')
+alteris$sexo <-factor(Recode(alteris$sexo ,"1=1;2=2"))
+table(alteris$sexo)
+
+# Relación
+alteris<-alteris%>%
+  dplyr::mutate(rel=case_when(rel%in%1:3~"fam",
+                              rel%in%4:5~"nofam"))
+table(alteris$rel)
+
+# Barrio 
+alteris$barrio<-factor(Recode(alteris$barrio,"1=1;2=2"))
+table(alteris$barrio)
+#alteris<-na.omit(alteris)
+```
+
+### Borrar alteris con 5 parámetros con NA
+```{r}
+# Función para borrar casos con un número determinado de NA's. 
+#delete.na <- function(DF, n=0) {
+#  DF[rowSums(is.na(DF)) <= n,]
+#}
+#
+#alteris<-delete.na(alteris, 4) #borro los casos que tienen más de 4 NA.  
+```
+
+## Data Frame Ego’s
+
+Creamos un subset con la data de ego equivalente a la data de los alteris. Las nombramos de la misma manera. 
+```{r}
+egos <-a %>%
+       dplyr::select(.egoID, 
+                     sexo=m0_sexo, 
+                     edad=m0_edad, 
+                     educ=m01, 
+                     relig=m38, 
+                     ideol=c15)
+
+egos <- as_tibble(egos)
+```
+
+## Recod data Ego's
+
+Recodificamos las variables de la data de ego siguiendo el patrón de la data de alteris. 
+```{r}
+# NA
+egos[egos=="-999"]<-NA
+egos[egos=="-888"]<-NA
+
+# Educación
+egos$educ <-factor(Recode(egos$educ,"1:3=1;4:5=2;6:7=3;8:10=4"))
+table(egos$educ)
+
+# Religión
+egos$relig<-factor(Recode(egos$relig,"1=1;2=2;3:6=3;7:9=4"))
+table(egos$relig)
+
+# Ideología
+#ideolab2<-c('leftwinger','centerleft','center','centerright','rightwinger','none')
+egos$ideol<-factor(Recode(egos$ideol,"0:2=5;3:4=4;5=3;6:7=2;8:10=1;11:12=6"))
+table(egos$ideol)
+
+# Edad
+egos$edad<-as.numeric(egos$edad)
+#egos$edad <-factor(Recode(egos$edad,"18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+
+# Sexo
+egos$sexo <-factor(Recode(egos$sexo,"1=1;2=2"))
+table(egos$sexo)
+
+# Barrio
+egos$barrio <- matrix(rbinom(2473*5,1,0.6),2473,1) # Criterio minimalista
+egos$barrio<-factor(Recode(egos$barrio,"1=1;0=2"))
+table(egos$barrio)
+```
+
+# Crear objeto Egor (requerido para trabajar con función `ergm.ego`)
+
+## Todos los alteris
+```{r}
+elsoc_ego <- egor(alters = alteris, 
+                  egos = egos,
+                  ID.vars = list(
+                    ego = ".egoID",
+                    alter = ".alterID"))
+
+elsoc_ego<-as.egor(elsoc_ego)
+#View(elsoc_ego$ego)
+#View(elsoc_ego$alter)
+
+
+elsoc_ego[["ego"]]  <-elsoc_ego[["ego"]]%>%drop_na(sexo)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(sexo)
+elsoc_ego[["ego"]]  <-elsoc_ego[["ego"]]%>%drop_na(educ)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(educ)
+elsoc_ego[["ego"]]  <-elsoc_ego[["ego"]]%>%drop_na(relig)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(relig)
+elsoc_ego[["ego"]]  <-elsoc_ego[["ego"]]%>%drop_na(ideol)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(ideol)
+elsoc_ego[["ego"]]<-elsoc_ego[["ego"]]%>%drop_na(barrio)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(barrio)
+
+```
+
+# Modelos
+## Modelo 6
+```{r, message=FALSE}
+modelo6<-ergm.ego(elsoc_ego~
+                  nodematch("sexo", diff=TRUE),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo6)
+```
+
+## Modelo 7
+```{r, message=FALSE}
+modelo7<-ergm.ego(elsoc_ego~
+                    nodematch("sexo", diff=TRUE)
+                  + nodematch("educ", diff=TRUE),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo7)
+```
+
+## Modelo 8
+```{r, message=FALSE}
+modelo8<-ergm.ego(elsoc_ego~
+                    nodematch("sexo", diff=TRUE)
+                  + nodematch("educ", diff=TRUE)
+                  + nodematch("relig", diff=TRUE),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo8)
+```
+
+## Modelo 9
+```{r, message=FALSE}
+modelo9<-ergm.ego(elsoc_ego~
+                    nodematch("sexo", diff=TRUE)
+                  + nodematch("educ", diff=TRUE)
+                  + nodematch("relig", diff=TRUE)
+                  + nodematch("ideol", diff=TRUE),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo9)
+```
+
+## Modelo 10
+```{r, message=FALSE}
+modelo10<-ergm.ego(elsoc_ego~
+                    nodematch("sexo", diff=TRUE)
+                  + nodematch("educ", diff=TRUE)
+                  + nodematch("relig", diff=TRUE)
+                  + nodematch("ideol", diff=TRUE)
+                  + nodematch("barrio",diff=TRUE),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo10)
+```
+
+## Modelo 11
+```{r, message=FALSE}
+modelo11<-ergm.ego(elsoc_ego~
+                    nodematch("sexo", diff=TRUE)
+                  + nodematch("educ", diff=TRUE)
+                  + nodematch("relig", diff=TRUE)
+                  + nodematch("ideol", diff=TRUE)
+                  + nodematch("barrio",diff=TRUE)
+                  + absdiff("edad"),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                                      init.MPLE.samplesize = 5e7,
+                                      MPLE.constraints.ignore = TRUE,
+                                      MCMLE.effectiveSize = NULL,
+                                      MCMC.burnin = 5e4,
+                                      MCMC.interval = 5e4,
+                                      MCMC.samplesize = 1000000,
+                                      parallel = 16,
+                                      SAN.nsteps = 5e7))
+
+summary(modelo11)
+```
+
+
+# ELSOC 2019 
+
+```{r}
+#load("C:/Users/rober/Downloads/ELSOC_W04_v2.01_R.RData")
+```
+
+Trabajamos solo con los casos muestra==1 (muestra original)
+```{r}
+b<-elsoc_2019 %>% dplyr::rename(.egoID = idencuesta)%>%
+  dplyr::filter(muestra==1)
+```
+
+
+Creamos subset con data de cada uno de los alteris mencionados, manteniendo el ID de cada ego en el cual están anidados. Las columnas de cada uno de los subset deben tener los mismos nombres. 
+
+```{r}
+alter_1<-b %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_01, 
+                      edad=r13_edad_01, 
+                      educ=r13_educ_01,
+                      relig=r13_relig_01, 
+                      ideol=r13_ideol_01,
+                      barrio=r13_barrio_01,
+                      rel=r13_relacion_01)
+#View(alter_1)
+alter_2<-b %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_02, 
+                      edad=r13_edad_02, 
+                      educ=r13_educ_02, 
+                      relig=r13_relig_02, 
+                      ideol=r13_ideol_02,
+                      barrio=r13_barrio_02,
+                      rel=r13_relacion_02)
+
+alter_3<-b %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_03, 
+                      edad=r13_edad_03, 
+                      educ=r13_educ_03, 
+                      relig=r13_relig_03, 
+                      ideol=r13_ideol_03,
+                      barrio=r13_barrio_03,
+                      rel=r13_relacion_03)
+
+alter_4<- b %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_04, 
+                      edad=r13_edad_04, 
+                      educ=r13_educ_04, 
+                      relig=r13_relig_04, 
+                      ideol=r13_ideol_04,
+                      barrio=r13_barrio_04,
+                      rel=r13_relacion_04)
+
+alter_5<-b %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_05, 
+                      edad=r13_edad_05, 
+                      educ=r13_educ_05, 
+                      relig=r13_relig_05, 
+                      ideol=r13_ideol_05,
+                      barrio=r13_barrio_05,
+                      rel=r13_relacion_05)
+```
+
+## setear
+
+Creamos un vector adicional en cada subset de alteris con un número constante que identifica a que alter representa la data. 
+```{r}
+alter_1$n<-1
+alter_2$n<-2
+alter_3$n<-3
+alter_4$n<-4
+alter_5$n<-5
+```
+
+## Crear base de alteris en formato *long*
+
+Con la función `rbind` agregamos la data hacia abajo en relación al orden establecido por los vectores númericos creados anteriormente. Es necesario que todas las columnas (variables) tengan los mismos nombres. Posteriormente con la función `arrange`, ordenamos la data en orden descendente en función del vector identificador de los egos (respondentes).  
+
+```{r}
+alteris<-rbind(alter_1,alter_2,alter_3,alter_4,alter_5)
+alteris<-arrange(alteris, .egoID)
+```
+
+## Crear vector alter id
+
+En el siguiente chunk creamos un vector identificador para cada uno de los alteris presentes en la data "alteris". Lo identificamos como objeto `tibble` y eliminamos el vector "n". 
+```{r}
+alteris   <- rowid_to_column(alteris, var = ".alterID")
+alteris   <- as_tibble(alteris)
+alteris$n <- NULL
+```
+
+## Recod alteris
+
+Recodificamos los valores de los atributos de los alteris. 
+```{r}
+# NA
+alteris[alteris=="-999"]<-NA
+alteris[alteris=="-888"]<-NA
+
+# Educación 
+#edulab<-c('ltsecondary', 'secondary', 'technicaled', 'collegeed')
+alteris$educ <-factor(Recode(alteris$educ ,"1=1;2:3=2;4=3;5=4"))
+table(alteris$educ)
+
+# Religión 
+#relilab<-c('catholic','evangelical','other','none')
+alteris$relig<-factor(Recode(alteris$relig,"1=1;2=2;3:4=4;5=3"))
+table(alteris$relig)
+
+# Ideología 
+#ideolab<-c('rightwinger','centerright','center','centerleft','leftwinger','none')
+alteris$ideol<-factor(Recode(alteris$ideol,"1=1;2=2;3=3;4=4;5=5;6=6"))
+table(alteris$ideol)
+
+# Edad 
+alteris$edad<-as.numeric(alteris$edad)
+#alteris$edad <-factor(Recode(alteris$edad ,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+
+# Sexo 
+#sexolab<-c('male','female')
+alteris$sexo <-factor(Recode(alteris$sexo ,"1=1;2=2"))
+table(alteris$sexo)
+
+# Relación
+alteris<-alteris%>%
+  dplyr::mutate(rel=case_when(rel%in%1:3~"fam",
+                              rel%in%4:5~"nofam"))
+table(alteris$rel)
+
+# Barrio 
+alteris$barrio<-factor(Recode(alteris$barrio,"1=1;2=2"))
+table(alteris$barrio)
+#alteris<-na.omit(alteris)
+```
+
+### Borrar alteris con 5 parámetros con NA
+```{r}
+# Función para borrar casos con un número determinado de NA's. 
+#delete.na <- function(DF, n=0) {
+#  DF[rowSums(is.na(DF)) <= n,]
+#}
+#
+#alteris<-delete.na(alteris, 4) #borro los casos que tienen más de 4 NA.  
+```
+
+## Data Frame Ego’s
+
+Creamos un subset con la data de ego equivalente a la data de los alteris. Las nombramos de la misma manera. 
+```{r}
+
+egos <-b %>%
+       dplyr::select(.egoID, 
+                     sexo=m0_sexo, 
+                     edad=m0_edad, 
+                     educ=m01, 
+                     relig=m38, 
+                     ideol=c15)
+
+egos <- as_tibble(egos)
+```
+
+## Recod data Ego's
+
+Recodificamos las variables de la data de ego siguiendo el patrón de la data de alteris. 
+```{r}
+# NA
+egos[egos=="-999"]<-NA
+egos[egos=="-888"]<-NA
+
+# Educación
+egos$educ <-factor(Recode(egos$educ,"1:3=1;4:5=2;6:7=3;8:10=4"))
+freq(table(egos$educ))
+
+# Religión
+egos$relig<-factor(Recode(egos$relig,"1=1;2=2;3:6=3;7:9=4"))
+freq(table(egos$relig))
+
+# Ideología
+#ideolab2<-c('leftwinger','centerleft','center','centerright','rightwinger','none')
+egos$ideol<-factor(Recode(egos$ideol,"0:2=5;3:4=4;5=3;6:7=2;8:10=1;11:12=6"))
+freq(table(egos$ideol))
+
+# Edad
+egos$edad<-as.numeric(egos$edad)
+#egos$edad <-factor(Recode(egos$edad,"18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+
+# Sexo
+egos$sexo <-factor(Recode(egos$sexo,"1=1;2=2"))
+freq(table(egos$sexo))
+
+# Barrio
+# Criterio minimalista (media de la proporción de la alteris del mismo barrio = 0.3376929)
+egos$barrio <- matrix(rbinom(2153*5,1,0.3),2153,1) 
+egos$barrio<-factor(Recode(egos$barrio,"1=1;0=2"))
+table(egos$barrio)
+
+```
+
+# Crear objeto Egor (requerido para trabajar con función `ergm.ego`)
+
+## Todos los alteris
+```{r}
+elsoc_ego <- egor(alters = alteris, 
+                  egos = egos,
+                  ID.vars = list(
+                    ego = ".egoID",
+                    alter = ".alterID"))
+
+elsoc_ego<-as.egor(elsoc_ego)
+#View(elsoc_ego$ego)
+#View(elsoc_ego$alter)
+
+elsoc_ego[["ego"]]<-elsoc_ego[["ego"]]%>%drop_na(edad)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(edad)
+elsoc_ego[["ego"]]<-elsoc_ego[["ego"]]%>%drop_na(relig)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(relig)
+elsoc_ego[["ego"]]<-elsoc_ego[["ego"]]%>%drop_na(sexo)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(sexo)
+elsoc_ego[["ego"]]<-elsoc_ego[["ego"]]%>%drop_na(ideol)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(ideol)
+elsoc_ego[["ego"]]<-elsoc_ego[["ego"]]%>%drop_na(educ)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(educ)
+elsoc_ego[["ego"]]<-elsoc_ego[["ego"]]%>%drop_na(barrio)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(barrio)
+```
+
+## Agregar weigths
+```{r}
+# Create a tiny weighted sample:
+#elsoc_ego<-sample(elsoc_ego, replace=TRUE, prob=weights(elsoc_ego$ego))
+#elsoc_ego
+# Create a tiny weighted sample:
+#s <- sample(elsoc_ego, 2473, replace=TRUE, prob=1:nrow(w))
+#s3 <- sample(elsoc_ego, 2473, replace=F, prob=elsoc_ego$w)
+#s$alter
+#example(sample.egor)
+
+#?ego_design
+```
+
+
+# Modelos
+
+## Modelo 12
+```{r, message=FALSE}
+modelo12<-ergm.ego(elsoc_ego~
+                  nodematch("sexo", diff=TRUE),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo12)
+```
+
+## Modelo 13
+```{r, message=FALSE}
+modelo13<-ergm.ego(elsoc_ego~
+                   nodematch("sexo", diff=TRUE)
+                  +nodematch("educ", diff=TRUE),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo13)
+```
+
+## Modelo 14
+```{r, message=FALSE}
+modelo14<-ergm.ego(elsoc_ego~
+                    nodematch("sexo", diff=TRUE)
+                   +nodematch("educ", diff=TRUE)
+                   +nodematch("relig",diff=TRUE),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo14)
+```
+
+## Modelo 15
+```{r, message=FALSE}
+modelo15<-ergm.ego(elsoc_ego~
+                    nodematch("sexo", diff=TRUE)
+                   +nodematch("educ", diff=TRUE)
+                   +nodematch("relig",diff=TRUE)
+                   +nodematch("ideol",diff=TRUE),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo15)
+```
+
+## Modelo 16
+```{r, message=FALSE}
+modelo16<-ergm.ego(elsoc_ego~
+                    nodematch("sexo", diff=TRUE)
+                   +nodematch("educ", diff=TRUE)
+                   +nodematch("relig",diff=TRUE)
+                   +nodematch("ideol",diff=TRUE)
+                   +nodematch("barrio",diff=TRUE),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo16)
+```
+
+## Modelo 17
+```{r, message=FALSE}
+modelo17<-ergm.ego(elsoc_ego~
+                    nodematch("sexo", diff=TRUE)
+                  + nodematch("educ", diff=TRUE)
+                  + nodematch("relig", diff=TRUE)
+                  + nodematch("ideol", diff=TRUE)
+                  + nodematch("barrio",diff=TRUE)
+                  + absdiff("edad"),
+                  control=control.ergm.ego(ppopsize="samp",
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="survey"),
+                  ignore.max.alters=T,
+                  boot.R = 1000000,
+                  ergm = control.ergm(init.method = "MPLE",
+                  init.MPLE.samplesize = 5e7,
+                  MPLE.constraints.ignore = TRUE,
+                  MCMLE.effectiveSize = NULL,
+                  MCMC.burnin = 5e4,
+                  MCMC.interval = 5e4,
+                  MCMC.samplesize = 1000000,
+                  parallel = 16,
+                  SAN.nsteps = 5e7))
+
+summary(modelo17)
+```
+
+

@@ -1,0 +1,2877 @@
+---
+title: "Homofilia absoluta 2014-2019"
+author: "Cantillan, Roberto."
+date: ""
+output: 
+   rmarkdown::html_document:
+     theme: lumen
+     toc: true 
+     toc_depth: 2  
+     number_sections: true
+     toc_float: true
+     toc_collapsed: true
+     highlight: pygments
+---
+
+# Cargamos Librerías
+```{r,message=FALSE,warning=FALSE}
+library(tidyverse)
+library(naniar)
+library(car)
+library(JWileymisc)
+library(data.table)
+library(questionr)
+library(tigerstats)
+library(readxl)
+library(memisc)
+library(kableExtra)
+library(boot)
+library(flextable)
+library(openxlsx)
+```
+
+
+# ELSOC 2017
+```{r}
+load("/home/rober/Escritorio/ELSOC/ELSOC_W01_v4.01_R.RData")
+load("/home/rober/Escritorio/ELSOC/ELSOC_W02_v3.00_R.RData")#2017
+load("/home/rober/Escritorio/ELSOC/ELSOC_W04_v2.01_R.RData")#2019
+```
+
+## Subset educ madre y padre
+```{r}
+elsoc_2016<-elsoc_2016%>%
+  dplyr::select(idencuesta,m27,m28)
+elsoc_2017<-left_join(elsoc_2017,elsoc_2016,by="idencuesta")
+```
+
+## Subset variables de género
+```{r}
+#elsoc_2019<-elsoc_2019%>%
+#  dplyr::select(idencuesta,g01_01,g01_02,g01_03,g01_04,g01_05,g02_05)
+#elsoc_2017<-left_join(elsoc_2017, elsoc_2019, by="idencuesta")
+```
+
+## Seleccionamos variables 
+```{r}
+el<-elsoc_2017 %>%
+  dplyr::filter(muestra==1)%>%
+  dplyr::select(idencuesta,
+                m0_sexo,
+                m0_edad,
+                c15, 
+                m01, 
+                m27,
+                m28,
+                m38, 
+                c15,
+                t06_01,
+                t06_02,
+                t06_03,
+                t06_04,
+                t06_05,
+                t06_06,
+                t06_07,
+                t06_08,
+               #g01_01,
+               #g01_02,
+               #g01_03,
+               #g01_04,
+               #g01_05,
+               #g02_05,
+                r13_sexo_01,
+                r13_sexo_02,
+                r13_sexo_03,
+                r13_sexo_04,
+                r13_sexo_05,
+                r13_edad_01,
+                r13_edad_02,
+                r13_edad_03,
+                r13_edad_04,
+                r13_edad_05,
+                r13_barrio_01, 
+                r13_barrio_02,
+                r13_barrio_03,
+                r13_barrio_04,
+                r13_barrio_05,
+                r13_educ_01,
+                r13_educ_02,
+                r13_educ_03,
+                r13_educ_04,
+                r13_educ_05,
+                r13_relig_01, 
+                r13_relig_02,
+                r13_relig_03,
+                r13_relig_04,
+                r13_relig_05,
+                r13_ideol_01,
+                r13_ideol_02,
+                r13_ideol_03,
+                r13_ideol_04,
+                r13_ideol_05,
+                r13_relacion_01,
+                r13_relacion_02,
+                r13_relacion_03,
+                r13_relacion_04,
+                r13_relacion_05,
+                ponderador02)
+
+```
+
+## tamred
+```{r}
+el$tamred = as.numeric(!is.na(el$r13_sexo_01)) +
+as.numeric(!is.na(el$r13_sexo_02)) +
+as.numeric(!is.na(el$r13_sexo_03)) +
+as.numeric(!is.na(el$r13_sexo_04)) +
+as.numeric(!is.na(el$r13_sexo_05))
+print(prop.table(table(el$tamred)), 2)
+```
+
+## Recodificamos 
+```{r}
+### Ego
+el$ego_p_educ<-factor(Recode(el$m27,"1:3=1;4:5=2;6:7=3;8:10=4;-999:-888=NA"))
+el$ego_m_educ<-factor(Recode(el$m28,"1:3=1;4:5=2;6:7=3;8:10=4;-999:-888=NA"))
+el$ego_educ <-factor(Recode(el$m01,"1:3=1;4:5=2;6:7=3;8:10=4;-999:-888=NA"))
+el$ego_relig<-factor(Recode(el$m38,"1=1;2=2;3:6=3;7:9=4;-999:-888=NA"))
+#el$ego_ideol<-factor(Recode(el$c15,"9:10=1;6:8=2;5=3;2:4=4;0:1=5;11:12=6;-999:-888=NA"))
+#el$ego_edad<-factor(Recode(el$m0_edad,"18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+el$ego_edad <-el$m0_edad
+el$ego_sexo <-factor(Recode(el$m0_sexo,"1=1;2=0"))
+el$ego_barrio<-1
+# Indice de calidad barrial
+el<-el%>%
+  na_if(-888)%>%
+  na_if(-999)%>%
+  mutate(cal_entorno=(t06_01+t06_02+t06_03+t06_04+
+                        t06_05+t06_06+t06_07+t06_08)/8)
+#summary(el$cal_entorno) #NA's=498
+
+#indice de "Machismo suave"
+#el<-el%>%
+#  na_if(-888)%>%
+#  na_if(-999)%>%
+#  mutate(machismo=(g01_01+g01_02+g01_03+g01_04+g01_05+g02_05)/6)
+#summary(el$machismo) #NA's= 857
+
+### Alter's
+el$alter_educ1 <-factor(Recode(el$r13_educ_01,"1=1;2:3=2;4=3;5=4;-999=NA"))
+el$alter_educ2 <-factor(Recode(el$r13_educ_02,"1=1;2:3=2;4=3;5=4;-999=NA"))
+el$alter_educ3 <-factor(Recode(el$r13_educ_03,"1=1;2:3=2;4=3;5=4;-999=NA"))
+el$alter_educ4 <-factor(Recode(el$r13_educ_04,"1=1;2:3=2;4=3;5=4;-999=NA"))
+el$alter_educ5 <-factor(Recode(el$r13_educ_05,"1=1;2:3=2;4=3;5=4;-999=NA"))
+
+el$alter_relig1<-factor(Recode(el$r13_relig_01,"1=1;2=2;3:4=4;5=3;-999=NA"))
+el$alter_relig2<-factor(Recode(el$r13_relig_02,"1=1;2=2;3:4=4;5=3;-999=NA"))
+el$alter_relig3<-factor(Recode(el$r13_relig_03,"1=1;2=2;3:4=4;5=3;-999=NA"))
+el$alter_relig4<-factor(Recode(el$r13_relig_04,"1=1;2=2;3:4=4;5=3;-999=NA"))
+el$alter_relig5<-factor(Recode(el$r13_relig_05,"1=1;2=2;3:4=4;5=3;-999=NA"))
+
+#el$alter_edad1 <-factor(Recode(el$r13_edad_01,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+#el$alter_edad2 <-factor(Recode(el$r13_edad_02,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+#el$alter_edad3 <-factor(Recode(el$r13_edad_03,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+#el$alter_edad4 <-factor(Recode(el$r13_edad_04,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+#el$alter_edad5 <-factor(Recode(el$r13_edad_05,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+
+el$alter_edad1<-el$r13_edad_01
+el$alter_edad2<-el$r13_edad_02
+el$alter_edad3<-el$r13_edad_03
+el$alter_edad4<-el$r13_edad_04
+el$alter_edad5<-el$r13_edad_05
+#summary(el$alter_edad1)
+
+el$alter_sexo1<-factor(Recode(el$r13_sexo_01,"1=1;2=0"))
+el$alter_sexo2<-factor(Recode(el$r13_sexo_02,"1=1;2=0"))
+el$alter_sexo3<-factor(Recode(el$r13_sexo_03,"1=1;2=0"))
+el$alter_sexo4<-factor(Recode(el$r13_sexo_04,"1=1;2=0"))
+el$alter_sexo5<-factor(Recode(el$r13_sexo_05,"1=1;2=0"))
+
+el$alter_barrio1<-Recode(el$r13_barrio_01,"1=1;2=0")
+el$alter_barrio2<-Recode(el$r13_barrio_02,"1=1;2=0")
+el$alter_barrio3<-Recode(el$r13_barrio_03,"1=1;2=0")
+el$alter_barrio4<-Recode(el$r13_barrio_04,"1=1;2=0")
+el$alter_barrio5<-Recode(el$r13_barrio_05,"1=1;2=0")
+
+## ideología 
+table(el$c15) #ideol
+el$c15[el$c15 == 0 | el$c15 == 1 | el$c15 == 2]<- 'leftwinger'
+el$c15[el$c15 == 3 | el$c15 == 4] <- 'center-left' 
+el$c15[el$c15 == 5]  <- 'center'
+el$c15[el$c15 == 11 | el$c15 == 12] <- 'none'
+el$c15[el$c15 == 6 | el$c15 == 7]<- 'center-right'
+el$c15[el$c15 == 8 | el$c15 == 9 | el$c15 == 10] <- 'rightwinger'
+
+el$ego_ideol<-el$c15
+el$ego_ideol[el$ego_ideol==-999] <- NA
+el$ego_ideol[el$ego_ideol==-888] <- NA
+table(el$ego_ideol)
+
+## ideol alter, derecha, centro derecha, centro, centro izquierda, izquierda, ninguno (6)
+table(el$r13_ideol_03) #
+
+for (i in 1:5){
+  eval(parse(text=paste('el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==1 & !is.na(el$r13_ideol_0',i,')]<-\'rightwinger\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==2 & !is.na(el$r13_ideol_0',i,')]<-\'center-right\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==3 & !is.na(el$r13_ideol_0',i,')]<-\'center\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==6 & !is.na(el$r13_ideol_0',i,')]<-\'none\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==4 & !is.na(el$r13_ideol_0',i,')]<-\'center-left\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==5 & !is.na(el$r13_ideol_0',i,')]<-\'leftwinger\' ', sep='')))
+}
+
+el$alter_ideol1<-el$r13_ideol_01
+el$alter_ideol1[el$alter_ideol1==-999] <- NA
+el$alter_ideol1[el$alter_ideol1==-888] <- NA
+
+el$alter_ideol2<-el$r13_ideol_02
+el$alter_ideol2[el$alter_ideol2==-999] <- NA
+el$alter_ideol2[el$alter_ideol2==-888] <- NA
+
+el$alter_ideol3<-el$r13_ideol_03
+el$alter_ideol3[el$alter_ideol3==-999] <- NA
+el$alter_ideol3[el$alter_ideol3==-888] <- NA
+
+el$alter_ideol4<-el$r13_ideol_04
+el$alter_ideol4[el$alter_ideol4==-999] <- NA
+el$alter_ideol4[el$alter_ideol4==-888] <- NA
+
+el$alter_ideol5<-el$r13_ideol_05
+el$alter_ideol5[el$alter_ideol5==-999] <- NA
+el$alter_ideol5[el$alter_ideol5==-888] <- NA
+
+table(el$alter_ideol2)
+
+# relación
+el<-el%>%
+  dplyr::mutate(alter_relacion1=case_when(r13_relacion_01%in%1:3~"fam",
+                                          r13_relacion_01%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion2=case_when(r13_relacion_02%in%1:3~"fam",
+                                          r13_relacion_02%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion3=case_when(r13_relacion_03%in%1:3~"fam",
+                                          r13_relacion_03%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion4=case_when(r13_relacion_04%in%1:3~"fam",
+                                          r13_relacion_04%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion5=case_when(r13_relacion_05%in%1:3~"fam",
+                                          r13_relacion_05%in%4:5~"nofam"))
+
+# crear variable proporción del total de vecinos
+el<-el %>% 
+  na_if(-999)%>%
+  rowwise() %>% 
+  mutate(barrio_total = sum(alter_barrio1,alter_barrio2,alter_barrio3,
+                   alter_barrio4,alter_barrio5, na.rm=TRUE))%>%
+  mutate(barrio_prop = barrio_total/tamred)
+
+summary(el$barrio_prop)
+mean(el$barrio_prop, na.rm=TRUE)
+table(el$barrio_total, el$tamred)
+#[1] 0.5675903
+```
+
+## Subset cross
+```{r}
+homoC_2017<-el%>%
+  dplyr::select(idencuesta,ego_sexo, ego_edad, ego_educ, ego_relig, ego_barrio,
+                ego_ideol,alter_sexo1, alter_sexo2, alter_sexo3, alter_sexo4,
+                alter_sexo5, alter_edad1, alter_edad2, alter_edad3, alter_edad4,
+                alter_edad5, alter_relig1, alter_relig2, alter_relig3, alter_relig4,
+                alter_relig5, alter_educ1, alter_educ2, alter_educ3, alter_educ4,
+                alter_educ5, alter_barrio1, alter_barrio2, alter_barrio3, alter_barrio4,
+                alter_barrio5, alter_ideol1, alter_ideol2, alter_ideol3, alter_ideol4,
+                alter_ideol5, alter_relacion1,alter_relacion2,alter_relacion3, 
+                alter_relacion4, alter_relacion5,tamred,ponderador=ponderador02)
+
+homoC_2017$año<-2017
+```
+
+
+## Distancias observadas (missmatch)
+```{r}
+##NOTA: weights are problematic: seleccionan misma persona con mucha mayor frecuencia.
+d <- length(el$idencuesta)
+table(table(sample(el$idencuesta, d, replace=T, prob = (1/el$ponderador02))))
+table(table(sample(el$idencuesta, d, replace=T)))
+#Si se usa ponderador, usar de la ola 1, no 2 (este tiene NA's)
+
+#Distancia Social Observada entre Ego-Alter
+vars_to_keep <- c("idencuesta", "ego_educ", "ego_relig",
+                  "ego_ideol", "ego_edad", "ego_sexo",
+                  "alter_educ1", "alter_educ2", "alter_educ3",
+                  "alter_educ4", "alter_educ5", "alter_relig1",
+                  "alter_relig2", "alter_relig3", "alter_relig4",
+                  "alter_relig5", "alter_ideol1", "alter_ideol2", 
+                  "alter_ideol3", "alter_ideol4", "alter_ideol5",
+                  "alter_edad1", "alter_edad2", "alter_edad3",
+                  "alter_edad4", "alter_edad5", "alter_sexo1", 
+                  "alter_sexo2", "alter_sexo3", "alter_sexo4", 
+                  "alter_sexo5", "alter_barrio1", "alter_barrio2",
+                  "alter_barrio3", "alter_barrio4", "alter_barrio5")
+
+elsoc_egos <- el[names(el) %in% vars_to_keep]
+
+educa_obs_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+edad_obs_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+relig_obs_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+sexo_obs_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+barrio_obs_dist<- array(NA, dim=list(nrow(elsoc_egos), 5))
+ideol_obs_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+
+### Distancia ego-alter observados
+
+#Distancia educativa
+for(k in 1:5) educa_obs_dist[,k] <- ifelse(
+  el$ego_educ == eval(parse(text=paste0("el$alter_educ", k))), 1, 0)
+educa_obs_dist <- data.frame(educa_obs_dist)
+names(educa_obs_dist) <- paste0("educ_dist_",1:5)
+
+## Edad
+for(k in 1:5) edad_obs_dist[,k] <- ifelse(
+  ((el$ego_edad) - eval(parse(text=paste0("el$alter_edad", k))))<=5, 1, 0)
+edad_obs_dist <- data.frame(edad_obs_dist)
+names(edad_obs_dist) <- paste0("edad_dist_",1:5)
+
+## Religion
+for(k in 1:5) relig_obs_dist[,k] <- ifelse(
+  el$ego_relig == eval(parse(text=paste0("el$alter_relig", k))), 1, 0)
+relig_obs_dist <- data.frame(relig_obs_dist)
+names(relig_obs_dist) <- paste0("relig_dist_",1:5)
+
+## Sexo
+for(k in 1:5) sexo_obs_dist[,k] <- ifelse(
+  el$ego_sexo == eval(parse(text=paste0("el$alter_sexo", k))), 1, 0)
+sexo_obs_dist <- data.frame(sexo_obs_dist)
+names(sexo_obs_dist) <- paste0("sexo_dist_",1:5)
+
+## Barrio
+for(k in 1:5) barrio_obs_dist[,k] <- ifelse(
+  el$ego_barrio == eval(parse(text=paste0("el$alter_barrio", k))), 1, 0)
+barrio_obs_dist <- data.frame(barrio_obs_dist)
+names(barrio_obs_dist) <- paste0("barrio_dist_",1:5)
+
+## Ideología
+for(k in 1:5) ideol_obs_dist[,k] <- ifelse(
+  el$ego_ideol == eval(parse(text=paste0("el$alter_ideol", k))), 1, 0)
+ideol_obs_dist <- data.frame(ideol_obs_dist)
+names(ideol_obs_dist) <- paste0("ideol_dist_",1:5)
+
+hom_obs <- data.frame(cbind(elsoc_egos, educa_obs_dist, edad_obs_dist, 
+                            relig_obs_dist, sexo_obs_dist,barrio_obs_dist,
+                            ideol_obs_dist))
+
+hom_obs$case <- 1
+```
+
+
+```{r}
+hom_obs<-hom_obs%>%
+  dplyr::select(idencuesta, case, ego_sexo, ego_edad, ego_relig, ego_educ, 
+                sexo_dist_1, sexo_dist_2, sexo_dist_3, sexo_dist_4, sexo_dist_5,
+                edad_dist_1, edad_dist_2, edad_dist_3, edad_dist_4, edad_dist_5,
+                relig_dist_1, relig_dist_2, relig_dist_3, relig_dist_4, relig_dist_5,
+                educ_dist_1, educ_dist_2, educ_dist_3, educ_dist_4, educ_dist_5,
+                barrio_dist_1, barrio_dist_2, barrio_dist_3, barrio_dist_4,
+                barrio_dist_5,ideol_dist_1,ideol_dist_2,ideol_dist_3,ideol_dist_4,
+                ideol_dist_5)
+
+head(hom_obs)
+```
+
+
+## Simulación (controles)
+```{r}
+## Preparativos simulacion de alteres
+sexo_sim_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+edad_sim_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+educ_sim_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+relig_sim_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+barrio_sim_dist<- array(NA, dim=list(nrow(elsoc_egos), 5))
+ideol_sim_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+```
+
+### Weight en base a CASEN
+```{r}
+w_casen <- read.csv("/home/rober/Documentos/homofilia_elsoc/weight_casen.csv", sep=";")
+```
+
+### Simulación con parámetros
+```{r}
+set.seed(44322)
+n <- 50
+d <- length(elsoc_egos$idencuesta)
+```
+
+### Post-stratificaction weight
+```{r}
+age_recode <- "18:30=18; 31:45=31; 46:60=46; else=61"
+elsoc_egos$age_grp <- car::recode(elsoc_egos$ego_edad, age_recode)
+elsoc_egos$educ_grp <- elsoc_egos$ego_educ
+educ_recode<- "1=2;2=3;3=4;else=5"
+elsoc_egos$educ_grp <- car::recode(elsoc_egos$ego_educ, educ_recode)
+elsoc_egos$educ_grp <- factor(elsoc_egos$educ_grp, exclude=NULL)
+
+
+w <- data.frame(xtabs(~educ_grp + ego_sexo + age_grp, data=elsoc_egos))
+#names(w) <- c("educaR_w02", "m0_sexo_w02", "Freq")
+w$prop <- w$Freq / sum(w$Freq)
+w$prop_target <- w_casen[,4]
+w$N_target <- w$prop_target*sum(w$Freq)
+w$w <- w$N_target/w$Freq
+w$ego_sexo <- as.numeric(levels(w$ego_sexo))[w$ego_sexo]
+
+el <- merge(elsoc_egos, w, by=c("educ_grp", "ego_sexo", "age_grp"))
+```
+
+### Sample random alters from observed egos
+```{r}
+#NOTA: Usar 'join' en lugar de 'merge', ya que este ultimo ordena las filas segun
+#'idencuesta', y por ende altera la seleccion aleatoria de alteres.
+nonties1 <- data.frame(idencuesta = sample(el$idencuesta, d, replace=T, el$w))
+nonties1 <- plyr::join(nonties1, elsoc_egos, by="idencuesta")
+
+nonties2 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties2 <- plyr::join(nonties2, elsoc_egos, by="idencuesta")
+
+nonties3 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties3 <- plyr::join(nonties3, elsoc_egos, by="idencuesta")
+
+nonties4 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties4 <- plyr::join(nonties4, elsoc_egos, by="idencuesta")
+
+nonties5 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties5 <- plyr::join(nonties5, elsoc_egos, by="idencuesta")
+
+  #Delete variables for next loop
+    elsoc_egos$Freq <- NULL
+    elsoc_egos$prop <- NULL
+    elsoc_egos$prop_target <- NULL
+    elsoc_egos$N_target <- NULL
+    elsoc_egos$w <- NULL
+    elsoc_egos$age_grp <- NULL
+    elsoc_egos$educ_grp <- NULL
+    
+### Distancia ego-alter simuladaos
+    
+## Educ
+for(k in 1:5) educ_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_educ == eval(parse(text=paste0("nonties",k,"$ego_educ"))), 1, 0)
+    educ_sim_dist <- data.frame(educ_sim_dist)
+    names(educ_sim_dist) <- paste0("educ_dist_",1:5)
+    
+## Edad
+for(k in 1:5) edad_sim_dist[,k] <- ifelse(
+    ((elsoc_egos$ego_edad) - eval(parse(text=paste0("nonties",k,"$ego_edad"))))<=5, 1, 0)
+    edad_sim_dist <- data.frame(edad_sim_dist)
+    names(edad_sim_dist) <- paste0("edad_dist_",1:5)
+
+## Religion
+for(k in 1:5) relig_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_relig == eval(parse(text=paste0("nonties",k,"$ego_relig"))), 1, 0)
+    relig_sim_dist <- data.frame(relig_sim_dist)
+    names(relig_sim_dist) <- paste0("relig_dist_",1:5)
+    
+## Sexo
+for(k in 1:5) sexo_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_sexo == eval(parse(text=paste0("nonties",k,"$ego_sexo"))), 1, 0)
+    sexo_sim_dist <- data.frame(sexo_sim_dist)
+    names(sexo_sim_dist) <- paste0("sexo_dist_",1:5)
+    
+## Barrio
+#barrio_sim_dist<-apply(barrio_sim_dist, c(1,2), function(x) sample(c(0,1),1))
+barrio_sim_dist <- matrix(rbinom(2473*5,1,0.6),2473,5) # Criterio minimalista
+barrio_sim_dist <- data.frame(barrio_sim_dist)
+names(barrio_sim_dist) <- paste0("barrio_dist_",1:5)
+
+## Ideología
+for(k in 1:5) ideol_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_ideol == eval(parse(text=paste0("nonties",k,"$ego_ideol"))), 1, 0)
+    ideol_sim_dist <- data.frame(ideol_sim_dist)
+    names(ideol_sim_dist) <- paste0("ideol_dist_",1:5)
+    
+hom_sim <- data.frame(cbind(el, educ_sim_dist, edad_sim_dist, relig_sim_dist, 
+                            sexo_sim_dist, barrio_sim_dist, ideol_sim_dist))
+hom_sim$case <- 0
+```
+
+```{r}
+hom_sim<-hom_sim%>%
+  dplyr::select(idencuesta, case, ego_sexo, ego_edad, ego_relig, ego_educ, 
+                sexo_dist_1, sexo_dist_2, sexo_dist_3, sexo_dist_4, sexo_dist_5,
+                edad_dist_1, edad_dist_2, edad_dist_3, edad_dist_4, edad_dist_5,
+                relig_dist_1, relig_dist_2, relig_dist_3, relig_dist_4, relig_dist_5,
+                educ_dist_1, educ_dist_2, educ_dist_3, educ_dist_4, educ_dist_5,
+                barrio_dist_1, barrio_dist_2, barrio_dist_3, barrio_dist_4, 
+                barrio_dist_5, ideol_dist_1, ideol_dist_2, ideol_dist_3, 
+                ideol_dist_4, ideol_dist_5)
+
+head(hom_sim)
+```
+
+### Eliminar alteres simulados si info de alter no fue observada
+```{r}
+vwm <- names(hom_sim)[!names(hom_sim) %in% c("idencuesta","case")]
+for(l in 1:length(vwm)) hom_sim[vwm[l]][is.na(hom_obs[vwm[l]])]<- NA
+head(hom_sim)
+```
+
+### Merge & reshape 
+```{r}
+#Merge
+homo <- plyr::rbind.fill(hom_obs, hom_sim)
+
+#Reshape Data 
+homoL <- reshape(homo, varying = list(paste0("educ_dist_", 1:5),
+                                      paste0("edad_dist_", 1:5),
+                                      paste0("relig_dist_", 1:5),
+                                      paste0("sexo_dist_", 1:5),
+                                      paste0("barrio_dist_", 1:5),
+                                      paste0("ideol_dist_", 1:5)),
+                 v.names=c("educ_dist", "edad_dist", "relig_dist", "sexo_dist",
+                           "barrio_dist", "ideol_dist"), 
+                 direction="long")
+
+homoL<-arrange(homoL, idencuesta)
+rownames(homoL) <- NULL
+
+homoL_2017 <- homoL[order(homoL$idencuesta),]
+homoL_2017$año<-2017
+#Drop lots of NA's - though with or without N of regresion is equal.
+#homoL <- subset(homoL, !is.na(sexo_dist))
+#head(homoL, 20)
+```
+
+
+# Descriptivos 
+
+## Sexo (observada y simulada)
+```{r}
+
+meanFunc <- function(x,i){mean(x[i])}
+
+sexo_dist_b_s<-homoL_2017%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(sexo_dist)%>%
+  na.omit()
+
+sexo_dist_b_o<-homoL_2017%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(sexo_dist)%>%
+  na.omit()
+
+boot_sexo_o<-boot(sexo_dist_b_o$sexo_dist, meanFunc, 1000)
+boot_sexo_o
+mean<-0.64
+SE<-0.006
+dist_obs_sexo_des<-c(mean,SE)
+dist_obs_sexo_des
+
+boot_sexo_s<-boot(sexo_dist_b_s$sexo_dist, meanFunc, 1000)
+boot_sexo_s
+mean<-0.5
+SE<-0.006
+dist_sim_sexo_des<-c(mean,SE)
+dist_sim_sexo_des
+
+
+dist_sexo_abs_2017<-rbind(dist_obs_sexo_des,dist_sim_sexo_des)
+dist_sexo_abs_2017
+```
+
+
+## edad (observada y simulada)
+```{r}
+edad_dist_b_s<-homoL_2017%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(edad_dist)%>%
+  na.omit()
+
+edad_dist_b_o<-homoL_2017%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(edad_dist)%>%
+  na.omit()
+
+boot_edad_o<-boot(edad_dist_b_o$edad_dist, meanFunc, 1000)
+boot_edad_o
+mean<-0.61
+SE<-0.006
+dist_obs_edad_des<-c(mean,SE)
+dist_obs_edad_des
+
+boot_edad_s<-boot(edad_dist_b_s$edad_dist, meanFunc, 1000)
+boot_edad_s
+mean<-0.55
+SE<-0.006
+dist_sim_edad_des<-c(mean,SE)
+dist_sim_edad_des
+
+
+dist_edad_abs_2017<-rbind(dist_obs_edad_des,dist_sim_edad_des)
+dist_edad_abs_2017
+```
+
+## educ (observada y simulada)
+```{r}
+educ_dist_b_s<-homoL_2017%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(educ_dist)%>%
+  na.omit()
+
+educ_dist_b_o<-homoL_2017%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(educ_dist)%>%
+  na.omit()
+
+boot_educ_o<-boot(educ_dist_b_o$educ_dist, meanFunc, 1000)
+boot_educ_o
+mean<-0.48
+SE<-0.006
+dist_obs_educ_des<-c(mean,SE)
+dist_obs_educ_des
+
+boot_educ_s<-boot(educ_dist_b_s$educ_dist, meanFunc, 1000)
+boot_educ_s
+mean<-0.27
+SE<-0.005
+dist_sim_educ_des<-c(mean,SE)
+dist_sim_educ_des
+
+
+dist_educ_abs_2017<-rbind(dist_obs_educ_des,dist_sim_educ_des)
+dist_educ_abs_2017
+```
+
+## relig (observada y simulada)
+```{r}
+relig_dist_b_s<-homoL_2017%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(relig_dist)%>%
+  na.omit()
+
+relig_dist_b_o<-homoL_2017%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(relig_dist)%>%
+  na.omit()
+
+boot_relig_o<-boot(relig_dist_b_o$relig_dist, meanFunc, 1000)
+boot_relig_o
+mean<-0.63
+SE<-0.005
+dist_obs_relig_des<-c(mean,SE)
+dist_obs_relig_des
+
+boot_relig_s<-boot(relig_dist_b_s$relig_dist, meanFunc, 1000)
+boot_relig_s
+mean<-0.37
+SE<-0.005
+dist_sim_relig_des<-c(mean,SE)
+dist_sim_relig_des
+
+dist_relig_abs_2017<-rbind(dist_obs_relig_des,dist_sim_relig_des)
+dist_relig_abs_2017
+```
+
+## barrio (observada y simulada)
+```{r}
+barrio_dist_b_s<-homoL_2017%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(barrio_dist)%>%
+  na.omit()
+
+barrio_dist_b_o<-homoL_2017%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(barrio_dist)%>%
+  na.omit()
+
+boot_barrio_o<-boot(barrio_dist_b_o$barrio_dist, meanFunc, 1000)
+boot_barrio_o
+mean<-0.53
+SE<-0.006
+dist_obs_barrio_des<-c(mean,SE)
+dist_obs_barrio_des
+
+boot_barrio_s<-boot(barrio_dist_b_s$barrio_dist, meanFunc, 1000)
+boot_barrio_s
+mean<-0.60
+SE<-0.006
+dist_sim_barrio_des<-c(mean,SE)
+dist_sim_barrio_des
+
+
+dist_barrio_abs_2017<-rbind(dist_obs_barrio_des,dist_sim_barrio_des)
+dist_barrio_abs_2017
+```
+
+## ideología (observada y simulada)
+```{r}
+ideol_dist_b_s<-homoL_2017%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(ideol_dist)%>%
+  na.omit()
+
+ideol_dist_b_o<-homoL_2017%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(ideol_dist)%>%
+  na.omit()
+
+boot_ideol_o<-boot(ideol_dist_b_o$ideol_dist, meanFunc, 1000)
+boot_ideol_o
+mean<-0.42
+SE<-0.006
+dist_obs_ideol_des<-c(mean,SE)
+dist_obs_ideol_des
+
+boot_ideol_s<-boot(ideol_dist_b_s$ideol_dist, meanFunc, 1000)
+boot_ideol_s
+mean<-0.25
+SE<-0.005
+dist_sim_ideol_des<-c(mean,SE)
+dist_sim_ideol_des
+
+
+dist_ideol_abs_2017<-rbind(dist_obs_ideol_des,dist_sim_ideol_des)
+dist_ideol_abs_2017
+```
+
+```{r}
+hom_abs_2017<-rbind(dist_sexo_abs_2017,
+                    dist_educ_abs_2017,
+                    dist_edad_abs_2017,
+                    dist_relig_abs_2017,
+                    dist_ideol_abs_2017)
+
+hom_abs_2017<-as.data.frame(hom_abs_2017)
+colnames(hom_abs_2017)<-c("Mean", "SE")
+```
+
+
+## Test por grupo caso/control
+```{r,results='asis',message=FALSE}
+hom_2017<-egltable(c("sexo_dist", "edad_dist", "educ_dist", "relig_dist", "barrio_dist",
+                     "ideol_dist"), data = homoL_2017, g="case", strict=T)
+show_html(hom_2017)
+```
+
+Esta tabla es la misma de Smith et al. (2014). Describe la media de la distancia sociodemogrpafica por parámetro. Como alternativa, el valor TRUE del argumento `strict` de la función `egltable`, muestra los porcentajes por categoría de la variable dummy.
+
+
+# ELSOC 2019 (muestra 1)
+
+```{r}
+load("/home/rober/Escritorio/ELSOC/ELSOC_W04_v2.01_R.RData")
+elsoc_2019<-left_join(elsoc_2019,elsoc_2016,by="idencuesta")
+```
+
+## Seleccionamos variables 
+```{r}
+el<-elsoc_2019 %>%
+  dplyr::filter(muestra==1)%>%
+  dplyr::select(idencuesta,
+                m0_sexo,
+                m0_edad,
+                c15, 
+                m01,
+                #m27,
+                #m28,
+                m38, 
+                c15,
+                t06_01,
+                t06_02,
+                t06_03,
+                t06_04,
+                t06_05,
+                t06_06,
+                t06_07,
+                t06_08,
+                g01_01,
+                g01_02,
+                g01_03,
+                g01_04,
+                g01_05,
+                g02_05,
+                c15,
+                r13_sexo_01,
+                r13_sexo_02,
+                r13_sexo_03,
+                r13_sexo_04,
+                r13_sexo_05,
+                r13_edad_01,
+                r13_edad_02,
+                r13_edad_03,
+                r13_edad_04,
+                r13_edad_05,
+                r13_barrio_01, 
+                r13_barrio_02,
+                r13_barrio_03,
+                r13_barrio_04,
+                r13_barrio_05,
+                r13_educ_01,
+                r13_educ_02,
+                r13_educ_03,
+                r13_educ_04,
+                r13_educ_05,
+                r13_relig_01, 
+                r13_relig_02,
+                r13_relig_03,
+                r13_relig_04,
+                r13_relig_05,
+                r13_ideol_01,
+                r13_ideol_02,
+                r13_ideol_03,
+                r13_ideol_04,
+                r13_ideol_05,
+                r13_relacion_01,
+                r13_relacion_02,
+                r13_relacion_03,
+                r13_relacion_04,
+                r13_relacion_05,
+                ponderador02)
+```
+
+## tamred
+```{r}
+el$tamred = as.numeric(!is.na(el$r13_sexo_01)) +
+as.numeric(!is.na(el$r13_sexo_02)) +
+as.numeric(!is.na(el$r13_sexo_03)) +
+as.numeric(!is.na(el$r13_sexo_04)) +
+as.numeric(!is.na(el$r13_sexo_05))
+print(prop.table(table(el$tamred)), 2)
+```
+
+## Recodificamos 
+```{r}
+### Ego
+#el$ego_p_educ<-factor(Recode(el$m27,"1:3=1;4:5=2;6:7=3;8:10=4;-999:-888=NA"))
+#el$ego_m_educ<-factor(Recode(el$m28,"1:3=1;4:5=2;6:7=3;8:10=4;-999:-888=NA"))
+el$ego_educ <-factor(Recode(el$m01,"1:3=1;4:5=2;6:7=3;8:10=4;-999:-888=NA"))
+el$ego_relig<-factor(Recode(el$m38,"1=1;2=2;3:6=3;7:9=4;-999:-888=NA"))
+table(el$ego_relig)
+#el$ego_ideol<-factor(Recode(el$c15,"9:10=1;6:8=2;5=3;2:4=4;0:1=5;11:12=6;-999:-888=NA"))
+#el$ego_edad <-factor(Recode(el$m0_edad,"19=1;20:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+el$ego_edad<-el$m0_edad
+el$ego_barrio<-1
+el$ego_sexo <-factor(Recode(el$m0_sexo,"1=1;2=0;-999:-888=NA"))
+
+# Indice de calidad barrial
+el<-el%>%
+  na_if(-888)%>%
+  na_if(-999)%>%
+  mutate(cal_entorno=(t06_01+t06_02+t06_03+t06_04+
+                        t06_05+t06_06+t06_07+t06_08)/8)
+#summary(el$cal_entorno) #NA's=498
+
+#indice de "Machismo suave"
+el<-el%>%
+  na_if(-888)%>%
+  na_if(-999)%>%
+  mutate(machismo=(g01_01+g01_02+g01_03+g01_04+g01_05+g02_05)/6)
+#summary(el$machismo) #NA's= 857
+
+
+### Alter's
+el$alter_educ1 <-factor(Recode(el$r13_educ_01,"1=1;2:3=2;4=3;5=4;-999:-888=NA"))
+el$alter_educ2 <-factor(Recode(el$r13_educ_02,"1=1;2:3=2;4=3;5=4;-999:-888=NA"))
+el$alter_educ3 <-factor(Recode(el$r13_educ_03,"1=1;2:3=2;4=3;5=4;-999:-888=NA"))
+el$alter_educ4 <-factor(Recode(el$r13_educ_04,"1=1;2:3=2;4=3;5=4;-999:-888=NA"))
+el$alter_educ5 <-factor(Recode(el$r13_educ_05,"1=1;2:3=2;4=3;5=4;-999:-888=NA"))
+
+el$alter_relig1<-factor(Recode(el$r13_relig_01,"1=1;2=2;3:4=4;5=3;-999:-888=NA"))
+el$alter_relig2<-factor(Recode(el$r13_relig_02,"1=1;2=2;3:4=4;5=3;-999:-888=NA"))
+el$alter_relig3<-factor(Recode(el$r13_relig_03,"1=1;2=2;3:4=4;5=3;-999:-888=NA"))
+el$alter_relig4<-factor(Recode(el$r13_relig_04,"1=1;2=2;3:4=4;5=3;-999:-888=NA"))
+el$alter_relig5<-factor(Recode(el$r13_relig_05,"1=1;2=2;3:4=4;5=3;-999:-888=NA"))
+
+#el$alter_edad1 <-factor(Recode(el$r13_edad_01,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+#el$alter_edad2 <-factor(Recode(el$r13_edad_02,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+#el$alter_edad3 <-factor(Recode(el$r13_edad_03,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+#el$alter_edad4 <-factor(Recode(el$r13_edad_04,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+#el$alter_edad5 <-factor(Recode(el$r13_edad_05,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+
+el$alter_edad1<-el$r13_edad_01
+el$alter_edad2<-el$r13_edad_02
+el$alter_edad3<-el$r13_edad_03
+el$alter_edad4<-el$r13_edad_04
+el$alter_edad5<-el$r13_edad_05
+
+el$alter_sexo1 <-factor(Recode(el$r13_sexo_01,"1=1;2=0;-999:-888=NA"))
+el$alter_sexo2 <-factor(Recode(el$r13_sexo_02,"1=1;2=0;-999:-888=NA"))
+el$alter_sexo3 <-factor(Recode(el$r13_sexo_03,"1=1;2=0;-999:-888=NA"))
+el$alter_sexo4 <-factor(Recode(el$r13_sexo_04,"1=1;2=0;-999:-888=NA"))
+el$alter_sexo5 <-factor(Recode(el$r13_sexo_05,"1=1;2=0;-999:-888=NA"))
+
+el$alter_barrio1<-Recode(el$r13_barrio_01,"1=1;2=0;-999:-888=NA")
+el$alter_barrio2<-Recode(el$r13_barrio_02,"1=1;2=0;-999:-888=NA")
+el$alter_barrio3<-Recode(el$r13_barrio_03,"1=1;2=0;-999:-888=NA")
+el$alter_barrio4<-Recode(el$r13_barrio_04,"1=1;2=0;-999:-888=NA")
+el$alter_barrio5<-Recode(el$r13_barrio_05,"1=1;2=0;-999:-888=NA")
+
+## Ideología 
+
+table(el$c15) #ideol
+
+el$c15[el$c15 == 0 | el$c15 == 1 | el$c15 == 2]<- 'leftwinger'
+el$c15[el$c15 == 3 | el$c15 == 4] <- 'center-left' 
+el$c15[el$c15 == 5]  <- 'center'
+el$c15[el$c15 == 11 | el$c15 == 12] <- 'none'
+el$c15[el$c15 == 6 | el$c15 == 7]<- 'center-right'
+el$c15[el$c15 == 8 | el$c15 == 9 | el$c15 == 10] <- 'rightwinger'
+
+el$ego_ideol<-el$c15
+table(el$ego_ideol)
+
+## ideol alter, derecha, centro derecha, centro, centro izquierda, izquierda, ninguno (6)
+table(el$r13_ideol_03) #
+
+for (i in 1:5){
+  eval(parse(text=paste('el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==1 & !is.na(el$r13_ideol_0',i,')]<-\'rightwinger\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==2 & !is.na(el$r13_ideol_0',i,')]<-\'center-right\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==3 & !is.na(el$r13_ideol_0',i,')]<-\'center\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==6 & !is.na(el$r13_ideol_0',i,')]<-\'none\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==4 & !is.na(el$r13_ideol_0',i,')]<-\'center-left\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==5 & !is.na(el$r13_ideol_0',i,')]<-\'leftwinger\' ', sep='')))
+}
+
+el$alter_ideol1<-el$r13_ideol_01
+el$alter_ideol1[el$alter_ideol1==-999] <- NA
+el$alter_ideol1[el$alter_ideol1==-888] <- NA
+
+el$alter_ideol2<-el$r13_ideol_02
+el$alter_ideol2[el$alter_ideol2==-999] <- NA
+el$alter_ideol2[el$alter_ideol2==-888] <- NA
+
+el$alter_ideol3<-el$r13_ideol_03
+el$alter_ideol3[el$alter_ideol3==-999] <- NA
+el$alter_ideol3[el$alter_ideol3==-888] <- NA
+
+el$alter_ideol4<-el$r13_ideol_04
+el$alter_ideol4[el$alter_ideol4==-999] <- NA
+el$alter_ideol4[el$alter_ideol4==-888] <- NA
+
+el$alter_ideol5<-el$r13_ideol_05
+el$alter_ideol5[el$alter_ideol5==-999] <- NA
+el$alter_ideol5[el$alter_ideol5==-888] <- NA
+
+table(el$alter_ideol2)
+
+## relación alter
+el<-el%>%
+  dplyr::mutate(alter_relacion1=case_when(r13_relacion_01%in%1:3~"fam",
+                                          r13_relacion_01%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion2=case_when(r13_relacion_02%in%1:3~"fam",
+                                          r13_relacion_02%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion3=case_when(r13_relacion_03%in%1:3~"fam",
+                                          r13_relacion_03%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion4=case_when(r13_relacion_04%in%1:3~"fam",
+                                          r13_relacion_04%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion5=case_when(r13_relacion_05%in%1:3~"fam",
+                                          r13_relacion_05%in%4:5~"nofam"))
+# tamaño de la red
+el$tamred = as.numeric(!is.na(el$alter_sexo1)) +
+            as.numeric(!is.na(el$alter_sexo2)) +
+            as.numeric(!is.na(el$alter_sexo3)) +
+            as.numeric(!is.na(el$alter_sexo4)) +
+            as.numeric(!is.na(el$alter_sexo5))
+print(prop.table(table(el$tamred)), 2)
+
+# crear variable proporción del total de vecinos
+el<-el %>% 
+  rowwise() %>% 
+  mutate(barrio_total = sum(alter_barrio1,alter_barrio2,alter_barrio3,
+                   alter_barrio4,alter_barrio5, na.rm=TRUE))%>%
+  mutate(barrio_prop = barrio_total/tamred)
+
+is.na(el$barrio_prop) <- sapply(el$barrio_prop, is.infinite) #definir inf
+table(el$barrio_prop)
+summary(el$barrio_prop)
+
+mean(el$barrio_prop, na.rm=TRUE)
+
+table(el$barrio_total, el$tamred)
+#[1] 0.3376929
+```
+
+## Subset cross
+```{r}
+homoC_2019m1<-el%>%
+  dplyr::select(idencuesta,ego_sexo, ego_edad, ego_educ, ego_relig, ego_barrio,
+                ego_ideol,alter_sexo1, alter_sexo2, alter_sexo3, alter_sexo4,
+                alter_sexo5, alter_edad1, alter_edad2, alter_edad3, alter_edad4,
+                alter_edad5, alter_relig1, alter_relig2, alter_relig3, alter_relig4,
+                alter_relig5, alter_educ1, alter_educ2, alter_educ3, alter_educ4,
+                alter_educ5, alter_barrio1, alter_barrio2, alter_barrio3, alter_barrio4,
+                alter_barrio5, alter_ideol1, alter_ideol2, alter_ideol3, alter_ideol4,
+                alter_ideol5, alter_relacion1,alter_relacion2,alter_relacion3, 
+                alter_relacion4, alter_relacion5,tamred,ponderador=ponderador02)
+
+homoC_2019m1$año<-2019
+```
+
+## Distancias observadas (missmatch)
+```{r}
+##NOTA: weights are problematic: seleccionan misma persona con mucha mayor frecuencia.
+d <- length(el$idencuesta)
+table(table(sample(el$idencuesta, d, replace=T, prob = (1/el$ponderador02))))
+table(table(sample(el$idencuesta, d, replace=T)))
+#Si se usa ponderador, usar de la ola 1, no 2 (este tiene NA's)
+
+#Distancia Social Observada entre Ego-Alter
+vars_to_keep <- c("idencuesta", "ego_educ", "ego_relig",
+                  "ego_ideol", "ego_edad", "ego_sexo",
+                  "alter_educ1", "alter_educ2", "alter_educ3",
+                  "alter_educ4", "alter_educ5", "alter_relig1",
+                  "alter_relig2", "alter_relig3", "alter_relig4",
+                  "alter_relig5", "alter_ideol1", "alter_ideol2", 
+                  "alter_ideol3", "alter_ideol4", "alter_ideol5",
+                  "alter_edad1", "alter_edad2", "alter_edad3",
+                  "alter_edad4", "alter_edad5", "alter_sexo1", 
+                  "alter_sexo2", "alter_sexo3", "alter_sexo4", 
+                  "alter_sexo5", "alter_barrio1", "alter_barrio2",
+                  "alter_barrio3", "alter_barrio4", "alter_barrio5")
+
+
+elsoc_egos <- el[names(el) %in% vars_to_keep]
+
+educa_obs_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+edad_obs_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+relig_obs_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+sexo_obs_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+barrio_obs_dist<- array(NA, dim=list(nrow(elsoc_egos), 5))
+ideol_obs_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+
+### Distancia ego-alter observados
+
+#Distancia educativa
+for(k in 1:5) educa_obs_dist[,k] <- ifelse(
+  el$ego_educ == eval(parse(text=paste0("el$alter_educ", k))), 1, 0)
+educa_obs_dist <- data.frame(educa_obs_dist)
+names(educa_obs_dist) <- paste0("educ_dist_",1:5)
+
+## Edad
+for(k in 1:5) edad_obs_dist[,k] <- ifelse(
+  ((el$ego_edad) - eval(parse(text=paste0("el$alter_edad", k))))<=5, 1, 0)
+edad_obs_dist <- data.frame(edad_obs_dist)
+names(edad_obs_dist) <- paste0("edad_dist_",1:5)
+
+## Religion
+for(k in 1:5) relig_obs_dist[,k] <- ifelse(
+  el$ego_relig == eval(parse(text=paste0("el$alter_relig", k))), 1, 0)
+relig_obs_dist <- data.frame(relig_obs_dist)
+names(relig_obs_dist) <- paste0("relig_dist_",1:5)
+
+## Sexo
+for(k in 1:5) sexo_obs_dist[,k] <- ifelse(
+  el$ego_sexo == eval(parse(text=paste0("el$alter_sexo", k))), 1, 0)
+sexo_obs_dist <- data.frame(sexo_obs_dist)
+names(sexo_obs_dist) <- paste0("sexo_dist_",1:5)
+
+## Barrio
+for(k in 1:5) barrio_obs_dist[,k] <- ifelse(
+  el$ego_barrio == eval(parse(text=paste0("el$alter_barrio", k))), 1, 0)
+barrio_obs_dist <- data.frame(barrio_obs_dist)
+names(barrio_obs_dist) <- paste0("barrio_dist_",1:5)
+
+## Ideología
+for(k in 1:5) ideol_obs_dist[,k] <- ifelse(
+  el$ego_ideol == eval(parse(text=paste0("el$alter_ideol", k))), 1, 0)
+ideol_obs_dist <- data.frame(ideol_obs_dist)
+names(ideol_obs_dist) <- paste0("ideol_dist_",1:5)
+
+hom_obs <- data.frame(cbind(elsoc_egos, educa_obs_dist, edad_obs_dist, 
+                            relig_obs_dist, sexo_obs_dist, barrio_obs_dist,
+                            ideol_obs_dist))
+hom_obs$case <- 1
+```
+
+```{r}
+hom_obs<-hom_obs%>%
+  dplyr::select(idencuesta, case, ego_sexo, ego_edad, ego_relig, ego_educ, 
+                sexo_dist_1, sexo_dist_2, sexo_dist_3, sexo_dist_4, sexo_dist_5,
+                edad_dist_1, edad_dist_2, edad_dist_3, edad_dist_4, edad_dist_5,
+                relig_dist_1, relig_dist_2, relig_dist_3, relig_dist_4, relig_dist_5,
+                educ_dist_1, educ_dist_2, educ_dist_3, educ_dist_4, educ_dist_5,
+                barrio_dist_1, barrio_dist_2, barrio_dist_3, barrio_dist_4,
+                barrio_dist_5, ideol_dist_1, ideol_dist_2, ideol_dist_3,
+                ideol_dist_4, ideol_dist_5)
+
+head(hom_obs)
+```
+
+
+## Simulación (controles)
+```{r}
+## Preparativos simulacion de alteres
+sexo_sim_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+edad_sim_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+educ_sim_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+relig_sim_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+barrio_sim_dist<- array(NA, dim=list(nrow(elsoc_egos), 5))
+ideol_sim_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+```
+
+### Weight en base a CASEN
+```{r}
+w_casen <- read.csv("/home/rober/Documentos/homofilia_elsoc/weight_casen.csv", sep=";")
+```
+
+### Simulación con parámetros
+```{r}
+set.seed(44322)
+n <- 50
+d <- length(elsoc_egos$idencuesta)
+```
+
+### Post-stratificaction weight
+```{r}
+age_recode <- "18:30=18; 31:45=31; 46:60=46; else=61"
+elsoc_egos$age_grp <- car::recode(elsoc_egos$ego_edad, age_recode)
+elsoc_egos$educ_grp <- elsoc_egos$ego_educ
+educ_recode<- "1=2;2=3;3=4;else=5"
+elsoc_egos$educ_grp <- car::recode(elsoc_egos$ego_educ, educ_recode)
+elsoc_egos$educ_grp <- factor(elsoc_egos$educ_grp, exclude=NULL)
+
+w <- data.frame(xtabs(~educ_grp + ego_sexo + age_grp, data=elsoc_egos))
+#names(w) <- c("educaR_w02", "m0_sexo_w02", "Freq")
+w$prop <- w$Freq / sum(w$Freq)
+w$prop_target <- w_casen[,4]
+w$N_target <- w$prop_target*sum(w$Freq)
+w$w <- w$N_target/w$Freq
+w$ego_sexo <- as.numeric(levels(w$ego_sexo))[w$ego_sexo]
+
+el <- merge(elsoc_egos, w, by=c("educ_grp", "ego_sexo", "age_grp"))
+```
+
+### Sample random alters from observed egos
+```{r}
+#NOTA: Usar 'join' en lugar de 'merge', ya que este ultimo ordena las filas segun
+#'idencuesta', y por ende altera la seleccion aleatoria de alteres.
+nonties1 <- data.frame(idencuesta = sample(el$idencuesta, d, replace=T, el$w))
+nonties1 <- plyr::join(nonties1, elsoc_egos, by="idencuesta")
+
+nonties2 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties2 <- plyr::join(nonties2, elsoc_egos, by="idencuesta")
+
+nonties3 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties3 <- plyr::join(nonties3, elsoc_egos, by="idencuesta")
+
+nonties4 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties4 <- plyr::join(nonties4, elsoc_egos, by="idencuesta")
+
+nonties5 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties5 <- plyr::join(nonties5, elsoc_egos, by="idencuesta")
+
+  #Delete variables for next loop
+    elsoc_egos$Freq <- NULL
+    elsoc_egos$prop <- NULL
+    elsoc_egos$prop_target <- NULL
+    elsoc_egos$N_target <- NULL
+    elsoc_egos$w <- NULL
+    elsoc_egos$age_grp <- NULL
+    elsoc_egos$educ_grp <- NULL
+    
+### Distancia ego-alter simuladaos
+    
+## Educ
+for(k in 1:5) educ_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_educ == eval(parse(text=paste0("nonties",k,"$ego_educ"))), 1, 0)
+    educ_sim_dist <- data.frame(educ_sim_dist)
+    names(educ_sim_dist) <- paste0("educ_dist_",1:5)
+    
+## Edad
+for(k in 1:5) edad_sim_dist[,k] <- ifelse(
+    ((elsoc_egos$ego_edad) - eval(parse(text=paste0("nonties",k,"$ego_edad"))))<=5, 1, 0)
+    edad_sim_dist <- data.frame(edad_sim_dist)
+    names(edad_sim_dist) <- paste0("edad_dist_",1:5)
+    
+## Religion
+for(k in 1:5) relig_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_relig == eval(parse(text=paste0("nonties",k,"$ego_relig"))), 1, 0)
+    relig_sim_dist <- data.frame(relig_sim_dist)
+    names(relig_sim_dist) <- paste0("relig_dist_",1:5)
+    
+## Sexo
+for(k in 1:5) sexo_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_sexo == eval(parse(text=paste0("nonties",k,"$ego_sexo"))), 1, 0)
+    sexo_sim_dist <- data.frame(sexo_sim_dist)
+    names(sexo_sim_dist) <- paste0("sexo_dist_",1:5)
+    
+## Barrio
+#barrio_sim_dist<-apply(barrio_sim_dist, c(1,2), function(x) sample(c(0,1),1))
+barrio_sim_dist <- matrix(rbinom(2153*5,1,0.34),2153,5) # Criterio minimalista = media a de la proporción de alteris vecinos. 
+barrio_sim_dist <- data.frame(barrio_sim_dist)
+names(barrio_sim_dist) <- paste0("barrio_dist_",1:5)
+
+## Ideología
+for(k in 1:5) ideol_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_ideol == eval(parse(text=paste0("nonties",k,"$ego_ideol"))), 1, 0)
+    ideol_sim_dist <- data.frame(ideol_sim_dist)
+    names(ideol_sim_dist) <- paste0("ideol_dist_",1:5)
+    
+hom_sim <- data.frame(cbind(el, educ_sim_dist, edad_sim_dist, relig_sim_dist, 
+                            sexo_sim_dist, barrio_sim_dist, ideol_sim_dist))
+
+hom_sim$case <- 0
+```
+
+```{r}
+hom_sim<-hom_sim%>%
+  dplyr::select(idencuesta, case, ego_sexo, ego_edad, ego_relig, ego_educ, 
+                sexo_dist_1, sexo_dist_2, sexo_dist_3, sexo_dist_4, sexo_dist_5,
+                edad_dist_1, edad_dist_2, edad_dist_3, edad_dist_4, edad_dist_5,
+                relig_dist_1, relig_dist_2, relig_dist_3, relig_dist_4, relig_dist_5,
+                educ_dist_1, educ_dist_2, educ_dist_3, educ_dist_4, educ_dist_5,
+                barrio_dist_1, barrio_dist_2, barrio_dist_3, barrio_dist_4,
+                barrio_dist_5, ideol_dist_1, ideol_dist_2, ideol_dist_3, 
+                ideol_dist_4, ideol_dist_5)
+
+head(hom_sim)
+```
+
+### Eliminar alteres simulados si info de alter no fue observada
+```{r}
+vwm <- names(hom_sim)[!names(hom_sim) %in% c("idencuesta","case")]
+for(l in 1:length(vwm)) hom_sim[vwm[l]][is.na(hom_obs[vwm[l]])]<- NA
+head(hom_sim)
+```
+
+
+### Merge & reshape 
+```{r}
+#Merge
+homo <- plyr::rbind.fill(hom_obs, hom_sim)
+
+#Reshape Data 
+homoL <- reshape(homo, varying = list(paste0("educ_dist_", 1:5),
+                                      paste0("edad_dist_", 1:5),
+                                      paste0("relig_dist_", 1:5),
+                                      paste0("sexo_dist_", 1:5),
+                                      paste0("barrio_dist_", 1:5),
+                                      paste0("ideol_dist_", 1:5)),
+                 v.names=c("educ_dist", "edad_dist", "relig_dist", "sexo_dist",
+                           "barrio_dist", "ideol_dist"), 
+                 direction="long")
+
+homoL<-arrange(homoL, idencuesta)
+rownames(homoL) <- NULL
+
+homoL_2019m1 <- homoL[order(homoL$idencuesta),]
+homoL_2019m1$año<-2019
+#homoL_2019
+#Drop lots of NA's - though with or without N of regresion is equal.
+#homoL <- subset(homoL, !is.na(sexo_dist))
+#head(homoL, 20)
+```
+
+
+# Descriptivos 
+
+## Sexo (observada y simulada)
+```{r}
+meanFunc <- function(x,i){mean(x[i])}
+
+sexo_dist_b_s<-homoL_2019m1%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(sexo_dist)%>%
+  na.omit()
+
+sexo_dist_b_o<-homoL_2019m1%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(sexo_dist)%>%
+  na.omit()
+
+boot_sexo_o<-boot(sexo_dist_b_o$sexo_dist, meanFunc, 1000)
+boot_sexo_o
+mean<-0.65
+SE<-0.007
+dist_obs_sexo_des<-c(mean,SE)
+dist_obs_sexo_des
+
+boot_sexo_s<-boot(sexo_dist_b_s$sexo_dist, meanFunc, 1000)
+boot_sexo_s
+mean<-0.49
+SE<-0.007
+dist_sim_sexo_des<-c(mean,SE)
+dist_sim_sexo_des
+
+dist_sexo_abs_2019<-rbind(dist_obs_sexo_des,dist_sim_sexo_des)
+dist_sexo_abs_2019
+```
+
+
+## edad (observada y simulada)
+```{r}
+edad_dist_b_s<-homoL_2019m1%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(edad_dist)%>%
+  na.omit()
+
+edad_dist_b_o<-homoL_2019m1%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(edad_dist)%>%
+  na.omit()
+
+boot_edad_o<-boot(edad_dist_b_o$edad_dist, meanFunc, 1000)
+boot_edad_o
+mean<-0.62
+SE<-0.007
+dist_obs_edad_des<-c(mean,SE)
+dist_obs_edad_des
+
+boot_edad_s<-boot(edad_dist_b_s$edad_dist, meanFunc, 1000)
+boot_edad_s
+mean<-0.5
+SE<-0.007
+dist_sim_edad_des<-c(mean,SE)
+dist_sim_edad_des
+
+dist_edad_abs_2019<-rbind(dist_obs_edad_des,dist_sim_edad_des)
+dist_edad_abs_2019
+```
+
+
+## educ (observada y simulada)
+```{r}
+educ_dist_b_s<-homoL_2019m1%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(educ_dist)%>%
+  na.omit()
+
+educ_dist_b_o<-homoL_2019m1%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(educ_dist)%>%
+  na.omit()
+
+boot_educ_o<-boot(educ_dist_b_o$educ_dist, meanFunc, 1000)
+boot_educ_o
+mean<-0.49
+SE<-0.007
+dist_obs_educ_des<-c(mean,SE)
+dist_obs_educ_des
+
+boot_educ_s<-boot(educ_dist_b_s$educ_dist, meanFunc, 1000)
+boot_educ_s
+mean<-0.27
+SE<-0.006
+dist_sim_educ_des<-c(mean,SE)
+dist_sim_educ_des
+
+dist_educ_abs_2019<-rbind(dist_obs_educ_des,dist_sim_educ_des)
+dist_educ_abs_2019
+```
+
+## relig (observada y simulada)
+```{r}
+relig_dist_b_s<-homoL_2019m1%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(relig_dist)%>%
+  na.omit()
+
+relig_dist_b_o<-homoL_2019m1%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(relig_dist)%>%
+  na.omit()
+
+boot_relig_o<-boot(relig_dist_b_o$relig_dist, meanFunc, 1000)
+boot_relig_o
+mean<-0.64
+SE<-0.007
+dist_obs_relig_des<-c(mean,SE)
+dist_obs_relig_des
+
+boot_relig_s<-boot(relig_dist_b_s$relig_dist, meanFunc, 1000)
+boot_relig_s
+mean<-0.33
+SE<-0.007
+dist_sim_relig_des<-c(mean,SE)
+dist_sim_relig_des
+
+dist_relig_abs_2019<-rbind(dist_obs_relig_des,dist_sim_relig_des)
+dist_relig_abs_2019
+```
+
+## barrio (observada y simulada)
+```{r}
+#barrio_dist_b_s<-homoL_2019m2%>%
+#  dplyr::filter(case==0)%>%
+#  dplyr::select(barrio_dist)%>%
+#  na.omit()
+#
+#barrio_dist_b_o<-homoL_2019m2%>%
+#  dplyr::filter(case==1)%>%
+#  dplyr::select(barrio_dist)%>%
+#  na.omit()
+#
+#boot_barrio_o<-boot(barrio_dist_b_o$barrio_dist, meanFunc, 1000)
+#boot_barrio_o
+#mean<-0.49
+#SE<-0.007
+#dist_obs_barrio_des<-c(mean,SE)
+#dist_obs_barrio_des
+#
+#boot_barrio_s<-boot(barrio_dist_b_s$barrio_dist, meanFunc, 1000)
+#boot_barrio_s
+#mean<-0.32
+#SE<-0.007
+#dist_sim_barrio_des<-c(mean,SE)
+#dist_sim_barrio_des
+#
+#dist_barrio_abs_2019<-rbind(dist_obs_barrio_des,dist_sim_barrio_des)
+#dist_barrio_abs_2019
+```
+
+## ideol (observada y simulada)
+```{r}
+ideol_dist_b_s<-homoL_2019m1%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(ideol_dist)%>%
+  na.omit()
+
+ideol_dist_b_o<-homoL_2019m1%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(ideol_dist)%>%
+  na.omit()
+
+boot_ideol_o<-boot(ideol_dist_b_o$ideol_dist, meanFunc, 1000)
+boot_ideol_o
+mean<-0.45
+SE<-0.007
+dist_obs_ideol_des<-c(mean,SE)
+dist_obs_ideol_des
+
+boot_ideol_s<-boot(ideol_dist_b_s$ideol_dist, meanFunc, 1000)
+boot_ideol_s
+mean<-0.23
+SE<-0.006
+dist_sim_ideol_des<-c(mean,SE)
+dist_sim_ideol_des
+
+dist_ideol_abs_2019<-rbind(dist_obs_ideol_des,dist_sim_ideol_des)
+dist_ideol_abs_2019
+```
+
+```{r}
+hom_abs_2019m1<-rbind(dist_sexo_abs_2019,
+                      dist_educ_abs_2019,
+                      dist_edad_abs_2019,
+                      dist_relig_abs_2019,
+                      dist_ideol_abs_2019)
+
+hom_abs_2019m1<-as.data.frame(hom_abs_2019m1)
+colnames(hom_abs_2019m1)<-c("Mean", "SE")
+hom_abs_2019m1
+```
+
+
+# ELSOC 2019 (muestra 2)
+
+```{r}
+load("/home/rober/Escritorio/ELSOC/ELSOC_W04_v2.01_R.RData")
+elsoc_2019<-left_join(elsoc_2019,elsoc_2016,by="idencuesta")
+```
+
+## Seleccionamos variables 
+```{r}
+el<-elsoc_2019 %>%
+  dplyr::filter(muestra==2)%>%
+  dplyr::select(idencuesta,
+                m0_sexo,
+                m0_edad,
+                c15, 
+                m01,
+                m27,
+                m28,
+                m38, 
+                c15,
+                t06_01,
+                t06_02,
+                t06_03,
+                t06_04,
+                t06_05,
+                t06_06,
+                t06_07,
+                t06_08,
+                g01_01,
+                g01_02,
+                g01_03,
+                g01_04,
+                g01_05,
+                g02_05,
+                c15,
+                r13_sexo_01,
+                r13_sexo_02,
+                r13_sexo_03,
+                r13_sexo_04,
+                r13_sexo_05,
+                r13_edad_01,
+                r13_edad_02,
+                r13_edad_03,
+                r13_edad_04,
+                r13_edad_05,
+                r13_barrio_01, 
+                r13_barrio_02,
+                r13_barrio_03,
+                r13_barrio_04,
+                r13_barrio_05,
+                r13_educ_01,
+                r13_educ_02,
+                r13_educ_03,
+                r13_educ_04,
+                r13_educ_05,
+                r13_relig_01, 
+                r13_relig_02,
+                r13_relig_03,
+                r13_relig_04,
+                r13_relig_05,
+                r13_ideol_01,
+                r13_ideol_02,
+                r13_ideol_03,
+                r13_ideol_04,
+                r13_ideol_05,
+                r13_relacion_01,
+                r13_relacion_02,
+                r13_relacion_03,
+                r13_relacion_04,
+                r13_relacion_05,
+                ponderador02)
+```
+
+## tamred
+```{r}
+el$tamred = as.numeric(!is.na(el$r13_sexo_01)) +
+as.numeric(!is.na(el$r13_sexo_02)) +
+as.numeric(!is.na(el$r13_sexo_03)) +
+as.numeric(!is.na(el$r13_sexo_04)) +
+as.numeric(!is.na(el$r13_sexo_05))
+print(prop.table(table(el$tamred)), 2)
+```
+
+## Recodificamos 
+```{r}
+### Ego
+el$ego_p_educ<-factor(Recode(el$m27,"1:3=1;4:5=2;6:7=3;8:10=4;-999:-888=NA"))
+el$ego_m_educ<-factor(Recode(el$m28,"1:3=1;4:5=2;6:7=3;8:10=4;-999:-888=NA"))
+el$ego_educ <-factor(Recode(el$m01,"1:3=1;4:5=2;6:7=3;8:10=4;-999:-888=NA"))
+el$ego_relig<-factor(Recode(el$m38,"1=1;2=2;3:6=3;7:9=4;-999:-888=NA"))
+table(el$ego_relig)
+#el$ego_ideol<-factor(Recode(el$c15,"9:10=1;6:8=2;5=3;2:4=4;0:1=5;11:12=6;-999:-888=NA"))
+#el$ego_edad <-factor(Recode(el$m0_edad,"19=1;20:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+el$ego_edad<-el$m0_edad
+el$ego_barrio<-1
+el$ego_sexo <-factor(Recode(el$m0_sexo,"1=1;2=0;-999:-888=NA"))
+
+# Indice de calidad barrial
+el<-el%>%
+  na_if(-888)%>%
+  na_if(-999)%>%
+  mutate(cal_entorno=(t06_01+t06_02+t06_03+t06_04+
+                        t06_05+t06_06+t06_07+t06_08)/8)
+#summary(el$cal_entorno) #NA's=498
+
+#indice de "Machismo suave"
+el<-el%>%
+  na_if(-888)%>%
+  na_if(-999)%>%
+  mutate(machismo=(g01_01+g01_02+g01_03+g01_04+g01_05+g02_05)/6)
+#summary(el$machismo) #NA's= 857
+
+
+### Alter's
+el$alter_educ1 <-factor(Recode(el$r13_educ_01,"1=1;2:3=2;4=3;5=4;-999:-888=NA"))
+el$alter_educ2 <-factor(Recode(el$r13_educ_02,"1=1;2:3=2;4=3;5=4;-999:-888=NA"))
+el$alter_educ3 <-factor(Recode(el$r13_educ_03,"1=1;2:3=2;4=3;5=4;-999:-888=NA"))
+el$alter_educ4 <-factor(Recode(el$r13_educ_04,"1=1;2:3=2;4=3;5=4;-999:-888=NA"))
+el$alter_educ5 <-factor(Recode(el$r13_educ_05,"1=1;2:3=2;4=3;5=4;-999:-888=NA"))
+
+el$alter_relig1<-factor(Recode(el$r13_relig_01,"1=1;2=2;3:4=4;5=3;-999:-888=NA"))
+el$alter_relig2<-factor(Recode(el$r13_relig_02,"1=1;2=2;3:4=4;5=3;-999:-888=NA"))
+el$alter_relig3<-factor(Recode(el$r13_relig_03,"1=1;2=2;3:4=4;5=3;-999:-888=NA"))
+el$alter_relig4<-factor(Recode(el$r13_relig_04,"1=1;2=2;3:4=4;5=3;-999:-888=NA"))
+el$alter_relig5<-factor(Recode(el$r13_relig_05,"1=1;2=2;3:4=4;5=3;-999:-888=NA"))
+
+#el$alter_edad1 <-factor(Recode(el$r13_edad_01,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+#el$alter_edad2 <-factor(Recode(el$r13_edad_02,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+#el$alter_edad3 <-factor(Recode(el$r13_edad_03,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+#el$alter_edad4 <-factor(Recode(el$r13_edad_04,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+#el$alter_edad5 <-factor(Recode(el$r13_edad_05,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6;-999:-888=NA"))
+
+el$alter_edad1<-el$r13_edad_01
+el$alter_edad2<-el$r13_edad_02
+el$alter_edad3<-el$r13_edad_03
+el$alter_edad4<-el$r13_edad_04
+el$alter_edad5<-el$r13_edad_05
+
+el$alter_sexo1 <-factor(Recode(el$r13_sexo_01,"1=1;2=0;-999:-888=NA"))
+el$alter_sexo2 <-factor(Recode(el$r13_sexo_02,"1=1;2=0;-999:-888=NA"))
+el$alter_sexo3 <-factor(Recode(el$r13_sexo_03,"1=1;2=0;-999:-888=NA"))
+el$alter_sexo4 <-factor(Recode(el$r13_sexo_04,"1=1;2=0;-999:-888=NA"))
+el$alter_sexo5 <-factor(Recode(el$r13_sexo_05,"1=1;2=0;-999:-888=NA"))
+
+el$alter_barrio1<-Recode(el$r13_barrio_01,"1=1;2=0;-999:-888=NA")
+el$alter_barrio2<-Recode(el$r13_barrio_02,"1=1;2=0;-999:-888=NA")
+el$alter_barrio3<-Recode(el$r13_barrio_03,"1=1;2=0;-999:-888=NA")
+el$alter_barrio4<-Recode(el$r13_barrio_04,"1=1;2=0;-999:-888=NA")
+el$alter_barrio5<-Recode(el$r13_barrio_05,"1=1;2=0;-999:-888=NA")
+
+## Ideología 
+
+table(el$c15) #ideol
+
+el$c15[el$c15 == 0 | el$c15 == 1 | el$c15 == 2]<- 'leftwinger'
+el$c15[el$c15 == 3 | el$c15 == 4] <- 'center-left' 
+el$c15[el$c15 == 5]  <- 'center'
+el$c15[el$c15 == 11 | el$c15 == 12] <- 'none'
+el$c15[el$c15 == 6 | el$c15 == 7]<- 'center-right'
+el$c15[el$c15 == 8 | el$c15 == 9 | el$c15 == 10] <- 'rightwinger'
+
+el$ego_ideol<-el$c15
+table(el$ego_ideol)
+
+## ideol alter, derecha, centro derecha, centro, centro izquierda, izquierda, ninguno (6)
+table(el$r13_ideol_03) #
+
+for (i in 1:5){
+  eval(parse(text=paste('el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==1 & !is.na(el$r13_ideol_0',i,')]<-\'rightwinger\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==2 & !is.na(el$r13_ideol_0',i,')]<-\'center-right\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==3 & !is.na(el$r13_ideol_0',i,')]<-\'center\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==6 & !is.na(el$r13_ideol_0',i,')]<-\'none\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==4 & !is.na(el$r13_ideol_0',i,')]<-\'center-left\' ;',
+                        'el$r13_ideol_0',i,'[el$r13_ideol_0',i,'==5 & !is.na(el$r13_ideol_0',i,')]<-\'leftwinger\' ', sep='')))
+}
+
+el$alter_ideol1<-el$r13_ideol_01
+el$alter_ideol1[el$alter_ideol1==-999] <- NA
+el$alter_ideol1[el$alter_ideol1==-888] <- NA
+
+el$alter_ideol2<-el$r13_ideol_02
+el$alter_ideol2[el$alter_ideol2==-999] <- NA
+el$alter_ideol2[el$alter_ideol2==-888] <- NA
+
+el$alter_ideol3<-el$r13_ideol_03
+el$alter_ideol3[el$alter_ideol3==-999] <- NA
+el$alter_ideol3[el$alter_ideol3==-888] <- NA
+
+el$alter_ideol4<-el$r13_ideol_04
+el$alter_ideol4[el$alter_ideol4==-999] <- NA
+el$alter_ideol4[el$alter_ideol4==-888] <- NA
+
+el$alter_ideol5<-el$r13_ideol_05
+el$alter_ideol5[el$alter_ideol5==-999] <- NA
+el$alter_ideol5[el$alter_ideol5==-888] <- NA
+
+table(el$alter_ideol2)
+
+## relación alter
+el<-el%>%
+  dplyr::mutate(alter_relacion1=case_when(r13_relacion_01%in%1:3~"fam",
+                                          r13_relacion_01%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion2=case_when(r13_relacion_02%in%1:3~"fam",
+                                          r13_relacion_02%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion3=case_when(r13_relacion_03%in%1:3~"fam",
+                                          r13_relacion_03%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion4=case_when(r13_relacion_04%in%1:3~"fam",
+                                          r13_relacion_04%in%4:5~"nofam"))%>%
+  dplyr::mutate(alter_relacion5=case_when(r13_relacion_05%in%1:3~"fam",
+                                          r13_relacion_05%in%4:5~"nofam"))
+# tamaño de la red
+el$tamred = as.numeric(!is.na(el$alter_sexo1)) +
+            as.numeric(!is.na(el$alter_sexo2)) +
+            as.numeric(!is.na(el$alter_sexo3)) +
+            as.numeric(!is.na(el$alter_sexo4)) +
+            as.numeric(!is.na(el$alter_sexo5))
+print(prop.table(table(el$tamred)), 2)
+
+# crear variable proporción del total de vecinos
+el<-el %>% 
+  rowwise() %>% 
+  mutate(barrio_total = sum(alter_barrio1,alter_barrio2,alter_barrio3,
+                   alter_barrio4,alter_barrio5, na.rm=TRUE))%>%
+  mutate(barrio_prop = barrio_total/tamred)
+
+is.na(el$barrio_prop) <- sapply(el$barrio_prop, is.infinite) #definir inf
+table(el$barrio_prop)
+summary(el$barrio_prop)
+
+mean(el$barrio_prop, na.rm=TRUE)
+
+table(el$barrio_total, el$tamred)
+#[1] 0.3376929
+```
+
+## Subset cross
+```{r}
+homoC_2019m2<-el%>%
+  dplyr::select(idencuesta,ego_sexo, ego_edad, ego_educ, ego_relig, ego_barrio,
+                ego_ideol,alter_sexo1, alter_sexo2, alter_sexo3, alter_sexo4,
+                alter_sexo5, alter_edad1, alter_edad2, alter_edad3, alter_edad4,
+                alter_edad5, alter_relig1, alter_relig2, alter_relig3, alter_relig4,
+                alter_relig5, alter_educ1, alter_educ2, alter_educ3, alter_educ4,
+                alter_educ5, alter_barrio1, alter_barrio2, alter_barrio3, alter_barrio4,
+                alter_barrio5, alter_ideol1, alter_ideol2, alter_ideol3, alter_ideol4,
+                alter_ideol5, alter_relacion1,alter_relacion2,alter_relacion3, 
+                alter_relacion4, alter_relacion5,tamred,ponderador=ponderador02)
+
+homoC_2019m2$año<-2019
+```
+
+## Distancias observadas (missmatch)
+```{r}
+##NOTA: weights are problematic: seleccionan misma persona con mucha mayor frecuencia.
+d <- length(el$idencuesta)
+table(table(sample(el$idencuesta, d, replace=T, prob = (1/el$ponderador02))))
+table(table(sample(el$idencuesta, d, replace=T)))
+#Si se usa ponderador, usar de la ola 1, no 2 (este tiene NA's)
+
+#Distancia Social Observada entre Ego-Alter
+vars_to_keep <- c("idencuesta", "ego_educ", "ego_relig",
+                  "ego_ideol", "ego_edad", "ego_sexo",
+                  "alter_educ1", "alter_educ2", "alter_educ3",
+                  "alter_educ4", "alter_educ5", "alter_relig1",
+                  "alter_relig2", "alter_relig3", "alter_relig4",
+                  "alter_relig5", "alter_ideol1", "alter_ideol2", 
+                  "alter_ideol3", "alter_ideol4", "alter_ideol5",
+                  "alter_edad1", "alter_edad2", "alter_edad3",
+                  "alter_edad4", "alter_edad5", "alter_sexo1", 
+                  "alter_sexo2", "alter_sexo3", "alter_sexo4", 
+                  "alter_sexo5", "alter_barrio1", "alter_barrio2",
+                  "alter_barrio3", "alter_barrio4", "alter_barrio5")
+
+
+elsoc_egos <- el[names(el) %in% vars_to_keep]
+
+educa_obs_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+edad_obs_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+relig_obs_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+sexo_obs_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+barrio_obs_dist<- array(NA, dim=list(nrow(elsoc_egos), 5))
+ideol_obs_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+
+### Distancia ego-alter observados
+
+#Distancia educativa
+for(k in 1:5) educa_obs_dist[,k] <- ifelse(
+  el$ego_educ == eval(parse(text=paste0("el$alter_educ", k))), 1, 0)
+educa_obs_dist <- data.frame(educa_obs_dist)
+names(educa_obs_dist) <- paste0("educ_dist_",1:5)
+
+## Edad
+for(k in 1:5) edad_obs_dist[,k] <- ifelse(
+  ((el$ego_edad) - eval(parse(text=paste0("el$alter_edad", k))))<=5, 1, 0)
+edad_obs_dist <- data.frame(edad_obs_dist)
+names(edad_obs_dist) <- paste0("edad_dist_",1:5)
+
+## Religion
+for(k in 1:5) relig_obs_dist[,k] <- ifelse(
+  el$ego_relig == eval(parse(text=paste0("el$alter_relig", k))), 1, 0)
+relig_obs_dist <- data.frame(relig_obs_dist)
+names(relig_obs_dist) <- paste0("relig_dist_",1:5)
+
+## Sexo
+for(k in 1:5) sexo_obs_dist[,k] <- ifelse(
+  el$ego_sexo == eval(parse(text=paste0("el$alter_sexo", k))), 1, 0)
+sexo_obs_dist <- data.frame(sexo_obs_dist)
+names(sexo_obs_dist) <- paste0("sexo_dist_",1:5)
+
+## Barrio
+for(k in 1:5) barrio_obs_dist[,k] <- ifelse(
+  el$ego_barrio == eval(parse(text=paste0("el$alter_barrio", k))), 1, 0)
+barrio_obs_dist <- data.frame(barrio_obs_dist)
+names(barrio_obs_dist) <- paste0("barrio_dist_",1:5)
+
+## Ideología
+for(k in 1:5) ideol_obs_dist[,k] <- ifelse(
+  el$ego_ideol == eval(parse(text=paste0("el$alter_ideol", k))), 1, 0)
+ideol_obs_dist <- data.frame(ideol_obs_dist)
+names(ideol_obs_dist) <- paste0("ideol_dist_",1:5)
+
+hom_obs <- data.frame(cbind(elsoc_egos, educa_obs_dist, edad_obs_dist, 
+                            relig_obs_dist, sexo_obs_dist, barrio_obs_dist,
+                            ideol_obs_dist))
+hom_obs$case <- 1
+```
+
+```{r}
+hom_obs<-hom_obs%>%
+  dplyr::select(idencuesta, case, ego_sexo, ego_edad, ego_relig, ego_educ, 
+                sexo_dist_1, sexo_dist_2, sexo_dist_3, sexo_dist_4, sexo_dist_5,
+                edad_dist_1, edad_dist_2, edad_dist_3, edad_dist_4, edad_dist_5,
+                relig_dist_1, relig_dist_2, relig_dist_3, relig_dist_4, relig_dist_5,
+                educ_dist_1, educ_dist_2, educ_dist_3, educ_dist_4, educ_dist_5,
+                barrio_dist_1, barrio_dist_2, barrio_dist_3, barrio_dist_4,
+                barrio_dist_5, ideol_dist_1, ideol_dist_2, ideol_dist_3,
+                ideol_dist_4, ideol_dist_5)
+
+head(hom_obs)
+```
+
+
+## Simulación (controles)
+```{r}
+## Preparativos simulacion de alteres
+sexo_sim_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+edad_sim_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+educ_sim_dist  <- array(NA, dim=list(nrow(elsoc_egos), 5))
+relig_sim_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+barrio_sim_dist<- array(NA, dim=list(nrow(elsoc_egos), 5))
+ideol_sim_dist <- array(NA, dim=list(nrow(elsoc_egos), 5))
+```
+
+### Weight en base a CASEN
+```{r}
+w_casen <- read.csv("/home/rober/Documentos/homofilia_elsoc/weight_casen.csv", sep=";")
+```
+
+### Simulación con parámetros
+```{r}
+set.seed(44322)
+n <- 50
+d <- length(elsoc_egos$idencuesta)
+```
+
+### Post-stratificaction weight
+```{r}
+age_recode <- "18:30=18; 31:45=31; 46:60=46; else=61"
+elsoc_egos$age_grp <- car::recode(elsoc_egos$ego_edad, age_recode)
+elsoc_egos$educ_grp <- elsoc_egos$ego_educ
+educ_recode<- "1=2;2=3;3=4;else=5"
+elsoc_egos$educ_grp <- car::recode(elsoc_egos$ego_educ, educ_recode)
+elsoc_egos$educ_grp <- factor(elsoc_egos$educ_grp, exclude=NULL)
+
+w <- data.frame(xtabs(~educ_grp + ego_sexo + age_grp, data=elsoc_egos))
+#names(w) <- c("educaR_w02", "m0_sexo_w02", "Freq")
+w$prop <- w$Freq / sum(w$Freq)
+w$prop_target <- w_casen[,4]
+w$N_target <- w$prop_target*sum(w$Freq)
+w$w <- w$N_target/w$Freq
+w$ego_sexo <- as.numeric(levels(w$ego_sexo))[w$ego_sexo]
+
+el <- merge(elsoc_egos, w, by=c("educ_grp", "ego_sexo", "age_grp"))
+```
+
+### Sample random alters from observed egos
+```{r}
+#NOTA: Usar 'join' en lugar de 'merge', ya que este ultimo ordena las filas segun
+#'idencuesta', y por ende altera la seleccion aleatoria de alteres.
+nonties1 <- data.frame(idencuesta = sample(el$idencuesta, d, replace=T, el$w))
+nonties1 <- plyr::join(nonties1, elsoc_egos, by="idencuesta")
+
+nonties2 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties2 <- plyr::join(nonties2, elsoc_egos, by="idencuesta")
+
+nonties3 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties3 <- plyr::join(nonties3, elsoc_egos, by="idencuesta")
+
+nonties4 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties4 <- plyr::join(nonties4, elsoc_egos, by="idencuesta")
+
+nonties5 <- data.frame(idencuesta=sample(el$idencuesta, d, replace=T, el$w))
+nonties5 <- plyr::join(nonties5, elsoc_egos, by="idencuesta")
+
+  #Delete variables for next loop
+    elsoc_egos$Freq <- NULL
+    elsoc_egos$prop <- NULL
+    elsoc_egos$prop_target <- NULL
+    elsoc_egos$N_target <- NULL
+    elsoc_egos$w <- NULL
+    elsoc_egos$age_grp <- NULL
+    elsoc_egos$educ_grp <- NULL
+    
+### Distancia ego-alter simuladaos
+    
+## Educ
+for(k in 1:5) educ_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_educ == eval(parse(text=paste0("nonties",k,"$ego_educ"))), 1, 0)
+    educ_sim_dist <- data.frame(educ_sim_dist)
+    names(educ_sim_dist) <- paste0("educ_dist_",1:5)
+    
+## Edad
+for(k in 1:5) edad_sim_dist[,k] <- ifelse(
+    ((elsoc_egos$ego_edad) - eval(parse(text=paste0("nonties",k,"$ego_edad"))))<=5, 1, 0)
+    edad_sim_dist <- data.frame(edad_sim_dist)
+    names(edad_sim_dist) <- paste0("edad_dist_",1:5)
+    
+## Religion
+for(k in 1:5) relig_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_relig == eval(parse(text=paste0("nonties",k,"$ego_relig"))), 1, 0)
+    relig_sim_dist <- data.frame(relig_sim_dist)
+    names(relig_sim_dist) <- paste0("relig_dist_",1:5)
+    
+## Sexo
+for(k in 1:5) sexo_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_sexo == eval(parse(text=paste0("nonties",k,"$ego_sexo"))), 1, 0)
+    sexo_sim_dist <- data.frame(sexo_sim_dist)
+    names(sexo_sim_dist) <- paste0("sexo_dist_",1:5)
+    
+## Barrio
+#barrio_sim_dist<-apply(barrio_sim_dist, c(1,2), function(x) sample(c(0,1),1))
+barrio_sim_dist <- matrix(rbinom(1264*5,1,0.34),1264,5) # Criterio minimalista = media a de la proporción de alteris vecinos. 
+barrio_sim_dist <- data.frame(barrio_sim_dist)
+names(barrio_sim_dist) <- paste0("barrio_dist_",1:5)
+
+## Ideología
+for(k in 1:5) ideol_sim_dist[,k] <- ifelse(
+    elsoc_egos$ego_ideol == eval(parse(text=paste0("nonties",k,"$ego_ideol"))), 1, 0)
+    ideol_sim_dist <- data.frame(ideol_sim_dist)
+    names(ideol_sim_dist) <- paste0("ideol_dist_",1:5)
+    
+hom_sim <- data.frame(cbind(el, educ_sim_dist, edad_sim_dist, relig_sim_dist, 
+                            sexo_sim_dist, barrio_sim_dist, ideol_sim_dist))
+
+hom_sim$case <- 0
+```
+
+```{r}
+hom_sim<-hom_sim%>%
+  dplyr::select(idencuesta, case, ego_sexo, ego_edad, ego_relig, ego_educ, 
+                sexo_dist_1, sexo_dist_2, sexo_dist_3, sexo_dist_4, sexo_dist_5,
+                edad_dist_1, edad_dist_2, edad_dist_3, edad_dist_4, edad_dist_5,
+                relig_dist_1, relig_dist_2, relig_dist_3, relig_dist_4, relig_dist_5,
+                educ_dist_1, educ_dist_2, educ_dist_3, educ_dist_4, educ_dist_5,
+                barrio_dist_1, barrio_dist_2, barrio_dist_3, barrio_dist_4,
+                barrio_dist_5, ideol_dist_1, ideol_dist_2, ideol_dist_3, 
+                ideol_dist_4, ideol_dist_5)
+
+head(hom_sim)
+```
+
+### Eliminar alteres simulados si info de alter no fue observada
+```{r}
+vwm <- names(hom_sim)[!names(hom_sim) %in% c("idencuesta","case")]
+for(l in 1:length(vwm)) hom_sim[vwm[l]][is.na(hom_obs[vwm[l]])]<- NA
+head(hom_sim)
+```
+
+
+### Merge & reshape 
+```{r}
+#Merge
+homo <- plyr::rbind.fill(hom_obs, hom_sim)
+
+#Reshape Data 
+homoL <- reshape(homo, varying = list(paste0("educ_dist_", 1:5),
+                                      paste0("edad_dist_", 1:5),
+                                      paste0("relig_dist_", 1:5),
+                                      paste0("sexo_dist_", 1:5),
+                                      paste0("barrio_dist_", 1:5),
+                                      paste0("ideol_dist_", 1:5)),
+                 v.names=c("educ_dist", "edad_dist", "relig_dist", "sexo_dist",
+                           "barrio_dist", "ideol_dist"), 
+                 direction="long")
+
+homoL<-arrange(homoL, idencuesta)
+rownames(homoL) <- NULL
+
+homoL_2019m2 <- homoL[order(homoL$idencuesta),]
+homoL_2019m2$año<-2019
+#homoL_2019
+#Drop lots of NA's - though with or without N of regresion is equal.
+#homoL <- subset(homoL, !is.na(sexo_dist))
+#head(homoL, 20)
+```
+
+
+
+# Descriptivos 
+
+## Sexo (observada y simulada)
+```{r}
+meanFunc <- function(x,i){mean(x[i])}
+
+sexo_dist_b_s<-homoL_2019m2%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(sexo_dist)%>%
+  na.omit()
+
+sexo_dist_b_o<-homoL_2019m2%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(sexo_dist)%>%
+  na.omit()
+
+boot_sexo_o<-boot(sexo_dist_b_o$sexo_dist, meanFunc, 1000)
+boot_sexo_o
+mean<-0.64
+SE<-0.009
+dist_obs_sexo_des<-c(mean,SE)
+dist_obs_sexo_des
+
+boot_sexo_s<-boot(sexo_dist_b_s$sexo_dist, meanFunc, 1000)
+boot_sexo_s
+mean<-0.49
+SE<-0.009
+dist_sim_sexo_des<-c(mean,SE)
+dist_sim_sexo_des
+
+dist_sexo_abs_2019<-rbind(dist_obs_sexo_des,dist_sim_sexo_des)
+dist_sexo_abs_2019
+```
+
+
+## edad (observada y simulada)
+```{r}
+edad_dist_b_s<-homoL_2019m2%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(edad_dist)%>%
+  na.omit()
+
+edad_dist_b_o<-homoL_2019m2%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(edad_dist)%>%
+  na.omit()
+
+boot_edad_o<-boot(edad_dist_b_o$edad_dist, meanFunc, 1000)
+boot_edad_o
+mean<-0.69
+SE<-0.008
+dist_obs_edad_des<-c(mean,SE)
+dist_obs_edad_des
+
+boot_edad_s<-boot(edad_dist_b_s$edad_dist, meanFunc, 1000)
+boot_edad_s
+mean<-0.57
+SE<-0.009
+dist_sim_edad_des<-c(mean,SE)
+dist_sim_edad_des
+
+dist_edad_abs_2019<-rbind(dist_obs_edad_des,dist_sim_edad_des)
+dist_edad_abs_2019
+```
+
+
+## educ (observada y simulada)
+```{r}
+educ_dist_b_s<-homoL_2019m2%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(educ_dist)%>%
+  na.omit()
+
+educ_dist_b_o<-homoL_2019m2%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(educ_dist)%>%
+  na.omit()
+
+boot_educ_o<-boot(educ_dist_b_o$educ_dist, meanFunc, 1000)
+boot_educ_o
+mean<-0.51
+SE<-0.009
+dist_obs_educ_des<-c(mean,SE)
+dist_obs_educ_des
+
+boot_educ_s<-boot(educ_dist_b_s$educ_dist, meanFunc, 1000)
+boot_educ_s
+mean<-0.26
+SE<-0.008
+dist_sim_educ_des<-c(mean,SE)
+dist_sim_educ_des
+
+dist_educ_abs_2019<-rbind(dist_obs_educ_des,dist_sim_educ_des)
+dist_educ_abs_2019
+```
+
+## relig (observada y simulada)
+```{r}
+relig_dist_b_s<-homoL_2019m2%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(relig_dist)%>%
+  na.omit()
+
+relig_dist_b_o<-homoL_2019m2%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(relig_dist)%>%
+  na.omit()
+
+boot_relig_o<-boot(relig_dist_b_o$relig_dist, meanFunc, 1000)
+boot_relig_o
+mean<-0.64
+SE<-0.009
+dist_obs_relig_des<-c(mean,SE)
+dist_obs_relig_des
+
+boot_relig_s<-boot(relig_dist_b_s$relig_dist, meanFunc, 1000)
+boot_relig_s
+mean<-0.34
+SE<-0.009
+dist_sim_relig_des<-c(mean,SE)
+dist_sim_relig_des
+
+dist_relig_abs_2019<-rbind(dist_obs_relig_des,dist_sim_relig_des)
+dist_relig_abs_2019
+```
+
+## barrio (observada y simulada)
+```{r}
+#barrio_dist_b_s<-homoL_2019m2%>%
+#  dplyr::filter(case==0)%>%
+#  dplyr::select(barrio_dist)%>%
+#  na.omit()
+#
+#barrio_dist_b_o<-homoL_2019m2%>%
+#  dplyr::filter(case==1)%>%
+#  dplyr::select(barrio_dist)%>%
+#  na.omit()
+#
+#boot_barrio_o<-boot(barrio_dist_b_o$barrio_dist, meanFunc, 1000)
+#boot_barrio_o
+#mean<-0.49
+#SE<-0.007
+#dist_obs_barrio_des<-c(mean,SE)
+#dist_obs_barrio_des
+#
+#boot_barrio_s<-boot(barrio_dist_b_s$barrio_dist, meanFunc, 1000)
+#boot_barrio_s
+#mean<-0.32
+#SE<-0.007
+#dist_sim_barrio_des<-c(mean,SE)
+#dist_sim_barrio_des
+#
+#dist_barrio_abs_2019<-rbind(dist_obs_barrio_des,dist_sim_barrio_des)
+#dist_barrio_abs_2019
+```
+
+## ideol (observada y simulada)
+```{r}
+ideol_dist_b_s<-homoL_2019m2%>%
+  dplyr::filter(case==0)%>%
+  dplyr::select(ideol_dist)%>%
+  na.omit()
+
+ideol_dist_b_o<-homoL_2019m2%>%
+  dplyr::filter(case==1)%>%
+  dplyr::select(ideol_dist)%>%
+  na.omit()
+
+boot_ideol_o<-boot(ideol_dist_b_o$ideol_dist, meanFunc, 1000)
+boot_ideol_o
+mean<-0.44
+SE<-0.01
+dist_obs_ideol_des<-c(mean,SE)
+dist_obs_ideol_des
+
+boot_ideol_s<-boot(ideol_dist_b_s$ideol_dist, meanFunc, 1000)
+boot_ideol_s
+mean<-0.22
+SE<-0.008
+dist_sim_ideol_des<-c(mean,SE)
+dist_sim_ideol_des
+
+dist_ideol_abs_2019<-rbind(dist_obs_ideol_des,dist_sim_ideol_des)
+dist_ideol_abs_2019
+```
+
+```{r}
+hom_abs_2019m2<-rbind(dist_sexo_abs_2019,
+                      dist_educ_abs_2019,
+                      dist_edad_abs_2019,
+                      dist_relig_abs_2019,
+                      dist_ideol_abs_2019)
+
+hom_abs_2019m2<-as.data.frame(hom_abs_2019m2)
+colnames(hom_abs_2019m2)<-c("Mean", "SE")
+hom_abs_2019m2
+```
+
+
+# Tabla descriptivos
+```{r}
+hom_abs<-cbind(hom_abs_2017,hom_abs_2019m1,hom_abs_2019m2)
+hom_abs
+#hom_abs %>%
+#  kbl(caption = "Homofilia absoluta Chile 2017-2019") %>%
+#    kable_classic("hover", full_width = F)%>%
+#    add_header_above(c(" "= 1,"2017"=2,"2019 (m1)"=2, "2019 (m2)"=2))%>%
+#  footnote(general = "",
+#           alphabet = c("Los valores más cercanos a 1 indican más homofilia; ",
+#                      "Los errores estándar se calculan a partir de muestras bootstrap para el nivel observado de homofilia y utilizando un diseño de encuesta complejo para el nivel esperado por chance; ",
+#                      "Los empates Ego-Alteri para edad fueron calculados considerando un rango de diferencia de 5 años entre la edad de Ego y Alteri; "),
+#           general_title = "Notas: ",
+#           footnote_as_chunk = F,
+#           escape = F)
+
+write.xlsx(hom_abs, 'hom_abs.xlsx')
+
+write.xlsx(hom_abs, file, sheetName = "Sheet1", 
+  col.names = TRUE, row.names = TRUE, append = FALSE)
+```
+
+# Regresiones caso-control
+
+## juntar para para los tres años (2014,2017,2019)
+```{r}
+homoC_2017$muestra<-0
+homoC_2019m1$muestra<-1
+homoC_2019m2$muestra<-2
+
+homoC_2017<-as.matrix(homoC_2017)
+homoC_2019m1<-as.matrix(homoC_2019m1)
+homoC_2019m2<-as.matrix(homoC_2019m2)
+
+#dim(homoC_2019m2)
+
+hom_rel<-rbind(homoC_2017,homoC_2019m1,homoC_2019m2)
+hom_rel<-as.data.frame(hom_rel)
+head(hom_rel)
+```
+
+# Tratamiento de var para uso de la función de Smith. 
+
+## Barrio
+```{r}
+## Ego barrio
+#hom_rel$ego_barrio <-rep('same', length(coes[,1]))
+```
+
+## Sexo 
+```{r}
+## sexo egos
+table(hom_rel$ego_sexo)
+hom_rel$ego_sexo<-ifelse(hom_rel$ego_sexo==1 & !is.na(hom_rel$ego_sexo), 'male', 'female')
+table(hom_rel$ego_sexo)
+
+## sexo alter
+hom_rel$alter_sexo1<-as.numeric(hom_rel$alter_sexo1)
+hom_rel$alter_sexo2<-as.numeric(hom_rel$alter_sexo2)
+hom_rel$alter_sexo3<-as.numeric(hom_rel$alter_sexo3)
+hom_rel$alter_sexo4<-as.numeric(hom_rel$alter_sexo4)
+hom_rel$alter_sexo5<-as.numeric(hom_rel$alter_sexo5)
+
+for (j in 1:5){
+  eval(parse(text=paste('hom_rel$alter_sexo',j,' <- ifelse(hom_rel$alter_sexo',j,'==1, \'male\', ifelse(hom_rel$alter_sexo',j,'==0, \'female\', hom_rel$alter_sexo',j,'))', sep='')))
+}
+
+table(hom_rel$alter_sexo1)
+table(hom_rel$alter_sexo5)
+```
+
+## 2c educación 
+```{r}
+table(hom_rel$ego_educ) #educ
+
+hom_rel$ego_educ<-ifelse(!is.na(hom_rel$ego_educ) & (hom_rel$ego_educ==1), 'lt.secondary', ifelse(!is.na(hom_rel$ego_educ) & hom_rel$ego_educ==2, 'secondary', ifelse(!is.na(hom_rel$ego_educ) & hom_rel$ego_educ==3, 'technical.ed',  ifelse(!is.na(hom_rel$ego_educ) & (hom_rel$ego_educ==4), 'college.ed', hom_rel$ego_educ))))
+table(hom_rel$ego_educ)
+
+#hom_rel$ego_p_educ<-ifelse(!is.na(hom_rel$ego_p_educ) & (hom_rel$ego_p_educ==1), 'lt.secondary', #ifelse(!is.na(hom_rel$ego_p_educ) & hom_rel$ego_p_educ==2, 'secondary', #ifelse(!is.na(hom_rel$ego_p_educ) & hom_rel$ego_p_educ==3, 'technical.ed',  #ifelse(!is.na(hom_rel$ego_p_educ) & (hom_rel$ego_p_educ==4), 'college.ed', hom_rel$ego_p_educ))))
+#table(hom_rel$ego_p_educ)
+#
+#hom_rel$ego_m_educ<-ifelse(!is.na(hom_rel$ego_m_educ) & (hom_rel$ego_m_educ==1), 'lt.secondary', #ifelse(!is.na(hom_rel$ego_m_educ) & hom_rel$ego_m_educ==2, 'secondary', #ifelse(!is.na(hom_rel$ego_m_educ) & hom_rel$ego_m_educ==3, 'technical.ed',  #ifelse(!is.na(hom_rel$ego_m_educ) & (hom_rel$ego_m_educ==4), 'college.ed', hom_rel$ego_m_educ))))
+#table(hom_rel$ego_m_educ)
+
+## educ alter
+table(hom_rel$alter_educ1)
+
+hom_rel$alter_educ1<-as.numeric(hom_rel$alter_educ1)
+hom_rel$alter_educ2<-as.numeric(hom_rel$alter_educ2)
+hom_rel$alter_educ3<-as.numeric(hom_rel$alter_educ3)
+hom_rel$alter_educ4<-as.numeric(hom_rel$alter_educ4)
+hom_rel$alter_educ5<-as.numeric(hom_rel$alter_educ5)
+
+for (j in 1:5){
+  eval(parse(text=(paste('hom_rel$alter_educ',j, ' <-ifelse(!is.na(hom_rel$alter_educ',j, ') & hom_rel$alter_educ',j,'==1, \'lt.secondary\',  ifelse(!is.na(hom_rel$alter_educ',j,') & hom_rel$alter_educ',j,'==2, \'secondary\', ifelse(!is.na(hom_rel$alter_educ',j,') & hom_rel$alter_educ',j,'==3, \'technical.ed\', ifelse(!is.na(hom_rel$alter_educ',j,') & hom_rel$alter_educ',j,'==4, \'college.ed\', hom_rel$alter_educ',j,'))))', sep=''))))
+}
+
+table(hom_rel$alter_educ1)
+table(hom_rel$alter_educ5)
+```
+
+## 2d religión
+```{r}
+table(hom_rel$ego_relig) #relig
+hom_rel$ego_relig<-as.numeric(hom_rel$ego_relig)
+
+hom_rel$ego_relig<- ifelse(!is.na(hom_rel$ego_relig) & hom_rel$ego_relig==1, 'catholic', ifelse(!is.na(hom_rel$ego_relig) & (hom_rel$ego_relig==2), 'evangelical', ifelse(!is.na(hom_rel$ego_relig) & (hom_rel$ego_relig==3), 'other', ifelse(!is.na(hom_rel$ego_relig) & (hom_rel$ego_relig==4), 'none', hom_rel$ego_relig))))
+
+table(hom_rel$ego_relig)
+
+## Alter: relig, católico, evangélico, ninguno, ateo/agn, otro
+table(hom_rel$alter_relig5)
+
+hom_rel$alter_relig1<-as.numeric(hom_rel$alter_relig1)
+hom_rel$alter_relig2<-as.numeric(hom_rel$alter_relig2)
+hom_rel$alter_relig3<-as.numeric(hom_rel$alter_relig3)
+hom_rel$alter_relig4<-as.numeric(hom_rel$alter_relig4)
+hom_rel$alter_relig5<-as.numeric(hom_rel$alter_relig5)
+
+for (i in 1:5){
+  eval(parse(text=(paste('hom_rel$alter_relig',i,'[hom_rel$alter_relig',i,'==1 & !is.na(hom_rel$alter_relig',i,')]<-\'catholic\' ;', 
+                         'hom_rel$alter_relig',i,'[hom_rel$alter_relig',i,'==2 & !is.na(hom_rel$alter_relig',i,')]<-\'evangelical\' ;',
+                         'hom_rel$alter_relig',i,'[hom_rel$alter_relig',i,'==3 & !is.na(hom_rel$alter_relig',i,')]<-\'other\' ;',
+                         'hom_rel$alter_relig',i,'[hom_rel$alter_relig',i,'==4 & !is.na(hom_rel$alter_relig',i,')]<-\'none\' ', sep=''))))
+}
+
+table(hom_rel$alter_relig1)
+table(hom_rel$alter_relig5)
+```
+
+## 2f barrio
+```{r}
+### ego_network_elsoc2017$barrio.ego_02<-'same'
+#table(hom_rel$ego_barrio)
+#
+#hom_rel$alter_barrio1<-as.numeric(hom_rel$alter_barrio1)
+#hom_rel$alter_barrio2<-as.numeric(hom_rel$alter_barrio2)
+#hom_rel$alter_barrio3<-as.numeric(hom_rel$alter_barrio3)
+#hom_rel$alter_barrio4<-as.numeric(hom_rel$alter_barrio4)
+#hom_rel$alter_barrio5<-as.numeric(hom_rel$alter_barrio5)
+#
+### barrio alter
+#for (i in 1:5){
+#  eval(parse(text=paste('hom_rel$alter_barrio',i,'[hom_rel$alter_barrio',i,'==1]<-\'same\' ;',
+#                        'hom_rel$alter_barrio',i,'[hom_rel$alter_barrio',i,'==0]<-\'another\' ', sep='')))
+#}
+#
+#table(hom_rel$alter_barrio1)
+#table(hom_rel$alter_barrio5)
+```
+
+## relación 
+```{r}
+table(hom_rel$alter_relacion1)
+table(hom_rel$alter_relacion5)
+```
+
+## ideol
+```{r}
+table(hom_rel$alter_ideol1)
+table(hom_rel$alter_ideol5)
+```
+
+## Reordenar variables
+```{r}
+hom_rel_c<-hom_rel%>%
+  dplyr::select(
+    idencuesta, 
+    ego_sexo, alter_sexo1, alter_sexo2, alter_sexo3, alter_sexo4, alter_sexo5, 
+    ego_edad, alter_edad1, alter_edad2, alter_edad3, alter_edad4, alter_edad5,
+    ego_educ, alter_educ1, alter_educ2, alter_educ3, alter_educ4, alter_educ5, 
+    ego_relig, alter_relig1, alter_relig2, alter_relig3, alter_relig4, alter_relig5,
+    ego_ideol, alter_ideol1, alter_ideol2, alter_ideol3, alter_ideol4, alter_ideol5,
+    ego_barrio, alter_barrio1,alter_barrio2, alter_barrio3, alter_barrio4, alter_barrio5,
+    alter_relacion1, alter_relacion2, alter_relacion3, alter_relacion4, alter_relacion5,
+    tamred, año,muestra,ponderador
+    )
+```
+
+## 2g cambiar nombres y guardar
+```{r}
+n<-paste(paste('sexo', 1:5, collapse=',', sep=''), ',', 
+         paste('edad', 1:5, collapse=',', sep=''), ',',
+         paste('barrio', 1:5, collapse=',', sep=''), ',',
+         paste('educ', 1:5, collapse=',', sep=''), ',',
+         paste('relig', 1:5, collapse=',', sep=''), ',',
+         paste('ideol', 1:5, collapse=',', sep=''), ',',
+         paste('relacion', 1:5, collapse=',', sep=''), collapse=',', sep='')
+gsub(',', '\',\'' ,n  )
+
+names(hom_rel_c)<- c('idencuesta',
+                   'sexo','sexo1','sexo2','sexo3','sexo4','sexo5', 
+                   'edad','edad1','edad2','edad3','edad4','edad5',
+                   'educ','educ1', 'educ2', 'educ3','educ4','educ5',
+                   'relig','relig1', 'relig2','relig3','relig4','relig5', 
+                   "ideol", "ideol1", "ideol2", "ideol3", "ideol4", "ideol5",
+                   'barrio','barrio1','barrio2','barrio3', 'barrio4','barrio5',
+                   'relacion1','relacion2','relacion3', 'relacion4','relacion5', 
+                   'tamred','año','muestra','ponderador')
+
+
+#egonet_coes_chile<-hom_rel
+save(hom_rel_c, file='hom_rel_c.RData')
+
+#load('hom_rel.RData')
+head(hom_rel_c)
+```
+
+## drop na
+```{r}
+hom_rel_c<-hom_rel_c %>% drop_na(relig)
+hom_rel_c<-hom_rel_c %>% drop_na(ideol)
+hom_rel_c<-hom_rel_c %>% drop_na(sexo)
+hom_rel_c<-hom_rel_c %>% drop_na(educ)
+#hom_rel<-hom_rel %>% drop_na(ego_m_educ)
+
+hom_rel_c$edad  <-as.numeric(hom_rel_c$edad)
+hom_rel_c$edad1 <-as.numeric(hom_rel_c$edad1)
+hom_rel_c$edad2 <-as.numeric(hom_rel_c$edad2)
+hom_rel_c$edad3 <-as.numeric(hom_rel_c$edad3)
+hom_rel_c$edad4 <-as.numeric(hom_rel_c$edad4)
+hom_rel_c$edad5 <-as.numeric(hom_rel_c$edad5)
+#hom_rel$machismo<-as.numeric(hom_rel$machismo)
+#hom_rel$cal_entorno<-as.numeric(hom_rel$cal_entorno)
+```
+
+
+# 3. Desarrollo análisis Case-control 
+
+```{r warning=FALSE, message=FALSE}
+#cargar paquetes necesarios del codigo de Smith
+library(biglm)
+#install.packages("ergm")
+library(ergm)
+library(doParallel)
+library(igraph)
+
+#cargar funciones de smith
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/ego_net_case_control_model.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/output_glm_formula.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/prepare_case_control_logistic_data_function_create_vars.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/prepare_case_control_logistic_data_function.R")
+```
+
+## Replicación
+
+Crearemos una lista, donde cada segmento es un atributo diferente,
+```{r}
+#name of degree column on data frame:
+var.name.degree="tamred"
+
+#names of key ego attribute columns in data frame:
+var.name.characs=c("educ", "relig", "sexo", "edad", "ideol") 
+
+var.name.characs.alter=list()
+
+for (p in 1:length(var.name.characs)){
+  var.name.characs.alter[[p]]=paste(var.name.characs[[p]],1:5,sep="")
+}
+
+#var.name.characs.alter[[7]]<-NULL
+#Let's take a look:
+var.name.characs.alter 
+```
+
+## Fórmula
+
+Ahora vamos a fijar la fórmula de interés. Los posibles términos son los siguientes:
+
+`nodematch` = un término de coincidencia/sin coincidencia (¿ego y alter coinciden en un atributo?)
+`nodemix` = incluye términos para todos los pares de categorías en el atributo de interés.
+`absdiff` = incluye un término para mostrar la diferencia absoluta entre ego y alter (apropiado para variables continuas.
+`nodefactor` =controla el grado de los diferentes grupos (ajustando las estimaciones de homofilia el hecho de que algunos grupos, por ejemplo, los hombres, tienen más vínculos que otros grupos, como las mujeres).
+`nodecov` = similar a nodefactor pero apropiado para variables continuas. Como nota general, es que el algoritmo puede incluir una lista de formulas.
+
+#help("ergm-terms")
+
+https://cran.r-project.org/web/packages/ergm/vignettes/ergm-term-crossRef.html
+http://statnet.org/nme/d2-ergmterms.html
+https://eehh-stanford.github.io/SNA-workshop/ergm-intro.html#some-practical-reasons
+
+```{r}
+hom_rel_2017<-hom_rel_c[hom_rel_c$año == '2017',]
+hom_rel_2017<-as.matrix(hom_rel_2017)
+hom_rel_2017<-as.data.frame(hom_rel_2017)
+
+hom_rel_2017$edad  <-as.numeric(hom_rel_2017$edad)
+hom_rel_2017$edad1 <-as.numeric(hom_rel_2017$edad1)
+hom_rel_2017$edad2 <-as.numeric(hom_rel_2017$edad2)
+hom_rel_2017$edad3 <-as.numeric(hom_rel_2017$edad3)
+hom_rel_2017$edad4 <-as.numeric(hom_rel_2017$edad4)
+hom_rel_2017$edad5 <-as.numeric(hom_rel_2017$edad5)
+
+```
+
+
+```{r}
+formula_ego<- as.formula(~ nodefactor("sexo") +
+                           nodefactor("educ") +
+                           nodefactor("relig") +
+                           nodefactor("ideol") +
+                           nodecov("edad") + 
+                           nodematch("sexo",diff=TRUE) +
+                           nodematch("educ", diff=TRUE) + 
+                           nodematch("relig", diff=TRUE) + 
+                           nodematch("ideol", diff=TRUE)+
+                           absdiff("edad")) 
+```
+
+## Análisis 1: 2014 Todos los confidentes (Weighted random matching)
+
+En este primer procedimiento se parea a los respondientes de manera aleatoria y en base a los pesos de probabilidad. 
+
+### Modelo 1 
+```{r}
+modelo1<-egonet_case_control_model(formula=formula_ego,
+                                   ego_data=hom_rel_2017,
+                                   var.name.degree=var.name.degree, 
+                                   var.name.characs=var.name.characs,
+                                   var.name.characs.alter=var.name.characs.alter, 
+                                   case.control.type="weighted.random.matching", 
+                                   max.alter=5,
+                                   max.control.data.N=500000,
+                                   remove.isolates.control=T, 
+                                   weight.var.name="ponderador", 
+                                   weight.var.name.control="ponderador", 
+                                   num.iterations=100,
+                                   bootstrap.sample=T, 
+                                   num.bootstrap.samples=100,
+                                   useparallel=T, 
+                                   num.cores=8,
+                                   maxit=20,
+                                   adjust.intercept=T)
+
+summary(modelo1)
+modelo1
+```
+
+
+```{r}
+names(modelo1)
+coefs=modelo1$coefs
+head(coefs)
+coefs_sample=aggregate(.~sample, data=coefs, mean)
+coefs_sample
+coefs_sample=coefs_sample[,-which(colnames(coefs_sample) %in% c("sample","iteration"))]
+apply(coefs_sample, 2, mean)
+apply(coefs_sample, 2, sd)
+apply(coefs_sample, 2, quantile, c(.025, .975))
+```
+
+
+## Análisis 2: No familiares 
+
+### Select data
+```{r}
+library(panelr)
+
+hom_rel_2014_ego<-hom_rel_2014%>%
+  dplyr::select(idencuesta,sexo,edad,educ,relig,barrio,ideol,tamred,año,ponderador)
+
+hom_rel_2014_alter<-hom_rel_2014%>%
+  dplyr::select(idencuesta,
+                sexo1,sexo2,sexo3,sexo4,sexo5,edad1,edad2,edad3,edad4,edad5,
+                educ1,educ2,educ3,educ4,educ5,relig1,relig2,relig3,relig4,relig5,
+                barrio1,barrio2,barrio3,barrio4,barrio5,ideol1,ideol2,ideol3,
+                ideol4,ideol5,relacion1,relacion2,relacion3,relacion4,relacion5)
+
+# reshape
+hom_rel_2014_long<-long_panel(hom_rel_2014_alter, prefix="", begin=1, end=5, label_location="end")
+
+# filter
+hom_rel_2014_long_nofam<-hom_rel_2014_long%>%
+  dplyr::filter(relacion =="nofam")
+
+# to wide
+hom_rel_2014_nofam<-widen_panel(hom_rel_2014_long_nofam, separator = "")
+hom_rel_2014_nofam<-as.matrix(hom_rel_2014_nofam)
+hom_rel_2014_nofam<-as.data.frame(hom_rel_2014_nofam)
+hom_rel_2014_nofam$id<-NULL
+
+# join
+hom_rel_2014_nofam<-dplyr::left_join(hom_rel_2014_nofam, 
+                                     hom_rel_2014_ego, 
+                                     by="idencuesta")%>%
+  dplyr::select(idencuesta,tamred,año,sexo,sexo1,sexo2,sexo3,sexo4,sexo5,
+                edad,edad1,edad2,edad3,edad4,edad5,educ,educ1,educ2,educ3,
+                educ4,educ5,relig,relig1,relig2,relig3,relig4,relig5,
+                barrio,barrio1,barrio2,barrio3,barrio4,barrio5,ideol,
+                ideol1,ideol2,ideol3,ideol4,ideol5,relacion1,relacion2,
+                relacion3,relacion4,relacion5,ponderador)
+# to numeric
+hom_rel_2014_nofam$edad  <-as.numeric(hom_rel_2014_nofam$edad)
+hom_rel_2014_nofam$edad1 <-as.numeric(hom_rel_2014_nofam$edad1)
+hom_rel_2014_nofam$edad2 <-as.numeric(hom_rel_2014_nofam$edad2)
+hom_rel_2014_nofam$edad3 <-as.numeric(hom_rel_2014_nofam$edad3)
+hom_rel_2014_nofam$edad4 <-as.numeric(hom_rel_2014_nofam$edad4)
+hom_rel_2014_nofam$edad5 <-as.numeric(hom_rel_2014_nofam$edad5)
+
+```
+
+```{r}
+modelo2<-egonet_case_control_model(formula=formula_ego,
+                                   ego_data=hom_rel_2014_nofam,
+                                   var.name.degree=var.name.degree, 
+                                   var.name.characs=var.name.characs,
+                                   var.name.characs.alter=var.name.characs.alter, 
+                                   case.control.type="weighted.random.matching", 
+                                   max.alter=5,
+                                   max.control.data.N=100000,
+                                   remove.isolates.control=T, 
+                                   weight.var.name="ponderador", 
+                                   weight.var.name.control="ponderador", 
+                                   num.iterations=100,
+                                   bootstrap.sample=T, 
+                                   num.bootstrap.samples=100,
+                                   useparallel=T, 
+                                   num.cores=8,
+                                   maxit=20,
+                                   adjust.intercept=F)
+
+# Se considera una muestra de diadas de control de 10000, considerando que las diadas posibles emergen de un N total de 530 egos.  
+
+```
+
+```{r}
+names(modelo2)
+coefs_nofam=modelo2$coefs
+head(coefs_nofam)
+coefs_sample_nofam=aggregate(.~sample, data=coefs_nofam, mean)
+coefs_sample_nofam
+coefs_sample_nofam=coefs_sample_nofam[,-which(colnames(coefs_sample_nofam) %in% c("sample","iteration"))]
+apply(coefs_sample_nofam, 2, mean)
+apply(coefs_sample_nofam, 2, sd)
+apply(coefs_sample_nofam, 2, quantile, c(.025, .975))
+```
+
+
+### Estimar SE
+```{r}
+std_mean <- function(x) sd(x)/sqrt(length(x))
+std_mean(coefs_sample_nofam$nodematch.ideol.rightwinger)
+```
+
+## Wald 
+```{r}
+z <- (1.797 - 0.1) / 0.055
+pnorm(q=z, lower.tail=FALSE) 
+
+```
+
+
+
+
+
+## Análisis 3: 2017 todos los vínculos multivariado
+```{r}
+hom_rel_2017<-hom_rel[hom_rel$año == '2017',]
+hom_rel_2017<-as.matrix(hom_rel_2017)
+hom_rel_2017<-as.data.frame(hom_rel_2017)
+
+hom_rel_2017$edad  <-as.numeric(hom_rel_2017$edad)
+hom_rel_2017$edad1 <-as.numeric(hom_rel_2017$edad1)
+hom_rel_2017$edad2 <-as.numeric(hom_rel_2017$edad2)
+hom_rel_2017$edad3 <-as.numeric(hom_rel_2017$edad3)
+hom_rel_2017$edad4 <-as.numeric(hom_rel_2017$edad4)
+hom_rel_2017$edad5 <-as.numeric(hom_rel_2017$edad5)
+
+hom_rel_2017<-hom_rel %>% drop_na(ego_m_educ)
+```
+
+### formula para sexo ego
+```{r}
+formula_ego<- as.formula(~ nodematch("sexo") + 
+                           nodematch("educ") + 
+                           nodematch("relig") + 
+                           nodematch("barrio") + 
+                           nodematch("ideol") +
+                           absdiff("edad") + 
+                           offset("ego_m_educ"))
+
+```
+
+### Caso- control 
+```{r}
+out_egonet_2017<-
+  egonet_case_control_model(formula=formula_ego,
+                            ego_data=hom_rel_2017,
+                            var.name.degree=var.name.degree, 
+                            var.name.characs=var.name.characs,
+                            var.name.characs.alter=var.name.characs.alter, 
+                            case.control.type="weighted.random.matching", 
+                            max.alter=5,
+                            max.control.data.N=100000,
+                            remove.isolates.control=T, 
+                            weight.var.name="ponderador", 
+                            weight.var.name.control="ponderador", 
+                            num.iterations=100,
+                            bootstrap.sample=T, 
+                            num.bootstrap.samples=10,
+                            useparallel=T, 
+                            num.cores=8,
+                            maxit=20,
+                            adjust.intercept=F)
+
+
+```
+
+```{r}
+names(out_egonet_2017)
+coefs_egonet_2017=out_egonet_2017$coefs
+head(coefs_egonet_2017)
+coefs_sample_egonet_2017=aggregate(.~sample, data=coefs_egonet_2017, mean)
+coefs_sample_egonet_2017
+coefs_sample_egonet_2017=coefs_sample_egonet_2017[,-which(colnames(coefs_sample_egonet_2017) %in% c("sample","iteration"))]
+apply(coefs_sample_egonet_2017, 2, mean)
+apply(coefs_sample_egonet_2017, 2, sd)
+apply(coefs_sample_egonet_2017, 2, quantile, c(.025, .975))
+```
+
+## Análisis 4: 2017 no familiares multivariado
+
+### Select data
+```{r}
+hom_rel_2017_nofam<-hom_rel_2017%>%
+  dplyr::filter(relacion1 != "fam" | is.na(relacion1))%>%
+  dplyr::filter(relacion2 != "fam" | is.na(relacion2))%>%
+  dplyr::filter(relacion3 != "fam" | is.na(relacion3))%>%
+  dplyr::filter(relacion4 != "fam" | is.na(relacion4))%>%
+  dplyr::filter(relacion5 != "fam" | is.na(relacion5))
+```
+
+### formula para sexo ego
+```{r}
+formula_ego<- as.formula(~ nodematch("sexo") + 
+                           nodematch("educ") + 
+                           nodematch("relig") + 
+                           nodematch("barrio") + 
+                           nodematch("ideol") +
+                           absdiff("edad"))
+```
+
+### Caso- control sexo
+```{r}
+out_egonet_2017_nofam<-
+  egonet_case_control_model(formula=formula_ego,
+                            ego_data=hom_rel_2017_nofam,
+                            var.name.degree=var.name.degree, 
+                            var.name.characs=var.name.characs,
+                            var.name.characs.alter=var.name.characs.alter, 
+                            case.control.type="weighted.random.matching", 
+                            max.alter=5,
+                            max.control.data.N=100000,
+                            remove.isolates.control=T, 
+                            weight.var.name="ponderador", 
+                            weight.var.name.control="ponderador", 
+                            num.iterations=100,
+                            bootstrap.sample=T, 
+                            num.bootstrap.samples=10,
+                            useparallel=T, 
+                            num.cores=8,
+                            maxit=20,
+                            adjust.intercept=F)
+
+```
+
+```{r}
+names(out_egonet_2017_nofam)
+coefs_egonet_2017_nofam=out_egonet_2017_nofam$coefs
+head(coefs_egonet_2017_nofam)
+coefs_sample_egonet_2017_nofam=aggregate(.~sample, data=coefs_egonet_2017_nofam, mean)
+coefs_sample_egonet_2017_nofam
+coefs_sample_egonet_2017_nofam=coefs_sample_egonet_2017_nofam[,-which(colnames(coefs_sample_egonet_2017_nofam) %in% c("sample","iteration"))]
+apply(coefs_sample_egonet_2017_nofam, 2, mean)
+apply(coefs_sample_egonet_2017_nofam, 2, sd)
+apply(coefs_sample_egonet_2017_nofam, 2, quantile, c(.025, .975))
+```
+
+
+## Análisis 5: 2019 todos los vínculos multivariado
+```{r}
+hom_rel_2019<-hom_rel[hom_rel$año == '2019',]
+hom_rel_2019<-as.matrix(hom_rel_2019)
+hom_rel_2019<-as.data.frame(hom_rel_2019)
+
+hom_rel_2019$edad  <-as.numeric(hom_rel_2019$edad)
+hom_rel_2019$edad1 <-as.numeric(hom_rel_2019$edad1)
+hom_rel_2019$edad2 <-as.numeric(hom_rel_2019$edad2)
+hom_rel_2019$edad3 <-as.numeric(hom_rel_2019$edad3)
+hom_rel_2019$edad4 <-as.numeric(hom_rel_2019$edad4)
+hom_rel_2019$edad5 <-as.numeric(hom_rel_2019$edad5)
+```
+
+### formula para sexo ego
+```{r}
+formula_ego<- as.formula(~ nodematch("sexo") + 
+                           nodematch("educ") + 
+                           nodematch("relig") + 
+                           nodematch("barrio") + 
+                           nodematch("ideol") +
+                           absdiff("edad"))
+```
+
+### Caso- control 
+```{r}
+out_egonet_2019<-
+  egonet_case_control_model(formula=formula_ego,
+                            ego_data=hom_rel_2017,
+                            var.name.degree=var.name.degree, 
+                            var.name.characs=var.name.characs,
+                            var.name.characs.alter=var.name.characs.alter, 
+                            case.control.type="weighted.random.matching", 
+                            max.alter=5,
+                            max.control.data.N=100000,
+                            remove.isolates.control=T, 
+                            weight.var.name="ponderador", 
+                            weight.var.name.control="ponderador", 
+                            num.iterations=100,
+                            bootstrap.sample=T, 
+                            num.bootstrap.samples=10,
+                            useparallel=T, 
+                            num.cores=8,
+                            maxit=20,
+                            adjust.intercept=F)
+
+```
+
+```{r}
+names(out_egonet_2019)
+coefs_egonet_2019=out_egonet_2019$coefs
+head(coefs_egonet_2019)
+coefs_sample_egonet_2019=aggregate(.~sample, data=coefs_egonet_2019, mean)
+coefs_sample_egonet_2019
+coefs_sample_egonet_2019=coefs_sample_egonet_2019[,-which(colnames(coefs_sample_egonet_2019) %in% c("sample","iteration"))]
+apply(coefs_sample_egonet_2019, 2, mean)
+apply(coefs_sample_egonet_2019, 2, sd)
+apply(coefs_sample_egonet_2019, 2, quantile, c(.025, .975))
+```
+
+
+## Análisis 4: 2019 no familiares multivariado
+
+### Select data
+```{r}
+hom_rel_2019_nofam<-hom_rel_2019%>%
+  dplyr::filter(relacion1 != "fam" | is.na(relacion1))%>%
+  dplyr::filter(relacion2 != "fam" | is.na(relacion2))%>%
+  dplyr::filter(relacion3 != "fam" | is.na(relacion3))%>%
+  dplyr::filter(relacion4 != "fam" | is.na(relacion4))%>%
+  dplyr::filter(relacion5 != "fam" | is.na(relacion5))
+```
+
+### formula para sexo ego
+```{r}
+formula_ego<- as.formula(~ nodematch("sexo") + 
+                           nodematch("educ") + 
+                           nodematch("relig") + 
+                           nodematch("barrio") + 
+                           nodematch("ideol") +
+                           absdiff("edad"))
+```
+
+### Caso- control sexo
+```{r}
+out_egonet_2019_nofam<-
+  egonet_case_control_model(formula=formula_ego,
+                            ego_data=hom_rel_2019_nofam,
+                            var.name.degree=var.name.degree, 
+                            var.name.characs=var.name.characs,
+                            var.name.characs.alter=var.name.characs.alter, 
+                            case.control.type="weighted.random.matching", 
+                            max.alter=5,
+                            max.control.data.N=100000,
+                            remove.isolates.control=T, 
+                            weight.var.name="ponderador", 
+                            weight.var.name.control="ponderador", 
+                            num.iterations=100,
+                            bootstrap.sample=T, 
+                            num.bootstrap.samples=10,
+                            useparallel=T, 
+                            num.cores=8,
+                            maxit=20,
+                            adjust.intercept=F)
+
+```
+
+```{r}
+names(out_egonet_2019_nofam)
+coefs_egonet_2019_nofam=out_egonet_2019_nofam$coefs
+head(coefs_egonet_2019_nofam)
+coefs_sample_egonet_2019_nofam=aggregate(.~sample, data=coefs_egonet_2019_nofam, mean)
+coefs_sample_egonet_2019_nofam
+coefs_sample_egonet_2019_nofam=coefs_sample_egonet_2019_nofam[,-which(colnames(coefs_sample_egonet_2019_nofam) %in% c("sample","iteration"))]
+apply(coefs_sample_egonet_2019_nofam, 2, mean)
+apply(coefs_sample_egonet_2019_nofam, 2, sd)
+apply(coefs_sample_egonet_2019_nofam, 2, quantile, c(.025, .975))
+```
+
+
+# Bibliografía 
+
+- Bargsted Valdés, M. A., Espinoza, V., & Plaza, A. (2020). Pautas de Homofilia en Chile. Papers. Revista de Sociología, 105(4), 583. https://doi.org/10.5565/rev/papers.2617
+
+- Smith, J. A., McPherson, M., & Smith-Lovin, L. (2014). Social Distance in the United States: Sex, Race, Religion, Age, and Education Homophily among Confidants, 1985 to 2004. American Sociological Review, 79(3), 432-456. https://doi.org/10.1177/0003122414531776
+
+
+
+
+

@@ -1,0 +1,308 @@
+---
+title: "Homofilia y desigualdad en Chile"
+subtitle: "Seminario ELSOC-COES 2022"
+author: "Cantillan, R.; Espinoza,V.; Bargsted, M. & Plaza, A."
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+header-includes:
+- \usepackage{booktabs}
+institute: "ISUC PUC - COES - redesLab"
+fontsize: 8pt
+output: 
+   beamer_presentation: 
+     theme: Malmoe
+     colortheme: whale
+     fonttheme: professionalfonts
+     latex_engine: xelatex
+     df_print: kable
+     toc: yes
+     fig_crop: no
+     fig_caption: yes
+---
+
+## Motivación 
+
+- En Chile, las reformas neoliberales establecidas durante la década de 1980, se tradujeron en un proyecto de modernización orientado al desarrollo de  
+
+  - Estabilidad política 
+  - Crecimiento económico sostenido (pro pobre) 
+  
+- Una de las consecuencias perniciosas de este proyecto político es el crecimiento sostenido de la desigualdad socioeconómica y los consecuentes problemas de cohesión social. 
+  
+## Motivación II
+
+- 
+
+
+
+
+
+## La homofilia está en todas partes! 
+
+- La **homofilia** es un fenómeno ecólogico y patrón empírico de organización de las sociedades.  
+
+- Refiere a la tendencia empírica en la cual el contacto entre personas similares ocurre a un ritmo mayor que entre personas diferentes. 
+
+- La omnipresencia de la homofilia significa que la información cultural, conductual, genética o material que fluye a través de las redes tenderá a estar localizada .
+
+- Esta tendencia constituye una de las características más marcadas de la estructura social de las sociedades modernas (McPherson, 2009; Smith et al., 2014). 
+
+
+## Relevancia
+
+- Realidades opuestas no se atraen
+- Potenciar homofilia como mecanismo. 
+- Relevancia de lo político. (relaciones no monotónicas) 
+
+- 
+
+- Homofilia como correlato micro de la desigualdad social. 
+- Homofilia multidimensional (segregación).
+- Caso control (técnica de punta) 
+
+
+## Objetivo 
+
+- En este artículo nos preguntamos hasta qué punto la modernización ha desdibujado las barreras entre los grupos sociales en Chile. 
+
+- El patrón chileno en las relaciones sociales mostró límites bien establecidos entre grupos sociales como personas educadas y menos escolarizadas, mujeres y hombres, católicos y no católicos (Bargsted Valdés et al., 2020). 
+
+- Fronteras eran menos claras, entre los jóvenes y las personas mayores e incluso entre las personas de inclinaciones políticas divergentes. 
+
+- La expansión del sistema educativo, especialmente el acceso a la educación universitaria, ha debilitado las barreras en muchas de las dimensiones, aunque el nivel socioeconómico sigue estructurando la sociedad chilena.
+
+- Argumentamos, primero que los patrones en la interacción social son consistentes con lo esperado bajo un proceso de modernización y, sostenemos que estos rasgos se mantienen estables durante el período en estudio porque expresan la estructura social de la sociedad chilena.
+
+
+## Teoría I
+
+- El análisis clásico de Lazarsfeld y Merton (1954) sobre las preferencias de adultos en la selección de amistades, usó el término homofilia para referirse a **"una tendencia en la formación de amistades entre aquellos que son similares en algún aspecto designado"**, ya sea, de carácter innato o adquirido.
+
+- La **homofilia**, entonces, se refiere a la mayor probabilidad de interacción entre personas de características similares (McPherson et al., 2001). La asociación entre dos o más personas va frecuentemente acompañada de similitudes de educación, ocupación, área de residencia, estilo de vida, opiniones o creencias religiosas. 
+
+
+
+- En efecto, relaciones sociales institucionalizadas, tales como el matrimonio o la amistad tienden a ocurrir con mayor probabilidad entre personas similares, lo cual demarca un aspecto que no es parte de la normatividad asociada con estas relaciones.
+
+## Teoría II
+
+- Homofilia = alta integración local y baja integración global. 
+
+- La **integración local** se caracteriza por la presencia de grupos de alta cohesión, con lazos fuertes entre sus miembros, que facilitan la coordinación necesaria para la acción colectiva o la circulación de recursos (en este sentido, la homofilia puede ser considerada como un **mecanismo de clausura**). 
+
+- La **integración global**, por otro lado, se refiere a la vinculación entre círculos sociales diversos a través de vínculos débiles, acompañada por dificultades de coordinación y establecimiento de reglas compartidas. 
+
+- La consistencia interna de un grupo, llevada al extremo, puede convertirse en una desventaja asociada con la marginalización. En contraste, las vinculaciones externas favorecen la cohesión social global.
+
+
+## Teoría III (convergencia Blau/ Granovetter)
+
+- **Interacciones macro**: vinculaciones entre posiciones sociales  Blau (1974, 1977).  
+
+- Las sociedades poseen un grado de **heterogeneidad** que depende del número de posiciones sociales identificables. Las sociedades de alta heterogeneidad -compuestas por muchas posiciones sociales de similar tamaño- ofrecen mayores oportunidades de interacción entre integrantes de distintos grupos que las sociedades más homogéneas (Blau, 1977). En sociedades heterogéneas, la distribución de la población en posiciones sociales se correlaciona débilmente entre sí.
+
+- Las sociedades **homogéneas**, se caracterizan por la menor probabilidad de establecer vínculos entre posiciones sociales diferentes. Desde el punto de vista microsocial ello se acerca a una situación que tiende a la homofilia, donde la formación de relaciones sigue una pauta que revela correlación de status (y entre parámetros nominales o graduados), reduciendo el contacto entre grupos. 
+
+- **Tamaño**: Las sociedades en las cuales se encuentran posiciones de diverso tamaño exhiben un incremento en la probabilidad de que miembros del grupo más pequeño interactúen con los integrantes del grupo mayoritario (Blau & Schwartz, 1984).
+
+- Pequeños grupos privilegiados o excluidos pueden estar sujetos a normas de clausura o segregación que reducen el poder de las diferencias numéricas entre grupos; así por ejemplo ocurría con el “apartheid” sudafricano.
+
+## Teoría IV 
+
+- **Interacciones micro**: Mark Granovetter (1973). De acuerdo con esta tesis, la clave de la cohesión social (integración, en la formulación original) reside en la capacidad para conectarse con círculos diversos antes que con un núcleo denso de personas cercanas (Granovetter, 1973). 
+
+- La fuerza de los lazos se refiere a la frecuencia de contacto, confianza y compromiso emocional asociados con un vínculo (Granovetter, 1973). 
+
+- Los **lazos fuertes** se asocian con similitud entre las partes en contacto, produciendo una estructura de pequeños grupos unidos hacia el interior por lazos fuertes y carentes de vínculos hacia otros círculos sociales. 
+
+- La constatación de que los lazos fuertes reducen la probabilidad de éxito en procesos sociales relevantes como la difusión de información, la incorporación de innovaciones o la capacidad de acción colectiva. Esto  lleva a Granovetter (1973) a sostener que son los **lazos débiles** los más relevantes para la cohesión social desde un punto de vista estructural.
+
+## Teoría V 
+
+- Las vinculaciones entre personas similares **cierran** el acceso a recursos, ideas, prácticas diferentes y actúan en contra de la integración del grupo (Espinoza, 1995). Esto último deviene en procesos acumulativos (y sinérgicos) de ventajas y desventajas de grupos (DiPrete & Eirich, 2006; Jackson, 2021). 
+
+- Diversos estudios hipotetizan sobre el **efecto sinérgico** de la homofilia cuando esta cruza diversos dominios de la vida social, entrecruzando personas similares en diferentes contextos (Degenne & Forsé, 1999; Kalmijn & Vermunt, 2007; Smith et al., 2014; Vermunt & Kalmijn, 2006). 
+
+- La hipótesis se alinea con el tercer teorema de Blau (1993) quien plantea que la homogeneidad social establece barreras a la interacción dada la correlación entre diferencias sociales en diversas dimensiones. 
+
+
+## Teoría VI (Homofilia y desigualdad)
+
+- La homofilia posee un papel clave en la separación, reproducción y evolución de grupos dentro de una estructura social y, en este sentido, en la configuración de desigualdades sociales (Jackson, 2021; Kossinets & Watts, 2009). 
+
+- **El papel de la homofilia redunda en ser un mecanismo que contribuye a la clausura grupal y a la acumulación de ventajas o desventajas sociales**
+
+- Dado que las personas dependen de sus redes para obtener información y oportunidades, las divisiones en una red generan información y oportunidades para permanecer concentradas en partes de la sociedad y no llegar a otras partes (Jackson, 2021; Rytina, 2020)
+
+- Es esperable que las dotaciones iniciales (por ejemplo, recursos financieros o culturales) pueden verse agravadas por influencia de la red y sus características, lo que exacerba la desigualdad entre grupos en la adopción de prácticas gratificantes en relación con lo que esperaríamos basándonos únicamente en las diferencias individuales (DiMaggio & Garip, 2011, 2012; Rivera et al., 2010). 
+
+## Homofilia basal y endogámica 
+
+- A nivel de redes personales, la literatura ha indicado dos maneras a través de las cuales la homofilia influye en la formación de diadas: 1) En términos de **disponibilidad demográfica**, es decir, en forma de estructura de oportunidades para la interacción (Blau, 1977; Feld, 1981, 1982; McPherson et al., 2001) y, 2) en forma de **preferencias individuales por la similitud**.
+
+- La **homofilia basal** es entendida como el nivel de homofilia esperado de la mezcla aleatoria en la población y, la homofilia endogámica como el nivel de homofilia por encima de esa línea de base. 
+
+- La **homofilia endogámica**, por lo tanto, incluye instancias que se clasificarían como homofilia de elección, pero también incluye cierta cantidad de homofilia inducida por que la homogeneidad de grupo puede ser un resultado de algún proceso de "endogamia", más allá de lo que está determinado por la distribución demográfica general (Kossinets & Watts, 2009).
+
+
+## Evidencia (Chile)
+
+- Efectos negativos de la homogeneidad social en procesos de superación de la pobreza y movilidad social en general (Espinoza, 1995; Espinoza & Canteros, 2001), y en procesos de  coordinación de acción colectiva (Espinoza, 1999). 
+
+- Diferencias regionales y culturales en la disponibilidad de lazos sociales (Espinoza & Durston, 2013; Espinoza & Rabí, 2009). 
+
+- Otros estudios han vinculado directamente la sociabilidad en que prima la intimidad de la familia inmediata con los bajos niveles de confianza observables en la sociedad chilena (Torche & Valenzuela, 2011; Valenzuela & Cousiño, 2000) 
+
+- Homogamia en la clase media-alta: El carácter dominante de la homogamia se refleja en el tratamiento del matrimonio mixto como una transgresión de la norma; sólo en períodos de crisis social podría apreciarse mayor permisividad frente a los matrimonios de clase media con la aristocracia o élite económica (McClure, 2012). 
+
+- La preferencia por la homogamia se expresa en las aprehensiones que muestran sus entrevistados con respecto de los matrimonios con personas que no pertenecen a la élite económica. La norma, sin embargo, puede relajarse ante las limitaciones demográficas y también económicas de los integrantes de la élite para cubrir todas las posiciones. El habitus hace que los futuros cónyuges lleguen a enamorarse de las personas que convienen a sus intereses.(Huneeuss, 2013). 
+
+- La homogamia educacional observada en parejas chilenas se ubica en niveles cercanos al 50%, lo cual es semejante al nivel de Estados Unidos, pero menor al nivel de Brasil (Torche, 2010). La norma de homogamia en la clase alta encuentra validación en estos resultados, ya que el rasgo dominante en las parejas chilenas consiste en la menor propensión de quienes cuentan con educación universitaria a emparejarse con personas de menor educación.
+
+## Evidencia (estudios de estratificación)
+
+- Wright & Choo (1992), estudian en qué medida las relaciones de explotación que sustentan las clases sociales resultan permeables a las relaciones de amistad. Los resultados muestran impermeabilidad en la dimensión de propiedad, mientras que las diferencias en las clases no propietarias, donde predominan relaciones de autoridad y calificación resultan más permeables a la amistad. La clase obrera, en particular, desarrolla relaciones de amistad con categorías superiores, como capataces, supervisores o autoempleados.
+
+- Chan & Goldthorpe (2004) conceptualizan las relaciones de amistad a través de las clases como una jerarquía de status, la cual mapean sobre la tipología de clases EGP (Erikson & Goldthorpe, 1992). Sus resultados muestran que la jerarquía de estatus tiende a ser más homogénea en algunas categorías de clase, notablemente en la élite de la clase de servicios, aunque están lejos de identificar una pauta. 
+
+- Los anteriores resultados contrastan con la pauta reportada por Degenne (1999) para establecimientos industriales franceses en términos de mayores probabilidades de socialización en puntos intermedios de las distribuciones de clase o status. En este contexto, las posiciones extremas socializan `hacia adentro', con los oficinistas, técnicos y gerentes junior actuando como intermediarios. 
+
+- La evolución de la homofilia en Francia muestra una reducción en términos de origen social u ocupación, aunque se mantiene relativamente estable en términos de niveles de educación y riqueza (Forsé & Chauvel, 1995). La pauta converge con las réplicas del modelo de logro de status de Blau & Duncan (1967) que muestran consistentemente el predominio de la educación del trabajador por sobre el status de su familia de origen.
+
+## Relevancia 
+
+- El enfoque de la homofilia como resultado de la composición de los grupos es una línea de trabajo escasamente desarrollada en América Latina; para Chile se cuenta solamente con un estudio sobre homogamia educacional (Torche, 2010). 
+
+- **En suma, los estudios chilenos referidos a la homofilia tienden a concentrarse en el matrimonio -la homogamia- con énfasis en su estudio normativo. La formación de familias por cierto constituye un campo relevante para estudiar la homofilia en Chile, pero está lejos de constituir el único campo. Las relaciones de amistad, aún cuando algunos autores las asimilan a las relaciones familiares (Torche & Valenzuela, 2011), siguen constituyendo un aspecto relevante de la sociabilidad chilena. Aún en el contexto de las mayores oportunidades de movilidad que ofrecen las sociedades modernas, la homofilia continúa siendo un rasgo preponderante**.
+
+## Hipótesis por parámetro 
+
+- El **sexo** de las personas afecta sus posibilidades de formación de diádas. En específico, esperamos mayores niveles de homofilia entre mujeres. Estas pautas de roles estás asociadas con la norma de una sociedad patriarcal.
+   
+- **Edad**, la etapa de *transición demográfica* en que se encuentra chile muestra un peso creciente de los adultos mayores, quienes enfrentan condiciones de vida difíciles, por lo que se podría esperar menores niveles de cohesión social entre ellos. (Esta hipótesis no la podemos testear como edad como continúa)
+      
+- **Educación**, (expación del sistema educativo especialmente desde el año 2000). El *acceso a la educación* constituye un fuerte principio estructurador en la sociedad chilena, generalmente asociado con el status socioeconómico y, en sus niveles más altos, con la reproducción en los círculos sociales más deseables. En la medida que la fase de expansión en el acceso a la educación universitaria es relativamente reciente, puede esperarse mayor cohesión social entre las personas que hayan tenido mayor exposición al sistema formal de educación universitaria.
+
+- **Religión**, cae la fuerza de la fe católica como principio estructurante de vínculos. Esperamos ver mayores niveles de homofilia entre individuos evangélicos. 
+
+- **Ideología política**, considerenado el incremento de la distancia entre partidos políticos y bases sociales, esperamos ver mayores niveles de polarización ideológica. Esto es, mayor probabilidad de formación de vinculos homófilos en los polos del espectro.  
+
+- **Barrio**, esperamos bajas probabilidades de incluir a vecinos en las redes de confidentes. 
+
+
+## Metodología I
+
+- Los datos de la red del ego ofrecen un medio para medir la prominencia de una o varias  dimensiones demográficas. 
+
+- Una dimensión de **baja prominencia**, o sin importancia, exhibirá bajos niveles de homofilia. En este caso los límites de categoriales son “porosos” y los individuos tienen menos restricciones para formar lazos sociales estrechos con miembros de un grupo (o categoría) social diferente. 
+
+- Por su parte una categoría sociodemográfica **prominente**, o importante, en la organización de un sistema social destaca por establecer fuertes sesgos en la formación de vínculos estrechos entre individuos haciendo más probable la interacción entre individuos que pertenecen a esta categoría o grupo social.  
+
+- En este sentido es relevante preguntarse si el nivel educativo alcanzado, es una división demográfica más importante que la religión, la edad o el género. 
+
+- Si se recopila a lo largo del tiempo, es posible preguntarse cómo la prominencia de diferentes dimensiones aumenta / disminuye a la luz de cambios macroestructurales más grandes, como cambios demográficos (por ejemplo, el país es más diverso racialmente), aumento de la desigualdad y cambios en la segregación residencial (Smith et al., 2014; Smith & Gauthier, 2020). 
+
+## Metodología II 
+
+- En este trabajo seguimos la orientación de Smith et al. (2014): revisamos la **tasa absoluta** de interacción o contacto entre grupos sociodemográficos, así como la **tasa de contacto en relación con algún modelo de base de expectativas de azar**. 
+
+- Las expectativas al azar se construyen en función de la composición demográfica de la población de interés.
+
+- Esta preocupación está fundamentada en la importancia del aprendizaje que podemos desarrollar mirando “todos los mundos posibles” (Watts, 2003), y la comprensión de la importancia relativa del orden y la aleatoriedad como parámetros que podemos sintonizar para movernos a través de un espacio de posibilidades.
+
+- Se pueden emplear varios modelos para evaluar la prominencia relativa al azar: incluidos los **modelos log-lineales** tradicionales, **modelos de casos y controles**, **modelos de gráficos aleatorios exponenciales** y **modelos de espacios latentes**. En este trabajo usamos la aproximación de las regresiones caso-control. A continuación describimos en breve este procedimiento. 
+
+## Metodología III (Regresiones logísticas caso-control)
+
+- Los modelos de casos y controles se utilizan a menudo en la investigación médica para estudiar enfermedades raras que son difíciles de capturar mediante un muestreo aleatorio (Borgan et al., 2018). 
+
+- Los modelos comparan los casos, un conjunto de individuos con la "enfermedad", con los controles, un conjunto de individuos sin la "enfermedad". 
+
+- Un modelo de casos y controles es ideal para los datos de la red del ego porque la muestra captura el raro evento de interés= **las relaciones sociales entre actores** (Smith et al., 2014). 
+
+- Todos los **casos** son parejas Ego-alteri, las cuales mantienen una relación social conocida (en nuestro caso, de confidentes). 
+
+- Los **controles** representan una muestra aleatoria de parejas que no tienen una relación social conocida. Esto se forma emparejando aleatoriamente a los encuestados de la muestra, capturando la mezcla aleatoria en la población. El emparejamiento aleatorio se realizda considerando pesos muestrales. 
+
+## Metodología IV
+
+- Para las variables numéricas, como la edad, esto se mide como la diferencia absoluta entre i y j.
+
+- Para variables categóricas, como raza o religión, la distancia se mide como un término coincidente (¿i y j tienen el mismo nivel educativo?). 
+
+- **En resumen, la distancia sociodemográfica entre los encuestados y los alters, o los casos, se compara con la distancia sociodemográfica entre los encuestados emparejados aleatoriamente o los controles. Por lo tanto, el modelo compara la distancia sociodemográfica observada en los datos con la esperada bajo una mezcla aleatoria en la población (Smith et al., 2014)**.
+
+## Modelo 
+
+
+$$
+ln\frac{\ p(Y)}{1- p(Y)} = \theta D \qquad (1)
+$$
+
+donde $Y_{ij}$ es la presencia o ausencia de un empate, $D_{ij}$ es la distancia sociodemográfica entre i y j para cada díada, y $\theta$ es el vector de coeficientes. 
+
+- El modelo de control de casos es útil debido a que permiten evaluar la prominencia relativa de los parámetros, es decir, controlando por los efectos de otros parámetros. 
+
+- Esto es importante, puesto que la homofilia suele operar como una tendencia sinérgica, es decir, como fuerza de atracción simultánea a través de distintos parámetros. 
+
+- Adicionalmente, su interpretación es más directa y sencilla que la que debemos realizar si utilizamos modelos loglineales, en donde podemos evaluar la prominencia entre máximo dos parámetros a la vez. 
+
+## Data 
+
+- Los datos utilizados corresponden con ENACOES (2014), ELSOC (2017 y 2019). 
+
+## Resultados I 
+
+```{r, out.width='90%', fig.align='center', echo=FALSE, fig.cap=''}
+#knitr::include_graphics('C:/Users/rober/Desktop/abs_homophily.jpg')
+```
+
+
+## Resultados II (Regresiones)
+ 
+
+```{r, out.width='90%', fig.align='center', echo=FALSE, fig.cap=''}
+#knitr::include_graphics('C:/Users/rober/Desktop/regression1.png')
+```
+
+
+## Resultados III 
+
+```{r, out.width='90%', fig.align='center', echo=FALSE, fig.cap=''}
+#knitr::include_graphics('C:/Users/rober/Desktop/regression2.png')
+```
+
+
+## Resumen resultados 
+
+En general, los resultados son consistentes con lo evidenciado por (Bargsted et al., 2020) para el año 2014. 
+
+- **Edad**, no tiene resultados significativos excepto para el año 2014. Este resultado indica mayor probabilidad de realcionarse entre personas con edades similares, especificamente, en entornos no familiares. 
+
+- **Sexo**, los resultados muestran consistentemente más homofilia entre mujeres, y en entornos no familiares.
+
+- **Nivel educativo**, los resultados sugieren que el ayor nivel de homofilia se da entre individuos con nivel educativo Universitario. Esto ocurre de  manera muy similar considerando todos los vinculos y vinculos familiares. Si consideramos los años 2017-2019, observamos un decaimiento en la fuerza de los efectos, y una mayor concentración de homofilia en el nivel educativo menos que media. 
+
+- **Religión**, los resultados muestran consistentemente mayores niveles de homofilia para los evangélicos y menores niveles de homofilia en entornos no familiares. 
+
+- **Ideología política**, los mayores niveles de homofilia se encuentran en los extremos del espectro ideológico, en particular entre aquellos de ideología de extrema derecha. Los que se identifican con una posición ideológica de centro son los menos homofílicos. 
+
+- **Barrio**, los resultados muestran consistentemente muy bajas probabilidades de incluir a vecinos en las redes personales de confidentes. 
+
+
+## Discusión 
+
+- El mayor nivel de homofilia entre mujeres puede estar relacionado a las menores tasas de integración en el mercado laboral en comparación con los hombres. Esto puede ser considerado como una dimensión relevante de las desigualdad de genero en tanto denota pautas de ventaja en el acceso a mayor capital social por parte de los hombres.  
+
+- La ideología y el nivel educativo parecen ser los parámetros más prominentes. En estas dos dimensiones los polos se muestran altamente clausurados. Esto sugiere una correlación entre parámetros y una dimensión relevante de la fragmentación vertical de lo social y lo político.
+
+- Pautas de segregación interseccionales: El credo religioso mantiene su relvancia, especialmente en entornos evangélicos. En tanto que la mayor presencia de este tipo de credo se da en los sectores populares, puede ser considerado como un parámetro adicional de clausura e integración local en los sectores más desfavorecidos de la población. 
+
+
+
+
+
+
+
+
+
+

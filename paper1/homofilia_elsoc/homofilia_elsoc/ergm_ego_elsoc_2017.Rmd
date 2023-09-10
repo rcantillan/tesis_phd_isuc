@@ -1,0 +1,390 @@
+---
+title: "elsoc_2017_ergm_ego"
+author: "Cantillan,R."
+date: "05-10-2022"
+output: html_document
+---
+
+## Librerías
+```{r, message=FALSE}
+library(ergm)
+library(ergm.ego)
+library(ergMargins)
+library(car)
+library(egor)
+library(tidyverse)
+library(tibble)
+library(texreg)
+library(prioritizr)
+library(questionr)
+library(sjPlot)
+```
+
+
+# ELSOC 2017
+
+```{r}
+load("/home/rober/Documents/ELSOC/ELSOC_W02_v3.00_R.RData") #2017
+```
+
+### Renombrar ID
+```{r}
+a<-elsoc_2017 %>% dplyr::rename(.egoID = idencuesta)
+```
+
+# Análisis ELSOC 2017
+## Crear data frame alteris para 2017=a
+
+Creamos subset con data de cada uno de los alteris mencionados, manteniendo el ID de cada ego en el cual están anidados. Las columnas de cada uno de los subset deben tener los mismos nombres. 
+```{r}
+alter_1<-a %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_01, 
+                      edad=r13_edad_01, 
+                      educ=r13_educ_01,
+                      relig=r13_relig_01, 
+                      ideol=r13_ideol_01,
+                      barrio=r13_barrio_01,
+                      rel=r13_relacion_01)
+#View(alter_1)
+alter_2<-a %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_02, 
+                      edad=r13_edad_02, 
+                      educ=r13_educ_02, 
+                      relig=r13_relig_02, 
+                      ideol=r13_ideol_02,
+                      barrio=r13_barrio_02,
+                      rel=r13_relacion_02)
+
+alter_3<-a %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_03, 
+                      edad=r13_edad_03, 
+                      educ=r13_educ_03, 
+                      relig=r13_relig_03, 
+                      ideol=r13_ideol_03,
+                      barrio=r13_barrio_03,
+                      rel=r13_relacion_03)
+
+alter_4<- a %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_04, 
+                      edad=r13_edad_04, 
+                      educ=r13_educ_04, 
+                      relig=r13_relig_04, 
+                      ideol=r13_ideol_04,
+                      barrio=r13_barrio_04,
+                      rel=r13_relacion_04)
+
+alter_5<-a %>%
+        dplyr::select(.egoID, 
+                      sexo=r13_sexo_05, 
+                      edad=r13_edad_05, 
+                      educ=r13_educ_05, 
+                      relig=r13_relig_05, 
+                      ideol=r13_ideol_05,
+                      barrio=r13_barrio_05,
+                      rel=r13_relacion_05)
+```
+
+## setear
+
+Creamos un vector adicional en cada subset de alteris con un número constante que identifica a que alter representa la data. 
+```{r}
+alter_1$n<-1
+alter_2$n<-2
+alter_3$n<-3
+alter_4$n<-4
+alter_5$n<-5
+```
+
+## Crear base de alteris en formato *long*
+
+Con la función `rbind` agregamos la data hacia abajo en relación al orden establecido por los vectores númericos creados anteriormente. Es necesario que todas las columnas (variables) tengan los mismos nombres. Posteriormente con la función `arrange`, ordenamos la data en orden descendente en función del vector identificador de los egos (respondentes).  
+
+```{r}
+alteris<-rbind(alter_1,alter_2,alter_3,alter_4,alter_5)
+alteris<-arrange(alteris, .egoID)
+```
+
+## Crear vector alter id
+
+En el siguiente chunk creamos un vector identificador para cada uno de los alteris presentes en la data "alteris". Lo identificamos como objeto `tibble` y eliminamos el vector "n". 
+```{r}
+alteris   <- rowid_to_column(alteris, var = ".alterID")
+alteris   <- as_tibble(alteris)
+alteris$n <- NULL
+```
+
+## Recod alteris
+
+Recodificamos los valores de los atributos de los alteris. 
+```{r}
+# NA
+alteris[alteris=="-999"]<-NA
+alteris[alteris=="-888"]<-NA
+
+# Educación 
+#edulab<-c('ltsecondary', 'secondary', 'technicaled', 'collegeed')
+alteris$educ <-factor(Recode(alteris$educ ,"1=1;2:3=2;4=3;5=4"))
+table(alteris$educ)
+
+# Religión 
+#relilab<-c('catholic','evangelical','other','none')
+alteris$relig<-factor(Recode(alteris$relig,"1=1;2=2;3:4=4;5=3"))
+table(alteris$relig)
+
+# Ideología 
+#ideolab<-c('rightwinger','centerright','center','centerleft','leftwinger','none')
+alteris$ideol<-factor(Recode(alteris$ideol,"1=1;2=2;3=3;4=4;5=5;6=6"))
+table(alteris$ideol)
+
+# Edad 
+alteris$edad<-as.numeric(alteris$edad)
+#alteris$edad <-factor(Recode(alteris$edad ,"0:18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+
+# Sexo 
+#sexolab<-c('male','female')
+alteris$sexo <-factor(Recode(alteris$sexo ,"1=1;2=2"))
+table(alteris$sexo)
+
+# Relación
+alteris<-alteris%>%
+  dplyr::mutate(rel=case_when(rel%in%1:3~"fam",
+                              rel%in%4:5~"nofam"))
+table(alteris$rel)
+
+# Barrio 
+alteris$barrio<-factor(Recode(alteris$barrio,"1=1;2=2"))
+table(alteris$barrio)
+#alteris<-na.omit(alteris)
+```
+
+### Borrar alteris con 5 parámetros con NA
+```{r}
+# Función para borrar casos con un número determinado de NA's. 
+#delete.na <- function(DF, n=0) {
+#  DF[rowSums(is.na(DF)) <= n,]
+#}
+#
+#alteris<-delete.na(alteris, 4) #borro los casos que tienen más de 4 NA.  
+```
+
+## Data Frame Ego’s
+
+Creamos un subset con la data de ego equivalente a la data de los alteris. Las nombramos de la misma manera. 
+```{r}
+egos <-a %>%
+       dplyr::select(.egoID, 
+                     sexo=m0_sexo, 
+                     edad=m0_edad, 
+                     educ=m01, 
+                     relig=m38, 
+                     ideol=c15,
+                     ponderador02,
+                     estrato,
+                     segmento)
+
+egos <- as_tibble(egos)
+```
+
+## Recod data Ego's
+
+Recodificamos las variables de la data de ego siguiendo el patrón de la data de alteris. 
+```{r}
+# NA
+egos[egos=="-999"]<-NA
+egos[egos=="-888"]<-NA
+
+# Educación
+egos$educ <-factor(Recode(egos$educ,"1:3=1;4:5=2;6:7=3;8:10=4"))
+table(egos$educ)
+
+# Religión
+egos$relig<-factor(Recode(egos$relig,"1=1;2=2;3:6=3;7:9=4"))
+table(egos$relig)
+
+# Ideología
+#ideolab2<-c('leftwinger','centerleft','center','centerright','rightwinger','none')
+egos$ideol<-factor(Recode(egos$ideol,"0:2=5;3:4=4;5=3;6:7=2;8:10=1;11:12=6"))
+table(egos$ideol)
+
+# Edad
+egos$edad<-as.numeric(egos$edad)
+#egos$edad <-factor(Recode(egos$edad,"18=1;19:29=2;30:40=3;41:51=4;52:62=5;63:100=6"))
+
+# Sexo
+egos$sexo <-factor(Recode(egos$sexo,"1=1;2=2"))
+table(egos$sexo)
+
+# Barrio
+egos$barrio <- matrix(rbinom(2473*5,1,0.6),2473,1) # Criterio minimalista
+egos$barrio<-factor(Recode(egos$barrio,"1=1;0=2"))
+table(egos$barrio)
+```
+
+# Crear objeto Egor (requerido para trabajar con función `ergm.ego`)
+## Todos los alteris
+```{r}
+
+elsoc_ego <- egor(alters = alteris, 
+                  egos = egos,
+                  alter_design = list(max = 5),
+                  ID.vars = list(
+                    ego = ".egoID",
+                    alter = ".alterID")) %>% as.egor()
+
+#View(elsoc_ego$ego)
+#View(elsoc_ego$alter)
+
+# definir diseño complejo
+ego_design(elsoc_ego) <- list(weight = "ponderador02",
+                              strata = "estrato",
+                              cluster="segmento") 
+
+# eliminar atributos de diseño
+elsoc_ego[["ego"]][["variables"]][["ponderador02"]]<-NULL
+elsoc_ego[["ego"]][["variables"]][["estrato"]]<-NULL
+elsoc_ego[["ego"]][["variables"]][["segmento"]]<-NULL
+
+
+#elsoc_ego
+
+elsoc_ego[["ego"]]  <-elsoc_ego[["ego"]]%>%drop_na(sexo)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(sexo)
+elsoc_ego[["ego"]]  <-elsoc_ego[["ego"]]%>%drop_na(educ)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(educ)
+elsoc_ego[["ego"]]  <-elsoc_ego[["ego"]]%>%drop_na(relig)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(relig)
+elsoc_ego[["ego"]]  <-elsoc_ego[["ego"]]%>%drop_na(ideol)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(ideol)
+elsoc_ego[["ego"]]<-elsoc_ego[["ego"]]%>%drop_na(barrio)
+elsoc_ego[["alter"]]<-elsoc_ego[["alter"]]%>%drop_na(barrio)
+
+head(elsoc_ego)
+```
+
+
+# Modelos
+
+`nodefactor` = controla el grado de los diferentes grupos (ajustando las estimaciones de homofilia por el hecho de que algunos grupos, por ejemplo, los hombres, tienen más vínculos que otros grupos, como las mujeres). 
+
+El paquete "ergm" proporciona no sólo estadísticas resumidas sino también valores-p. Sin embargo, como indica Kolaczyk y Csárdi (2020), la justificación teórica para las distribuciones asintóticas chi-cuadrado y F utilizadas por ergm para calcular estos valores no se ha establecido hasta la fecha. Por lo tanto, puede ser pertinente  interpretar estos valores de manera informal, como estadísticas resumidas adicionales
+
+
+## Modelo 1
+```{r, message=FALSE}
+modelo1<-ergm.ego(elsoc_ego~
+                    nodefactor("sexo") +
+                    nodefactor("educ") +
+                    nodefactor("ideol") +
+                    nodefactor("relig") +
+                    nodematch("sexo", diff=TRUE) +
+                    nodematch("educ", diff=TRUE) +
+                    nodematch("ideol", diff=TRUE)+
+                    nodematch("relig", diff=TRUE)+
+                    absdiff("edad"),
+                  control=control.ergm.ego(ppopsize=10000,
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="bootstrap",
+                                           boot.R = 1000,
+                                           ignore.max.alters=TRUE),
+                  ergm = control.ergm(init.method = "MPLE",
+                                      init.MPLE.samplesize = 5e7,
+                                      MPLE.constraints.ignore = TRUE,
+                                      MCMLE.effectiveSize = NULL,
+                                      MCMC.burnin = 5e4,
+                                      MCMC.interval = 5e4,
+                                      MCMC.samplesize = 7500,
+                                      parallel = 16,
+                                      SAN.nsteps = 5e7))
+
+summary(modelo1)
+?control.ergm.ego
+```
+
+
+```{r}
+exp(0.818924)
+```
+
+
+
+Para interpretar los coeficientes, es útil pensar en términos de la probabilidad de que un par dado de nodos tenga un vínculo, condicionada al estado del nodo entre todos los demás pares. Para el término de homofilia de género (segundo orden) en el modelo anterio: El empate entre dos nodos mujeres, casi cuatriplica las probabilidades (odds) de tener un vínculo en la red observada (por su puesto, manteniendo todo lo demás igual). 
+ 
+```{r}
+exp(1.336812)
+```
+
+Vale indicar también que para todas las variables el coeficiente difiere de cero en al menos un error estándar, lo que sugiere algún efecto no trivial de estas variables en la formación de vínculos en la red.
+
+
+*Bondad de ajuste*
+
+Para los ERGM, la práctica actual para evaluar la bondad de ajuste es simular primero numerosos gráficos aleatorios del modelo ajustado y luego comparar varios resúmenes de estos gráficos con los del gráfico observado originalmente. Si las características de los grafos de red observados no coinciden con los valores típicos que surgen de las realizaciones del modelo de gráfico aleatorio ajustado, esto sugiere diferencias sistemáticas entre la clase especificada de modelos y los datos y, por lo tanto, una falta de bondad. 
+
+En general, al evaluar la bondad de ajuste en el modelado de redes, los resúmenes de uso común incluyen la distribución de cualquier número de los diversos resúmenes de la estructura de la red: como el grado, la centralidad y la distancia geodésica. Con los ERGMs, sin embargo, una elección natural de resumen son las propias estadísticas $g$ que definen el ERGM (es decir, las llamadas estadísticas suficientes). Para evaluar la bondad de ajuste de nuestro modelo anterior de homofilia, la función `ergm` ejecuta las simulaciones de Monte Carlo necesarias y calcula las comparaciones con la red original en términos de las distribuciones de cada uno de los estadísticos en el modelo.
+
+```{r}
+plot(gof(modelo1))
+```
+
+Considerando las características particulares capturadas por las estadísticas, el ajuste del modelo es bastante bueno en general, toda vez que las estadísticas observadas están bastante cerca de la mediana de los valores simulados en la mayoría de los casos. 
+
+```{r}
+#mcmc.diagnostics(modelo1)
+```
+
+```{r}
+broom::tidy(modelo1, exponentiate = TRUE, conf.int = TRUE, conf.level = 0.99)
+```
+
+# efectos marginales 
+```{r}
+class(modelo1)
+ergm.MEM(modelo1,"nodematch.educ.1", return.dydx=T)
+```
+
+
+```{r}
+predict(modelo1, type = "response")
+```
+
+
+## Modelo 2 (nodemix)
+```{r, message=FALSE}
+modelo2<-ergm.ego(elsoc_ego~
+                  nodemix("sexo") +
+                  nodemix("educ") +
+                  nodemix("ideol") +
+                  nodemix("relig") ,
+                  control=control.ergm.ego(ppopsize=10000,
+                                           ppop.wt="sample",
+                                           stats.wt="data",
+                                           stats.est="bootstrap",
+                                           boot.R = 10000,
+                                           ignore.max.alters=TRUE),
+                  ergm = control.ergm(init.method = "MPLE",
+                                      init.MPLE.samplesize = 5e7,
+                                      MPLE.constraints.ignore = TRUE,
+                                      MCMLE.effectiveSize = NULL,
+                                      MCMC.burnin = 5e4,
+                                      MCMC.interval = 5e4,
+                                      MCMC.samplesize = 7500,
+                                      parallel = 16,
+                                      SAN.nsteps = 5e7))
+
+summary(modelo2)
+?control.ergm.ego
+```
+
+
+
+
+
+
+
+
+

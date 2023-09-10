@@ -1,0 +1,842 @@
+---
+title: "campo asociativo en chile"
+author: "redeslab"
+date: "Septiembre 2021"
+output: 
+ rmarkdown::html_document:
+     theme: lumen
+     toc: true # table of content true
+     toc_depth: 2  # upto three depths of headings (specified by #, ## and ###)
+     number_sections: true  ## if you want number sections at each table header
+     toc_float: true
+     toc_collapsed: true
+     highlight: pygments
+---
+
+# Librerías
+```{r,message=F}
+pacman::p_load(intergraph,
+               tidygraph,
+               igraph,
+               network,
+               signnet,
+               sna,
+               MASS,
+               ggplot2,
+               xlsx,
+               ggraph,
+               backbone,
+               dplyr,
+               readr,
+               reshape2,
+               extrafont,
+               kableExtra,
+               table1,
+               flextable,
+               tigerstats,
+               foreign,
+               xtable,
+               Hmisc,
+               memisc,
+               nnet,
+               lattice,
+               texreg)
+
+```
+
+# Manipulación de la data
+## Cargar data
+```{r}
+#2016
+load("C:/Users/rober/Desktop/ELSOC/ELSOC_W01_v4.01_R (3).RData")
+#2018
+load("C:/Users/rober/Desktop/ELSOC/ELSOC_W03_v2.00_R.RData")
+```
+
+## Recod 2016-2018
+```{r}
+
+asociaciones_2016 <- elsoc_2016 %>%
+  dplyr::mutate (JJVV         = ifelse(c12_01>=2, 1, 0)) %>%
+  dplyr::mutate (Religiosa    = ifelse(c12_02>=2, 1, 0)) %>%
+  dplyr::mutate (Partido      = ifelse(c12_03>=2, 1, 0)) %>%
+  dplyr::mutate (Deportiva    = ifelse(c12_07>=2, 1, 0)) %>%
+  dplyr::mutate (AAEE         = ifelse(c12_08>=2, 1, 0)) %>%
+  dplyr::mutate (Caridad      = ifelse(c12_06>=2, 1, 0)) %>%
+  dplyr::mutate (Sindicato    = ifelse(c12_04>=2, 1, 0)) %>%
+  dplyr::mutate (Profesional  = ifelse(c12_05>=2, 1, 0)) %>%
+  dplyr::mutate (Otras        = ifelse(c12_09>=2, 1, 0))%>%
+  dplyr::select (JJVV, Religiosa, AAEE, Deportiva, Partido, 
+                 Profesional, Sindicato, Caridad, Otras)
+
+asociaciones_2018 <- elsoc_2018 %>%
+  dplyr::filter(muestra==1)%>% #seleccionar casos de la muestra original
+  dplyr::mutate (JJVV         = ifelse(c12_01>=2, 1, 0)) %>%
+  dplyr::mutate (Religiosa    = ifelse(c12_02>=2, 1, 0)) %>%
+  dplyr::mutate (Partido      = ifelse(c12_03>=2, 1, 0)) %>%
+  dplyr::mutate (Deportiva    = ifelse(c12_07>=2, 1, 0)) %>%
+  dplyr::mutate (AAEE         = ifelse(c12_08>=2, 1, 0)) %>%
+  dplyr::mutate (Caridad      = ifelse(c12_06>=2, 1, 0)) %>%
+  dplyr::mutate (Sindicato    = ifelse(c12_04>=2, 1, 0)) %>%
+  dplyr::mutate (Profesional  = ifelse(c12_05>=2, 1, 0)) %>%
+  dplyr::mutate (Otras        = ifelse(c12_09>=2, 1, 0))%>%
+  dplyr::select (JJVV, Religiosa, AAEE, Deportiva, Partido, 
+                 Profesional, Sindicato, Caridad, Otras)
+
+```
+
+## NA
+```{r}
+asociaciones_2016[asociaciones_2016=="-999"] <- NA
+asociaciones_2016[asociaciones_2016=="-888"] <- NA
+asociaciones_2018[asociaciones_2018=="-999"] <- NA
+asociaciones_2018[asociaciones_2018=="-888"] <- NA
+```
+
+# Descriptivos (composición de las asociaciones)
+```{r}
+
+asociaciones_2016d <- elsoc_2016 %>%
+  dplyr::mutate (JJVV         = ifelse(c12_01<2, 0, 1)) %>%
+  dplyr::mutate (Religiosa    = ifelse(c12_02<2, 0, 1)) %>%
+  dplyr::mutate (Partido      = ifelse(c12_03<2, 0, 1)) %>%
+  dplyr::mutate (Deportiva    = ifelse(c12_07<2, 0, 1)) %>%
+  dplyr::mutate (AAEE         = ifelse(c12_08<2, 0, 1)) %>%
+  dplyr::mutate (Caridad      = ifelse(c12_06<2, 0, 1)) %>%
+  dplyr::mutate (Sindicato    = ifelse(c12_04<2, 0, 1)) %>%
+  dplyr::mutate (Profesional  = ifelse(c12_05<2, 0, 1)) %>%
+  dplyr::mutate (Otras        = ifelse(c12_09<2, 0, 1))%>%
+  dplyr::mutate (mujer        = case_when(m0_sexo   == 1     ~ "hombre",
+                                          m0_sexo   == 2     ~ "mujer")) %>%
+  dplyr::mutate (edad         = case_when(m0_edad %in% 18:29 ~ "joven",
+                                          m0_edad %in% 30:65 ~ "adulto",
+                                          m0_edad %in% 66:88 ~ "adulto_mayor")) %>%
+  dplyr::mutate (nivel_educ   = case_when(m01     %in% 1 :7  ~ "no_univers",
+                                          m01     %in% 8 :10 ~ "univers"))%>%
+  dplyr::select(JJVV,Religiosa,Partido,Deportiva,AAEE,Caridad,Sindicato,
+                Profesional,Otras,mujer,edad,nivel_educ)%>%
+  as.data.frame()
+
+
+asociaciones_2018d <- elsoc_2018 %>%
+  dplyr::mutate (JJVV         = ifelse(c12_01<2, 0, 1)) %>%
+  dplyr::mutate (Religiosa    = ifelse(c12_02<2, 0, 1)) %>%
+  dplyr::mutate (Partido      = ifelse(c12_03<2, 0, 1)) %>%
+  dplyr::mutate (Deportiva    = ifelse(c12_07<2, 0, 1)) %>%
+  dplyr::mutate (AAEE         = ifelse(c12_08<2, 0, 1)) %>%
+  dplyr::mutate (Caridad      = ifelse(c12_06<2, 0, 1)) %>%
+  dplyr::mutate (Sindicato    = ifelse(c12_04<2, 0, 1)) %>%
+  dplyr::mutate (Profesional  = ifelse(c12_05<2, 0, 1)) %>%
+  dplyr::mutate (Otras        = ifelse(c12_09<2, 0, 1))%>%
+  dplyr::mutate (mujer        = case_when(m0_sexo   == 1     ~ "hombre",
+                                          m0_sexo   == 2     ~ "mujer")) %>%
+  dplyr::mutate (edad         = case_when(m0_edad %in% 18:29 ~ "joven",
+                                          m0_edad %in% 30:65 ~ "adulto",
+                                          m0_edad %in% 66:88 ~ "adulto_mayor")) %>%
+  dplyr::mutate (nivel_educ   = case_when(m01     %in% 1 :7  ~ "no_univers",
+                                          m01     %in% 8 :10 ~ "univers"))%>%
+  dplyr::select(JJVV,Religiosa,Partido,Deportiva,AAEE,Caridad,Sindicato,
+                Profesional,Otras,mujer,edad,nivel_educ)%>%
+  as.data.frame()
+```
+
+## subtablas 2016
+```{r}
+t1<-rowPerc(xtabs(~JJVV+mujer,data=asociaciones_2016d))
+t2<-rowPerc(xtabs(~Religiosa+mujer,data=asociaciones_2016d))
+t3<-rowPerc(xtabs(~Deportiva+mujer,data=asociaciones_2016d))
+t4<-rowPerc(xtabs(~Caridad+mujer,data=asociaciones_2016d))
+t5<-rowPerc(xtabs(~Partido+mujer,data=asociaciones_2016d))
+t6<-rowPerc(xtabs(~Profesional+mujer,data=asociaciones_2016d))
+t7<-rowPerc(xtabs(~Sindicato+mujer,data=asociaciones_2016d))
+t8<-rowPerc(xtabs(~AAEE+mujer,data=asociaciones_2016d))
+t9<-rowPerc(xtabs(~Otras+mujer,data=asociaciones_2016d))
+
+a<-rbind(t1,t2,t3,t4,t5,t6,t7,t8,t9)
+a<-as.data.frame(a)
+a$part<-c(0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1)
+a1<-a[a$part==1,]
+
+a1$Tipo<-c("JJVV","Religiosa","Deportiva","Caridad","Partido","Profesional","Sindicato","AAEE","Otras")
+a1<-a1%>%
+  dplyr::select(Tipo,hombre,mujer)
+#a1
+```
+
+```{r}
+t1<-rowPerc(xtabs(~JJVV+nivel_educ,data=asociaciones_2016d))
+t2<-rowPerc(xtabs(~Religiosa+nivel_educ,data=asociaciones_2016d))
+t3<-rowPerc(xtabs(~Deportiva+nivel_educ,data=asociaciones_2016d))
+t4<-rowPerc(xtabs(~Caridad+nivel_educ,data=asociaciones_2016d))
+t5<-rowPerc(xtabs(~Partido+nivel_educ,data=asociaciones_2016d))
+t6<-rowPerc(xtabs(~Profesional+nivel_educ,data=asociaciones_2016d))
+t7<-rowPerc(xtabs(~Sindicato+nivel_educ,data=asociaciones_2016d))
+t8<-rowPerc(xtabs(~AAEE+nivel_educ,data=asociaciones_2016d))
+t9<-rowPerc(xtabs(~Otras+nivel_educ,data=asociaciones_2016d))
+
+a<-rbind(t1,t2,t3,t4,t5,t6,t7,t8,t9)
+a<-as.data.frame(a)
+a$part<-c(0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1)
+a2<-a[a$part==1,]
+a2<-a2%>%
+  dplyr::select("no universitario"=no_univers, "universitario"=univers)
+```
+
+```{r}
+t1<-rowPerc(xtabs(~JJVV+edad,data=asociaciones_2016d))
+t2<-rowPerc(xtabs(~Religiosa+edad,data=asociaciones_2016d))
+t3<-rowPerc(xtabs(~Deportiva+edad,data=asociaciones_2016d))
+t4<-rowPerc(xtabs(~Caridad+edad,data=asociaciones_2016d))
+t5<-rowPerc(xtabs(~Partido+edad,data=asociaciones_2016d))
+t6<-rowPerc(xtabs(~Profesional+edad,data=asociaciones_2016d))
+t7<-rowPerc(xtabs(~Sindicato+edad,data=asociaciones_2016d))
+t8<-rowPerc(xtabs(~AAEE+edad,data=asociaciones_2016d))
+t9<-rowPerc(xtabs(~Otras+edad,data=asociaciones_2016d))
+
+a<-rbind(t1,t2,t3,t4,t5,t6,t7,t8,t9)
+a<-as.data.frame(a)
+a$part<-c(0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1)
+a3<-a[a$part==1,]
+a3<-a3%>%
+  dplyr::select(joven, adulto, "adulto mayor"=adulto_mayor)
+
+```
+
+## Descriptivos 2016
+```{r,results='asis'}
+tabla1<-cbind(a1,a2,a3)
+tabla1<-as.data.frame(tabla1)
+tabla1<-tibble::rowid_to_column(tabla1, "id")
+
+tabla1 %>%
+  kbl(caption = "Composición (%) de participantes en asociaciones voluntarias (ELSOC 2016)") %>%
+    kable_classic("hover", full_width = F)
+```
+
+
+## subtablas 2018
+```{r}
+t1<-rowPerc(xtabs(~JJVV+mujer,data=asociaciones_2018d))
+t2<-rowPerc(xtabs(~Religiosa+mujer,data=asociaciones_2018d))
+t3<-rowPerc(xtabs(~Deportiva+mujer,data=asociaciones_2018d))
+t4<-rowPerc(xtabs(~Caridad+mujer,data=asociaciones_2018d))
+t5<-rowPerc(xtabs(~Partido+mujer,data=asociaciones_2018d))
+t6<-rowPerc(xtabs(~Profesional+mujer,data=asociaciones_2018d))
+t7<-rowPerc(xtabs(~Sindicato+mujer,data=asociaciones_2018d))
+t8<-rowPerc(xtabs(~AAEE+mujer,data=asociaciones_2018d))
+t9<-rowPerc(xtabs(~Otras+mujer,data=asociaciones_2018d))
+
+a<-rbind(t1,t2,t3,t4,t5,t6,t7,t8,t9)
+a<-as.data.frame(a)
+#a
+a$part<-c(0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1)
+a1<-a[a$part==1,]
+
+a1$Tipo<-c("JJVV","Religiosa","Deportiva","Caridad","Partido","Profesional","Sindicato","AAEE","Otras")
+a1<-a1%>%
+  dplyr::select(Tipo,hombre,mujer)
+#a1
+```
+
+```{r}
+t1<-rowPerc(xtabs(~JJVV+nivel_educ,data=asociaciones_2018d))
+t2<-rowPerc(xtabs(~Religiosa+nivel_educ,data=asociaciones_2018d))
+t3<-rowPerc(xtabs(~Deportiva+nivel_educ,data=asociaciones_2018d))
+t4<-rowPerc(xtabs(~Caridad+nivel_educ,data=asociaciones_2018d))
+t5<-rowPerc(xtabs(~Partido+nivel_educ,data=asociaciones_2018d))
+t6<-rowPerc(xtabs(~Profesional+nivel_educ,data=asociaciones_2018d))
+t7<-rowPerc(xtabs(~Sindicato+nivel_educ,data=asociaciones_2018d))
+t8<-rowPerc(xtabs(~AAEE+nivel_educ,data=asociaciones_2018d))
+t9<-rowPerc(xtabs(~Otras+nivel_educ,data=asociaciones_2018d))
+
+a<-rbind(t1,t2,t3,t4,t5,t6,t7,t8,t9)
+a<-as.data.frame(a)
+a$part<-c(0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1)
+a2<-a[a$part==1,]
+a2<-a2%>%
+  dplyr::select("no universitario"=no_univers, "universitario"=univers)
+#a2
+```
+
+```{r}
+t1<-rowPerc(xtabs(~JJVV+edad,data=asociaciones_2018d))
+t2<-rowPerc(xtabs(~Religiosa+edad,data=asociaciones_2018d))
+t3<-rowPerc(xtabs(~Deportiva+edad,data=asociaciones_2018d))
+t4<-rowPerc(xtabs(~Caridad+edad,data=asociaciones_2018d))
+t5<-rowPerc(xtabs(~Partido+edad,data=asociaciones_2018d))
+t6<-rowPerc(xtabs(~Profesional+edad,data=asociaciones_2018d))
+t7<-rowPerc(xtabs(~Sindicato+edad,data=asociaciones_2018d))
+t8<-rowPerc(xtabs(~AAEE+edad,data=asociaciones_2018d))
+t9<-rowPerc(xtabs(~Otras+edad,data=asociaciones_2018d))
+
+a<-rbind(t1,t2,t3,t4,t5,t6,t7,t8,t9)
+a<-as.data.frame(a)
+a$part<-c(0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1)
+a3<-a[a$part==1,]
+a3<-a3%>%
+  dplyr::select(joven, adulto, "adulto mayor"=adulto_mayor)
+#a3
+```
+
+## Descriptivos 2018
+```{r}
+tabla1<-cbind(a1,a2,a3)
+tabla1<-as.data.frame(tabla1)
+tabla1<-tibble::rowid_to_column(tabla1, "id")
+
+tabla1 %>%
+  kbl(caption = "Composición (%) de participantes en asociaciones voluntarias (ELSOC 2018)") %>%
+    kable_classic("hover", full_width = F)
+```
+
+
+## `as.matrix`
+```{r}
+#asociaciones_2016 <- na.omit(asociaciones_2016)
+asociaciones_2016 <- as.matrix(asociaciones_2016)
+
+#asociaciones_2018 <- na.omit(asociaciones_2018)
+asociaciones_2018 <- as.matrix(asociaciones_2018)
+```
+
+# Modelos de extracción de vínculos significativos con `Backbone`
+
+El enfoque que el backbone está diseñado para identificar los vínculos importantes que se retendrán en el "backbone" mediante una prueba estadística que compara el peso observado de un vínculo con la distribución de sus pesos bajo un modelo nulo.
+
+Dado un modelo nulo que puede generar una distribución de los pesos de un borde $G^*_{ij}$, es posible calcular la probabilidad de que el peso observado de un borde esté en la parte superior $(P(G^*_{ij}\geq G_{ij}))$ o en la cola inferior $(P(G^*_{ij}\leqq G_{ij}))$ de esta distribución y, por lo tanto, no es probable que sea el resultado de un modelo nulo. Usando estas probabilidades y un nivel de significancia $α$ para la prueba, se puede extraer una columna vertebral "signada" de manera que: 
+
+
+
+$$G_{ij}= \left\{\begin{array}{lr}
+        1 & \text{si  } P(G^*_{ij}\geq G_{ij} )<\alpha/2\\
+        -1 & \text{si } P(G^*_{ij}\leq G_{ij} )<\alpha/2\\
+        0 & \text{de otra manera } 
+        \end{array}\right\}$$
+
+En otros casos puede ser de utilidad una matriz binaria que excluya los valores negativos, de manera que: 
+
+$$G_{ij}= \left\{\begin{array}{lr}
+        1 & \text{si  } P(G^*_{ij}\geq G_{ij} )<\alpha/2\\
+        0 & \text{si } P(G^*_{ij}\geq G_{ij} )\geq\alpha/2\\
+        \end{array}\right\}$$
+
+Ya sea que se extraiga matriz (bakcbone) binaria o con signo, se usa una prueba de significancia tro tailed porque, para cualquier lazo dado, el valor observado en la proyección podría estar en cualquier cola de la distribución nula.
+
+El enfoque estadístico para la extracción de la columna vertebral radica en definir un modelo nulo adecuado y calcular las probabilidades requeridas (es decir, valores p de lazos). Una familia de nueve modelos nulos se puede definir por las restricciones que colocan en las sumas de filas y columnas en un gráfico bipartito aleatorio $B^*$: Las sumas de filas en $B^*$, y por separado las sumas de columnas en $B^*$, pueden ser ilimitadas, restringidas a coincidir con los valores de $B$ en promedio, o restringido a coincidir exactamente con los valores de $B$. 
+
+Sea R un conjunto de restricciones en los grados de vértice de las filas y columnas correspondientes a una de estas nueve posibilidades, y sea $B(R)$ el espacio de todos los gráficos bipartitos $B^*$ que satisfacen esas condiciones. Este enfoque de extracción de la columna vertebral compara los valores $G_{ij}$, la proyección bipartita de interés, con las distribuciones que describen $G^*_{ij}=(B^*B^{*T})_{ij}$ para todos los gráficos bipartitos $B^*\in B(R)$. Aquí, nos enfocamos en tres conjuntos de restricciones $B(R)$, definiendo tres modelos nulos distintos: (1) el modelo hipergeométrico, en el que las sumas de las filas están restringidas para coincidir exactamente con las de $B$, pero las sumas de las columnas no están restringidas; (2) el modelo de secuencia de grados estocásticos, en el que las sumas de filas y columnas están restringidas para coincidir con las de $B$ en promedio; y (3) el modo de secuencia de grados fijos, en el que las sumas de filas y columnas están restringidas para coincidir exactamente con las de $B$.
+
+El modelo trabajado acá es el modelo de secuencia de grados fijos. A continuacón detallamos el procedimiento para su estimación. 
+
+
+# Modelo secuencial de grados fijos (FDSM)
+
+El modelo secuencial de grados fijos restringe las sumas de filas y columnas en $B^*$ para que sean iguales a sus valores en $B$ (es decir, ambas son fijas) (Zweig & Kaufmann, 2011). La distribución de probabilidad que describe $(B^* B^{*T})_{ij}$ para todas las gráficas bipartitas $B^* \in B(R)$ se desconoce y, por lo tanto, se construye una distribución aproximada mediante simulación:
+
+1. Se construye un gráfico bipartito $B^*$ que represente un sorteo aleatorio de $B(R)$ 
+2. Proyecta $B^*$ (es decir, calcular $B^*B^{*T}$) para obtener una proyección bipartita ponderada aleatoria $G^*$.
+3. Repetir los pasos 1 y 2 N veces para muestrear el espacio de posible $G^*_{ij}$.
+
+La multiplicación de matrices requerida en el paso 2 es computacionalmente costosa pero sencilla. Sin embargo, el muestreo aleatorio de un $B^*$ de $B(R)$ en el paso 1 es más desafiante. Se han sugerido varios métodos, incluidos los métodos de intercambio de Markov (Gionis et al., 2007) y el muestreo de importancia secuencial (Chen et al., 2005). Aquí utilizamos el algoritmo curveball (Strona et al., 2014), que es uno de los algoritmos más rápidos que se ha demostrado que funciona aleatoriamente.
+
+
+# Backbone 2016
+```{r,message=F}
+#Transpose
+asociaciones_2016t <-t(asociaciones_2016)
+
+#Proyección modo 1 (overlap) 
+overlap_2016 <- asociaciones_2016t%*%t(asociaciones_2016t)
+#write.xlsx (overlap_2016, file = "overlap_2016.xlsx")
+
+## Hyperg model 
+hyperg_2016 <- hyperg(asociaciones_2016t)
+hyperg_bb_2016 <- backbone.extract(hyperg_2016, signed = TRUE)
+hyperg_bb_2016
+
+## Stochastic Degree Sequence Model
+sdsm_2016 <- sdsm(asociaciones_2016t)
+sdsm_bb_2016 <- backbone.extract(sdsm_2016, signed = TRUE, alpha = 0.05) 
+sdsm_bb_2016
+
+## Fixed Degree Sequence Model 
+fdsm_2016  <- fdsm(asociaciones_2016t, trials = 10000)
+fdsm_2016a <- fdsm(asociaciones_2016t, trials = 10000, dyad = c("Religiosa", "JJVV"))
+fdsm_2016b <- fdsm(asociaciones_2016t, trials = 10000, dyad = c("Religiosa", "Sindicato"))
+```
+
+## Extraccción bakcbone
+```{r}
+fdsm_bb_2016 <- backbone.extract(fdsm_2016, signed = TRUE, alpha = 0.01) 
+fdsm_bb_2016
+#class(fdsm_2016)
+```
+
+## Graficar distribución aleatoria (sim) y valores observados)
+
+### Diada Religiosas/JJVV
+```{r}
+hist(fdsm_2016a$dyad_values, 
+     freq = FALSE, 
+     xlim=c(340,480),
+     main="Religiosas/JJV",
+     xlab = "Afiliaciones múltiples con FDSM")
+lines(density(fdsm_2016a$dyad_values))
+abline(v=472,col="red",lwd=2)
+```
+
+### Diada Religiosas/Sindicatos 
+```{r}
+hist(fdsm_2016b$dyad_values, 
+     freq = FALSE, 
+     xlim=c(105,170),
+     main="Religiosas/Sindicatos",
+     xlab = "Afiliaciones múltiples con FDSM")
+lines(density(fdsm_2016b$dyad_values))
+abline(v=109,col="red",lwd=2)
+```
+
+## matrix -> edgelist con `melt`
+```{r}
+matrix2016 <- as.matrix(fdsm_bb_2016)
+bb_2016_e  <-melt(matrix2016)%>%
+  dplyr::na_if("value"==0)%>%
+  dplyr::select(from=Var2, to=Var1,sign=value)%>%
+  na.omit()
+
+bb_2016_e$year<-2016
+bb_2016_e
+```
+
+
+# Backbone 2018
+```{r,message=F}
+# Transpose
+asociaciones_2018t <-t(asociaciones_2018)
+
+# Proyección modo 1 (overlap) 
+overlap_2018 <- asociaciones_2018t%*%t(asociaciones_2018t)
+#write.xlsx (overlap_2018, file = "overlap_2018.xlsx")
+
+## Hyperg model 
+hyperg_2018 <- hyperg(asociaciones_2018t)
+hyperg_bb_2018 <- backbone.extract(hyperg_2018, signed = TRUE)
+hyperg_bb_2018
+
+## Stochastic Degree Sequence Model
+sdsm_2018 <- sdsm(asociaciones_2018t)
+sdsm_bb_2018 <- backbone.extract(sdsm_2018, signed = TRUE, alpha = 0.05) 
+sdsm_bb_2018
+
+## Fixed Degree Sequence Model 
+fdsm_2018  <- fdsm(asociaciones_2018t, trials = 10000)
+fdsm_2018a <- fdsm(asociaciones_2018t, trials = 10000, dyad = c("Religiosa", "JJVV"))
+fdsm_2018b <- fdsm(asociaciones_2018t, trials = 10000, dyad = c("Religiosa", "Sindicato"))
+```
+
+## Extraccción `bakcbone`
+```{r}
+fdsm_bb_2018 <- backbone.extract(fdsm_2018, signed = TRUE, alpha = 0.01) 
+fdsm_bb_2018
+#class(fdsm_2016)
+```
+
+## Graficar distribución aleatoria (sim) y valores observados)
+
+### Diada Religiosas/JJVV
+```{r}
+hist(fdsm_2018a$dyad_values, 
+     freq = FALSE, 
+     xlim=c(300,400),
+     main="Religiosas/JJV",
+     xlab = "Afiliaciones múltiples con FDSM")
+lines(density(fdsm_2018a$dyad_values))
+abline(v=383,col="red",lwd=2)
+```
+
+### Diada Religiosas/Sindicatos 
+```{r}
+hist(fdsm_2018b$dyad_values, 
+     freq = FALSE, 
+     xlim=c(80,140),
+     main="Religiosas/Sindicatos",
+     xlab = "Afiliaciones múltiples con FDSM")
+lines(density(fdsm_2018b$dyad_values))
+abline(v=82,col="red",lwd=2)
+```
+
+## matrix -> edgelist con `melt`
+```{r}
+matrix2018 <- as.matrix(fdsm_bb_2018)
+bb_2018_e  <-melt(matrix2018)%>%
+  dplyr::na_if("value"==0)%>%
+  dplyr::select(from=Var2, to=Var1,sign=value)%>%
+  na.omit()
+
+bb_2018_e$year<-2018
+bb_2018_e
+```
+
+# Graficar campo asociativo 2016-2018
+
+## agregamos data con `rbind`
+```{r}
+g<-rbind(bb_2016_e,bb_2018_e)
+g
+```
+
+## crear vector link
+```{r}
+g <- graph_from_data_frame(g, directed = F)
+
+E(g)[E(g)$sign ==  "1"]$link <- "attraction"
+E(g)[E(g)$sign == "-1"]$link <- "repulsion"
+```
+
+## Plot 
+```{r,message=FALSE, results='asis'}
+#extrafont::font_import()
+#extrafont::loadfonts()
+
+# agregar atributos a la red
+g$name <- "Red asociativa"
+#g$name
+
+V(g)$id <- 1:9
+#V(g)$id
+#V(g)$tipo
+
+## Calcular degree signed "ratio":  positive neighbors/(positive neighbors+negative neighbors)/ 
+V(g)$centrality<-degree_signed(g, type="ratio")
+
+# Visualización de la red
+p1<-ggraph(g, layout = "in_circle") +  
+      theme_graph(background = "white",
+              base_family = "Helvetica",
+              foreground = 'steelblue', 
+              fg_text_colour = 'white',
+              base_size = 11) + 
+     geom_edge_link(aes(color = link)) + 
+     geom_node_point(aes(size = centrality),alpha = 8) + 
+     geom_node_text(aes(label = name), repel = T) +
+# geom_edge_density(aes(fill = vinculo)) + 
+     geom_edge_link(alpha = 0.001) + 
+     facet_edges(~year) +
+     theme(legend.text=element_text(size=13)) +
+     labs(caption = "1- Measure of centrality PN based on Everett & Borgatti 2014.
+     2- Links statistically significant (alpha = 0.01) compared to a null model obtained from FDSM. 
+     3- Fuente de datos: ELSOC-COES 2016 - 2018.")
+
+p1
+
+#?theme
+#ggraph:::igraphlayouts
+```
+
+# Análisis de balance estructural con `Signnet`
+
+```{r out.width = '50%', echo = FALSE, fig.align = 'center', results='asis'}
+knitr::include_graphics("C:/Users/rober/Desktop/descarga.png") 
+```
+
+
+## triangulos (balance)
+
+```{r}
+g_sign<-rbind(bb_2016_e,bb_2018_e)
+```
+
+### 2016
+```{r}
+t_2016<-g_sign%>%
+  dplyr::filter(year==2016)
+
+t_2016<-graph_from_data_frame(t_2016,directed = F)
+#E(t_2016)$sign
+tb_2016<-count_signed_triangles(t_2016)
+tb_2016<-as.data.frame(tb_2016)
+#tb_2016
+```
+
+### 2018
+```{r}
+t_2018<-g_sign%>%
+  dplyr::filter(year==2018)
+
+t_2018<-graph_from_data_frame(t_2018,directed = F)
+#E(t_2016)$sign
+tb_2018<-count_signed_triangles(t_2018)
+tb_2018<-as.data.frame(tb_2018)
+#tb_2018
+```
+
+### Tabla 
+```{r, results='asis'}
+tt<-cbind(tb_2016,tb_2018)
+tt<-as.data.frame(tt)
+
+tt %>%
+  kbl(caption = "Balance 2016-2018") %>%
+  kable_paper("hover", full_width = F)
+```
+
+El predominio de estructuras locales balanceadas sugiere una tendencia a la estabilidad del campo organizacional. 
+
+## Balancedness (polarización)
+
+### 2016
+```{r}
+triangles  <-balance_score(t_2016, method = "triangles")
+walk       <-balance_score(t_2016, method = "walk")
+frustration<-balance_score(t_2016, method = "frustration")
+
+b2016<-cbind(triangles,walk,frustration)
+b2016<-as.data.frame(b2016)
+
+b2016$year<-2016
+#b2016
+```
+
+### 2018
+```{r}
+triangles  <-balance_score(t_2018, method = "triangles")
+walk       <-balance_score(t_2018, method = "walk")
+frustration<-balance_score(t_2018, method = "frustration")
+
+b2018<-cbind(triangles,walk,frustration)
+b2018<-as.data.frame(b2018)
+
+b2018$year<-2018
+#b2018
+```
+
+
+## tabla 
+```{r, results='asis'}
+bb<-rbind(b2016,b2018)
+bb<-as.data.frame(bb)
+
+bb %>%
+  kbl(caption = "Blancedness 2016-2018") %>%
+  kable_paper("hover", full_width = F)
+```
+
+Las estructuras balanceadas cuando se puede dividir en dos subconjuntos de vértices, de modo que las aristas intragrupo sean todas positivas y las aristas intergrupales sean todas negativas. Los resultados anteriores, muestran una tendencia a la polarización fuerte en el campo considerando los análisis de Neal (2020). Para nuestro análisis esto es indicativo de una fragmentación vertical del campo de la sociedad civil.  
+
+
+# Análisis de regresión 
+```{r}
+#cargar librerias
+library(sjmisc)
+
+#Cargar base de datos desde el repositorio de Dataverse
+load(url("https://dataverse.harvard.edu/api/access/datafile/4606527"))
+elsoc<-elsoc_wide_2016_2019
+
+#REVISAR ESTO
+#frq(elsoc$c12_01_w01)
+#with(elsoc, table(c12_01_w01,c12_01_w03))
+
+#filtrar base de datos
+elsoc<- elsoc_wide_2016_2019 %>% dplyr::filter(muestra==1)
+#elsoc<- elsoc_wide_2016_2019 %>% filter(tipo_atricion<=2 | tipo_atricion==6)
+#frq(elsoc$tipo_atricion) 
+
+#recodificar variables
+elsoc <- elsoc %>%
+  dplyr::mutate (JJVV_w01         = ifelse(c12_01_w01>=2, 1, 0)) %>%
+  dplyr::mutate (Religiosa_w01    = ifelse(c12_02_w01>=2, 1, 0)) %>%
+  dplyr::mutate (Partido_w01      = ifelse(c12_03_w01>=2, 1, 0)) %>%
+  dplyr::mutate (Deportiva_w01    = ifelse(c12_07_w01>=2, 1, 0)) %>%
+  dplyr::mutate (AAEE_w01         = ifelse(c12_08_w01>=2, 1, 0)) %>%
+  dplyr::mutate (Caridad_w01      = ifelse(c12_06_w01>=2, 1, 0)) %>%
+  dplyr::mutate (Sindicato_w01    = ifelse(c12_04_w01>=2, 1, 0)) %>%
+  dplyr::mutate (Profesional_w01  = ifelse(c12_05_w01>=2, 1, 0)) %>%
+  dplyr::mutate (Otras_w01        = ifelse(c12_09_w01>=2, 1, 0)) %>%
+  dplyr::mutate (JJVV_w03         = ifelse(c12_01_w03>=2, 1, 0)) %>%
+  dplyr::mutate (Religiosa_w03    = ifelse(c12_02_w03>=2, 1, 0)) %>%
+  dplyr::mutate (Partido_w03      = ifelse(c12_03_w03>=2, 1, 0)) %>%
+  dplyr::mutate (Deportiva_w03    = ifelse(c12_07_w03>=2, 1, 0)) %>%
+  dplyr::mutate (AAEE_w03         = ifelse(c12_08_w03>=2, 1, 0)) %>%
+  dplyr::mutate (Caridad_w03      = ifelse(c12_06_w03>=2, 1, 0)) %>%
+  dplyr::mutate (Sindicato_w03    = ifelse(c12_04_w03>=2, 1, 0)) %>%
+  dplyr::mutate (Profesional_w03  = ifelse(c12_05_w03>=2, 1, 0)) %>%
+  dplyr::mutate (Otras_w03        = ifelse(c12_09_w03>=2, 1, 0))
+
+
+elsoc$JJVV_tray        <- paste0(elsoc$JJVV_w01,elsoc$JJVV_w03)
+elsoc$Religiosa_tray   <- paste0(elsoc$Religiosa_w01,elsoc$Religiosa_w03)
+elsoc$Partido_tray     <- paste0(elsoc$Partido_w01,elsoc$Partido_w03)
+elsoc$Deportiva_tray   <- paste0(elsoc$Deportiva_w01,elsoc$Deportiva_w03)
+elsoc$AAEE_tray        <- paste0(elsoc$AAEE_w01,elsoc$AAEE_w03)
+elsoc$Caridad_tray     <- paste0(elsoc$Caridad_w01,elsoc$Caridad_w03)
+elsoc$Sindicato_tray   <- paste0(elsoc$Sindicato_w01,elsoc$Sindicato_w03)
+elsoc$Profesional_tray <- paste0(elsoc$Profesional_w01,elsoc$Profesional_w03)
+elsoc$Otras_tray       <- paste0(elsoc$Otras_w01,elsoc$Otras_w03)
+
+#frq(elsoc$JJVV_tray)
+#frq(elsoc$Religiosa_tray)
+#frq(elsoc$Partido_tray)
+#frq(elsoc$Deportiva_tray)
+#frq(elsoc$AAEE_tray)
+#frq(elsoc$Caridad_tray)
+#frq(elsoc$Sindicato_tray)
+#frq(elsoc$Profesional_tray)
+#frq(elsoc$Otras_tray)
+
+elsoc$JJVV_tray       <- car::recode(elsoc$JJVV_tray,       "'00'='NP';'01'='CP';'10'='DP';'11'='MP'; else=NA", as.factor = T)
+elsoc$Religiosa_tray  <- car::recode(elsoc$Religiosa_tray,  "'00'='NP';'01'='CP';'10'='DP';'11'='MP'; else=NA", as.factor = T)
+elsoc$Partido_tray    <- car::recode(elsoc$Partido_tray,    "'00'='NP';'01'='CP';'10'='DP';'11'='MP'; else=NA", as.factor = T)
+elsoc$Deportiva_tray  <- car::recode(elsoc$Deportiva_tray,  "'00'='NP';'01'='CP';'10'='DP';'11'='MP'; else=NA", as.factor = T)
+elsoc$AAEE_tray       <- car::recode(elsoc$AAEE_tray,       "'00'='NP';'01'='CP';'10'='DP';'11'='MP'; else=NA", as.factor = T)
+elsoc$Caridad_tray    <- car::recode(elsoc$Caridad_tray,    "'00'='NP';'01'='CP';'10'='DP';'11'='MP'; else=NA", as.factor = T)
+elsoc$Sindicato_tray  <- car::recode(elsoc$Sindicato_tray,  "'00'='NP';'01'='CP';'10'='DP';'11'='MP'; else=NA", as.factor = T)
+elsoc$Profesional_tray<- car::recode(elsoc$Profesional_tray,"'00'='NP';'01'='CP';'10'='DP';'11'='MP'; else=NA", as.factor = T)
+elsoc$Otras_tray      <- car::recode(elsoc$Otras_tray,      "'00'='NP';'01'='CP';'10'='DP';'11'='MP'; else=NA", as.factor = T)
+
+#CPDP
+lab = c("NP","CP","DP","MP")
+
+elsoc$JJVV_tray       <- factor(elsoc$JJVV_tray       ,labels = lab)
+elsoc$Religiosa_tray  <- factor(elsoc$Religiosa_tray  ,labels = lab)
+elsoc$Partido_tray    <- factor(elsoc$Partido_tray    ,labels = lab)
+elsoc$Deportiva_tray  <- factor(elsoc$Deportiva_tray  ,labels = lab)
+elsoc$AAEE_tray       <- factor(elsoc$AAEE_tray       ,labels = lab)
+elsoc$Caridad_tray    <- factor(elsoc$Caridad_tray    ,labels = lab)
+elsoc$Sindicato_tray  <- factor(elsoc$Sindicato_tray  ,labels = lab)
+elsoc$Profesional_tray<- factor(elsoc$Profesional_tray,labels = lab)
+elsoc$Otras_tray      <- factor(elsoc$Otras_tray      ,labels = lab)
+
+
+frq(elsoc$JJVV_tray)
+frq(elsoc$Religiosa_tray)
+frq(elsoc$Partido_tray)
+frq(elsoc$Deportiva_tray)
+frq(elsoc$AAEE_tray)
+frq(elsoc$Caridad_tray)
+frq(elsoc$Sindicato_tray)
+frq(elsoc$Profesional_tray)
+frq(elsoc$Otras_tray)
+
+```
+
+# Recod 
+```{r}
+elsoc<-elsoc%>%
+  dplyr::mutate(mujer=as.factor(case_when(m0_sexo_w01==1~"hombre",
+                                          m0_sexo_w01==2~"mujer")))%>%
+  dplyr::mutate(mujer=as.factor(case_when(m0_sexo_w03==1~"hombre",
+                                          m0_sexo_w03==2~"mujer")))%>%
+  dplyr::mutate(edad =as.factor(case_when (m0_edad_w01%in%18:24~"18-24",
+                                           m0_edad_w01%in%25:34~"25-34",
+                                           m0_edad_w01%in%34:44~"34-44",
+                                           m0_edad_w01%in%45:54~"45-54",
+                                           m0_edad_w01%in%55:64~"55-64",
+                                           m0_edad_w01%in%65:99~"65 +")))%>%
+  dplyr::mutate(edad=as.factor(case_when (m0_edad_w03%in%18:24~"18-24",
+                                          m0_edad_w03%in%25:34~"25-34",
+                                          m0_edad_w03%in%34:44~"34-44",
+                                          m0_edad_w03%in%45:54~"45-54",
+                                          m0_edad_w03%in%55:64~"55-64",
+                                          m0_edad_w03%in%65:99~"65 +")))%>%
+  dplyr::mutate (educ=as.factor(case_when(m01_w01%in% 1 :3  ~ "básica",
+                                          m01_w01%in% 4 :5  ~ "media",
+                                          m01_w01%in% 6 :7  ~ "técnica",
+                                          m01_w01%in% 8 :10 ~ "univers")))%>%
+  dplyr::mutate (educ=as.factor(case_when(m01_w03%in% 1 :3  ~ "básica",
+                                          m01_w03%in% 4 :5  ~ "media",
+                                          m01_w03%in% 6 :7  ~ "técnica",
+                                          m01_w03%in% 8 :10 ~ "univers"))) 
+```
+
+# Modelos
+```{r, results='asis'}
+# JJVV
+m1 = multinom(JJVV_tray~mujer+edad+educ, data=elsoc)
+#summary(m1)
+
+# Religiosa
+m2 = multinom(Religiosa_tray~mujer+edad+educ, data=elsoc)
+#summary(m2)
+
+# Partido_tray
+m3 = multinom(Partido_tray~mujer+edad+educ, data=elsoc)
+#summary(m3)
+
+# Deportiva
+m4 = multinom(Deportiva_tray~mujer+edad+educ, data=elsoc)
+#summary(m4)
+
+# AAEE
+m5 = multinom(AAEE_tray~mujer+edad+educ, data=elsoc)
+#summary(m2)
+
+# Caridad_tray
+m6 = multinom(Caridad_tray~mujer+edad+educ, data=elsoc)
+#summary(m6)
+
+# Sindicato_tray
+m7 = multinom(Sindicato_tray~mujer+edad+educ, data=elsoc)
+#summary(m7)
+
+# Profesional_tray
+m8 = multinom(Profesional_tray~mujer+edad+educ, data=elsoc)
+#summary(m8)
+
+# Otras_tray
+m9 = multinom(Otras_tray~mujer+edad+educ, data=elsoc)
+#summary(m9)
+
+# Tablas 
+htmlreg(l=list(m1, m2, m3, m4, m5, m6, m7, m8, m9), 
+        stars=c(0.01,0.05,0.1), 
+       caption="logistic multinomial model for individual trajectories",
+       booktabs = TRUE, 
+       dcolumn = TRUE,
+       groups = list("Membership\nbegins" = 1:10,
+                     "Membership\nends" = 11:20,
+                     "Maintains\nmembership"=21:30), 
+       single.row = T, 
+       bold = 0.05,
+       custom.model.names=c("JJVV", 
+                            "Religiosa",
+                            "Partido",
+                            "Deportiva",
+                            "AAEE",
+                            "Caridad",
+                            "Sindicato",
+                            "Profesional",
+                            "Otras"),
+       fontsize="footnotesize")
+
+
+
+'NP'='Nunca participo'
+'CP'='Comenzo a participar'
+'DP'='Dejo de participar'
+'MP'='Mantuvo participacion'
+
+```
+
+
+
+# Bibliografía
+
+- Chen, Y., Diaconis, P., Holmes, S. P., & Liu, J. S. (2005). Sequential Monte Carlo Methods for Statistical Analysis of Tables. Journal of the American Statistical Association, 100(469), 109–120. https://doi.org/10.1198/016214504000001303
+
+- Domagalski, R., Neal, Z., & Sagan, B. (2019). backbone: An R Package for Backbone Extraction of Weighted Graphs. arXiv:1912.12779 [cs]. http://arxiv.org/abs/1912.12779
+
+- Gionis, A., Mannila, H., Mielikäinen, T., & Tsaparas, P. (2007). Assessing data mining results via swap randomization. ACM Transactions on Knowledge Discovery from Data, 1(3), 14. https://doi.org/10.1145/1297332.1297338
+
+- Neal, Z. (2020). A sign of the times? Weak and strong polarization in the U.S. Congress, 1973–2016. Social Networks, 60, 103-112. https://doi.org/10.1016/j.socnet.2018.07.007
+
+- Strona, G., Nappo, D., Boccacci, F., Fattorini, S., & San-Miguel-Ayanz, J. (2014). A fast and unbiased procedure to randomize ecological binary matrices with fixed row and column totals. Nature Communications, 5(1), 4114. https://doi.org/10.1038/ncomms5114
+
+- Zweig, K. A., & Kaufmann, M. (2011). A systematic approach to the one-mode projection of bipartite graphs. Social Network Analysis and Mining, 1(3), 187–218. https://doi.org/10.1007/s13278-011-0021-0
+
+
+
+
+
+
+

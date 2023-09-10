@@ -1,0 +1,351 @@
+---
+title: "LM_homofilia(religión/educación"
+author: "redeslab"
+date: "21-07-2021"
+output: 
+   rmarkdown::html_document:
+     theme: lumen
+     toc: true # table of content true
+     toc_depth: 2  # upto three depths of headings (specified by #, ## and ###)
+     number_sections: true  ## if you want number sections at each table header
+     toc_float: true
+     toc_collapsed: true
+     highlight: pygments
+---
+
+# Latent Markov Models (Lmest)
+
+Aproximación de modelos de markov para formación de patrones de interacción en redes cercanas. 
+
+```{r,message=FALSE}
+library(tidyverse)
+library(jtools)
+library(ggplot2)
+library(broom)
+library(survey)
+library(dplyr)
+library(LMest)
+library(panelr)
+library(ggplot2)
+
+load("C:/Users/rober/Downloads/ELSOC_W04_v2.01_R.RData")
+load("C:/Users/rober/Downloads/ELSOC_W02_v3.00_R.RData")
+
+# Selección de variables
+elsocw2<-dplyr::select(elsoc_2017, idencuesta, ponderador02, m0_sexo, m0_edad, m01,m38, 
+                       r13_educ_01, r13_educ_02,r13_educ_03,r13_educ_04,r13_educ_05,
+                       r13_relig_01,r13_relig_02,r13_relig_03,r13_relig_04,r13_relig_05)
+
+elsocw4<-dplyr::select(elsoc_2019, idencuesta, ponderador02, m0_sexo, m0_edad, m01,m38, 
+                       r13_educ_01, r13_educ_02,r13_educ_03,r13_educ_04,r13_educ_05,
+                       r13_relig_01,r13_relig_02,r13_relig_03,r13_relig_04,r13_relig_05)
+
+# Generar identificador de ola y setear bases
+elsocw2$ola<-1
+elsocw4$ola<-2
+
+#?rbind
+elsoc<-rbind(elsocw2,elsocw4)
+elsoc<-rbind(elsocw2,elsocw4, make.row.names=FALSE)
+elsoc<- elsoc[order(elsoc$idencuesta),]
+row.names(elsoc) <- 1:nrow(elsoc)
+```
+
+## Edad
+```{r}
+elsoc<-elsoc%>%
+dplyr::mutate(m0_edad=case_when(m0_edad%in%18:29~"18-29",
+                                m0_edad%in%30:39~"30-39",
+                                m0_edad%in%40:49~"40-49",
+                                m0_edad%in%50:59~"50-59",
+                                m0_edad%in%60:89~"60-89"))
+```
+
+
+## Sexo
+```{r}
+## sexo egos
+table(elsoc$m0_sexo)
+elsoc$m0_sexo<-ifelse(elsoc$m0_sexo==1 & !is.na(elsoc$m0_sexo), 'male', 'female')
+```
+
+## Educ alteris
+```{r}
+## educaci?n ego m01_w02 823
+## 1, 2, 3|4|5|6,7|8,9,10
+
+table(elsoc$m01) #educ
+
+elsoc$m01<-ifelse(!is.na(elsoc$m01) & (elsoc$m01==1 | elsoc$m01==2 | elsoc$m01==3), 'lt.secondary', ifelse(!is.na(elsoc$m01) & elsoc$m01==4, 'some.secondary', ifelse(!is.na(elsoc$m01) & elsoc$m01==5, 'secondary', ifelse(!is.na(elsoc$m01) & (elsoc$m01==6 | elsoc$m01==7), 'technical.ed',  ifelse(!is.na(elsoc$m01) & (elsoc$m01==8 | elsoc$m01==9 | elsoc$m01==10), 'college.ed', elsoc$m01)))))
+
+## educ alter
+table(elsoc$r13_educ_01)
+
+for (j in 1:5){
+  eval(parse(text=(paste('elsoc$r13_educ_0',j, ' <-ifelse(!is.na(elsoc$r13_educ_0',j,') & elsoc$r13_educ_0',j,'==1, \'lt.secondary\', ifelse(!is.na(elsoc$r13_educ_0',j,') & elsoc$r13_educ_0',j,'==2, \'some.secondary\', ifelse(!is.na(elsoc$r13_educ_0',j,') & elsoc$r13_educ_0',j,'==3, \'secondary\', ifelse(!is.na(elsoc$r13_educ_0',j,') & elsoc$r13_educ_0',j,'==4, \'technical.ed\', ifelse(!is.na(elsoc$r13_educ_0',j,') & elsoc$r13_educ_0',j,'==5, \'college.ed\', elsoc$r13_educ_0',j,')))))', sep=''))))
+}
+```
+
+## religión alteris
+```{r}
+## religión
+## relig ego: m38_w02 918
+## 1. cat| 2. evan, 3. protes|9.ninguna|5 no adherente|7. ateo, 8. agnóstico|4.judío 6.otra
+table(elsoc$m38) #relig
+
+elsoc$m38<- ifelse(!is.na(elsoc$m38) & elsoc$m38==1, 'catholic', ifelse(!is.na(elsoc$m38) & (elsoc$m38==2 | elsoc$m38==3), 'evangelical', ifelse(!is.na(elsoc$m38) & (elsoc$m38==5 | elsoc$m38==9), 'none', ifelse(!is.na(elsoc$m38) & (elsoc$m38==7 | elsoc$m38==8), 'atheist', ifelse(!is.na(elsoc$m38) & (elsoc$m38==4 | elsoc$m38==6), 'other', elsoc$m38)))))
+
+## Alter: relig, católico, evangélico, ninguno, ateo/agn, otro
+table(elsoc$r13_relig_03)
+
+for (i in 1:5){
+  eval(parse(text=(paste('elsoc$r13_relig_0',i,'[elsoc$r13_relig_0',i,'==1 & !is.na(elsoc$r13_relig_0',i,')]<-\'catholic\' ;', 
+                         'elsoc$r13_relig_0',i,'[elsoc$r13_relig_0',i,'==2 & !is.na(elsoc$r13_relig_0',i,')]<-\'evangelical\' ;',
+                         'elsoc$r13_relig_0',i,'[elsoc$r13_relig_0',i,'==3 & !is.na(elsoc$r13_relig_0',i,')]<-\'none\' ;',
+                         'elsoc$r13_relig_0',i,'[elsoc$r13_relig_0',i,'==4 & !is.na(elsoc$r13_relig_0',i,')]<-\'atheist\' ;',
+                         'elsoc$r13_relig_0',i,'[elsoc$r13_relig_0',i,'==5 & !is.na(elsoc$r13_relig_0',i,')]<-\'other\' ', sep=''))))
+}
+```
+
+## NA
+```{r}
+elsoc[elsoc=="-999"] <- NA
+elsoc[elsoc=="-888"] <- NA
+```
+
+## Crear variables de conteo 
+```{r, message=F}
+#install.packages("expss")
+library(expss)
+elsoc<-elsoc%>%
+  select(idencuesta, ola, ponderador02, sexo=m0_sexo,educ=m01,edad=m0_edad, relig=m38,
+         relig1=r13_relig_01,relig2=r13_relig_02,relig3=r13_relig_03,relig4=r13_relig_04,
+         relig5=r13_relig_05,educ1=r13_educ_01,educ2=r13_educ_02,educ3=r13_educ_03,
+         educ4=r13_educ_04,educ5=r13_educ_05)
+```
+
+```{r}
+elsoc$sexo<-as.factor(elsoc$sexo)
+elsoc$educ<-as.factor(elsoc$educ)
+elsoc$edad<-as.factor(elsoc$edad)
+```
+
+```{r}
+#table(elsoc$relig1)
+elsoc$atheist<-count_row_if(criterion = "atheist", 
+                            elsoc$relig1, 
+                            elsoc$relig2,
+                            elsoc$relig3, 
+                            elsoc$relig4, 
+                            elsoc$relig5) 
+
+elsoc$catholic<-count_row_if(criterion = "catholic",
+                             elsoc$relig1,
+                             elsoc$relig2,
+                             elsoc$relig3,
+                             elsoc$relig4,
+                             elsoc$relig5)
+
+elsoc$evangelical<-count_row_if(criterion = "evangelical",
+                                elsoc$relig1,
+                                elsoc$relig2,
+                                elsoc$relig3,
+                                elsoc$relig4,
+                                elsoc$relig5)
+
+elsoc$none_relig<-count_row_if(criterion = "none",
+                               elsoc$relig1,
+                               elsoc$relig2,
+                               elsoc$relig3,
+                               elsoc$relig4,
+                               elsoc$relig5)
+
+elsoc$other_relig<-count_row_if(criterion = "other",
+                                elsoc$relig1,
+                                elsoc$relig2,
+                                elsoc$relig3,
+                                elsoc$relig4,
+                                elsoc$relig5)
+
+```
+
+
+```{r}
+#table(elsoc$educ1)
+
+elsoc$college.ed<-count_row_if(criterion = "college.ed", 
+                               elsoc$educ1, 
+                               elsoc$educ2,
+                               elsoc$educ3, 
+                               elsoc$educ4, 
+                               elsoc$educ5) 
+
+elsoc$lt.secondary<-count_row_if(criterion = "lt.secondary",
+                                 elsoc$educ1,
+                                 elsoc$educ2,
+                                 elsoc$educ3,
+                                 elsoc$educ4,
+                                 elsoc$educ5)
+
+elsoc$secondary<-count_row_if(criterion = "secondary",
+                              elsoc$educ1,
+                              elsoc$educ2,
+                              elsoc$educ3,
+                              elsoc$educ4,
+                              elsoc$educ5)
+
+elsoc$some.secondary<-count_row_if(criterion = "some.secondary",
+                                   elsoc$educ1,
+                                   elsoc$educ2,
+                                   elsoc$educ3,
+                                   elsoc$educ4,
+                                   elsoc$educ5)
+
+elsoc$technical.ed<-count_row_if(criterion = "technical.ed",
+                                 elsoc$educ1,
+                                 elsoc$educ2,
+                                 elsoc$educ3,
+                                 elsoc$educ4,
+                                 elsoc$educ5)
+```
+
+# recod categorías de respuesta (=3)
+```{r}
+elsoc<-elsoc%>%
+  mutate(college.ed=case_when(college.ed==0~0,
+                              college.ed%in%1:3~1,
+                              college.ed%in%4:5~2))%>%
+  mutate(lt.secondary=case_when(lt.secondary==0~0,
+                                lt.secondary%in%1:3~1,
+                                lt.secondary%in%4:5~2))%>%
+  mutate(secondary=case_when(secondary==0~0,
+                             secondary%in%1:3~1,
+                             secondary%in%4:5~2))%>%
+  mutate(some.secondary=case_when(some.secondary==0~0,
+                                  some.secondary%in%1:3~1,
+                                  some.secondary%in%4:5~2))%>%
+  mutate(technical.ed=case_when(technical.ed==0~0,
+                                technical.ed%in%1:3~1,
+                                technical.ed%in%4:5~2))%>%
+  mutate(atheist=case_when(atheist==0~0,
+                           atheist%in%1:3~1,
+                           atheist%in%4:5~2))%>%
+  mutate(catholic=case_when(catholic==0~0,
+                            catholic%in%1:3~1,
+                            catholic%in%4:5~2))%>%
+  mutate(evangelical=case_when(evangelical==0~0,
+                               evangelical%in%1:3~1,
+                               evangelical%in%4:5~2))%>%
+  mutate(none_relig=case_when(none_relig==0~0,
+                              none_relig%in%1:3~1,
+                              none_relig%in%4:5~2))%>%
+  mutate(other_relig=case_when(other_relig==0~0,
+                               other_relig%in%1:3~1,
+                               other_relig%in%4:5~2))
+```
+
+
+
+```{r}
+elsoc$relig1<-NULL
+elsoc$relig2<-NULL
+elsoc$relig3<-NULL
+elsoc$relig4<-NULL
+elsoc$relig5<-NULL
+
+elsoc$educ1<-NULL
+elsoc$educ2<-NULL
+elsoc$educ3<-NULL
+elsoc$educ4<-NULL
+elsoc$educ5<-NULL
+
+```
+
+```{r}
+elsoc<- panel_data(elsoc, id = idencuesta, wave = ola) %>%
+  complete_data(min.waves = 2)%>%
+  as.data.frame()
+```
+
+# Modelamos
+```{r}
+modelo1 <-  lmest(responsesFormula = atheist+catholic+evangelical+none_relig+
+                    other_relig+college.ed+lt.secondary+secondary+some.secondary+
+                     technical.ed ~NULL,
+                  latentFormula =~ sexo +edad,
+                  param = "multilogit",
+                  modBasic = 2,
+                  modManifest="LM",
+                  index = c("idencuesta","ola"),
+                  data = elsoc,
+                  k = 1:6, 
+                  start = 0,
+                  seed = 123)
+```
+
+
+```{r}
+plot(modelo1,what="modSel")
+```
+
+```{r}
+modelo2 <-  lmest(responsesFormula = atheist+catholic+evangelical+none_relig+
+                    other_relig+college.ed+lt.secondary+secondary+some.secondary+
+                     technical.ed ~NULL,
+                  latentFormula =~ sexo +edad,
+                  modBasic = 1,
+                  modManifest="LM",
+                  index = c("idencuesta","ola"),
+                  data = elsoc,
+                  k =4, 
+                  start = 0,
+                  seed = 123)
+
+modelo2
+summary(modelo2)
+
+```
+
+
+```{r}
+plot(modelo2, what = "CondProb")
+```
+
+```{r}
+LMmodelo2 <- reshape2::melt(modelo2$Psi, level=1)
+LMmodelo2$item<-as.factor(LMmodelo2$item)
+LMmodelo2 = LMmodelo2 %>%
+  dplyr::mutate(item=case_when(item==1~"a.ateo",
+                               item==2~"b.católico",
+                               item==3~"c.evange",
+                               item==4~"d.sin_rel",
+                               item==5~"e.otra_rel",
+                               item==6~"f.college.ed",
+                               item==7~"g.lt.secondary",
+                               item==8~"h.secondary",
+                               item==9~"i.some.secondary",
+                               item==10~"j.technical.ed"))%>%
+  dplyr::mutate (state= case_when(state==1~"estado1\n15%",
+                                  state==2~"estado2\n30%",
+                                  state==3~"estado3\n21%",
+                                  state==4~"estado4\n34%")) 
+  
+  
+zp1 <- ggplot(LMmodelo2,aes(x = item, y = value, fill = category))
+zp1 <- zp1 + geom_bar(stat = "identity", position = "stack") 
+zp1 <- zp1 + facet_grid(state ~ .) 
+zp1 <- zp1 + labs(x = "Item",y="State", fill ="") + 
+  theme(text = element_text(size=10))
+zp1 <- zp1 + theme( axis.ticks.y=element_blank(),
+                    legend.position = "left",
+                    panel.grid.major.y=element_blank(),
+                    plot.title = element_text(hjust = 0.5, size = 8),
+                    axis.title = element_text(size=10),
+                    axis.text.x = element_text(size = 8,angle = 90),
+                    axis.text.y = element_text(size = 6))
+zp1
+```
+
+
+
+

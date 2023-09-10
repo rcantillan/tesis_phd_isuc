@@ -1,0 +1,386 @@
+---
+title: "cohort_consolidation"
+author: "Cantillan, R."
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output: 
+ rmarkdown::html_document:
+     theme: flatly
+     toc: true # table of content true
+     toc_depth: 2  # upto three depths of headings (specified by #, ## and ###)
+     number_sections: true  ## if you want number sections at each table header
+     toc_float: true
+     toc_collapsed: true
+     highlight: monochrome
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+El objetivo de esta exploracion es evaluar lo que Peter Blau denómina como "consolidadión", fenómeno que hace alusión a la correlación entre atributos relevantes (salientes) en la población. En específico, me enfoco evaluar como se comporta la correlación entre una variable de estatus (nivel de ingreso para `CEP` y `WVS`, aunque idealmente se debería trabajar con la variable ocupación (CIUO 88 - 08) y prestigio ISEI) y variables que capturan preferencias religiosas e ideológicas, esto para diferentes cohortes de nacimiento. 
+
+La teoría de Blau & Schwartz (1997) sugiere que sociedades con mayor consolidación ofreceran escenarios más desintegrados y con mayores constricciones para la interacción intergrupal. Por esto, el primer paper de mi tesis busca analizar como se comporta la relación entre la consolidación y parámetros estimados de homofilia para diferentes contextos o unidades de anidación (idealmente con ELSOC). La hipótesis fundamental es que la consolidación se relaciona positivamente con la homofilia. 
+
+Me queda por revisar: 
+
+  - Estimar parámetros de consolidación que reflejen correlaciones entre varios atributos al mismo tiempo (siempre con un parámetros de tipo graduado o estatus, en términos de Blau)
+  - Evaluar correlaciones con variables que reflejen "estilos de vida" (a lo Weber) y estatus. 
+  - Construir una variable CIUO e ISEI para CEP y WVS.
+
+## Librerías
+```{r, message=FALSE}
+pacman::p_load(tidyverse, tidymodels, readxl, DescTools, labelled, vcd, mice, 
+               rstatix, Hmisc, viridis, questionr)
+```
+
+## Cargar data
+
+Cargamos al serie de tiempo completa de la encuesta CEP
+```{r}
+cep <- readRDS("~/Documents/doctorado-UC/tesis/data/base_consolidada_1990_2022_v2-1.Rds_/base_consolidada_1990_2022_v2 (1).Rds")
+```
+
+## Seleccionar datos CEP serie completa
+
+A continuación seleccionamos las variables de interes y filtramos para los años que cuentan con la variable edad adecuada. 
+
+
+- `edad` =	Edad exacta
+- `esc_nivel_1` = Escolaridad por nivel 1	
+- `info_hogar_7` = ¿Con cuánto ingreso se dispone mensualmente en esta casa en total aproximadamente? Por favor, indíquenos el rango de ingreso	
+- `info_enc_20`	= De los siguientes tramos de ingresos mensuales que se presentan en esta tarjeta. ¿Podría Ud. indicarme en cuál de los siguientes tramos se encuentra UD., considerando SU ingreso líquido por sueldo, jubilación si la tuviera, pensión, aportes de parientes o amigos, mesadas, arriendos y otros? ¿o no tiene ningún tipo ingresos?	
+- `iden_pol_1`  = Posición política del encuestado 
+- `iden_pol_3_T` = Preferencia por partidos políticos
+- `religion_1` = ¿Podría Ud. decirme la religión o iglesia a la que pertenece o se siente más cercano? [8 categorías]	
+- `info_enc_1_A` = En relación a su actividad y ocupación, ¿cuál es o era su actividad principal? (v1)	
+- `info_enc_1_D` = En relación a su actividad y ocupación, ¿cuál es o era su actividad principal? (código CIUO 88)	
+- `info_enc_19_D` = En relación a su actividad y ocupación, ¿cuál es o era su actividad principal? (código ciuo 88)	 
+- `info_enc_1_e` = En relación a su actividad y ocupación, ¿cuál es o era su actividad principal? (código CIUO 08)	
+- `info_enc_20` = tramo ingreso
+
+
+## seleccionar variables
+```{r}
+cep_sub<-cep%>%
+  dplyr::select(encuesta, edad, esc_nivel_1, info_enc_20, iden_pol_1,religion_1,info_enc_19_d,
+                info_enc_1_d,info_enc_19_d, info_enc_1_d, info_enc_1_e) %>%
+  dplyr::filter(encuesta > 28 & encuesta != 88)%>% # filtramos para considerar solo los años desde el 1994 hasta el 2021. 
+  tidyr::drop_na(edad)
+```
+
+
+## ciuo
+```{r}
+#install.packages("ISCO08ConveRsions")
+#library(ISCO08ConveRsions)
+#isco08toisco88(as.factor(cep_sub$info_enc_1_e))
+#cep_sub$info_enc_1_e <- ifelse(nchar(cep_sub$info_enc_1_e) == 3, paste0("0", cep_sub$info_enc_1_e), cep_sub$info_enc_1_e)
+#isco08toisei08(cep_sub$info_enc_19_e)
+```
+
+
+## Construir cohortes
+
+Se construyen cohortes de cinco años, en efecto, se trabaja con nueve cohortes de cinco años nacidas en 1970 o antes, dos cohortes nacidas entre 1971 y 1980 y tres cortes nacidas entre 1981 y 1995.
+
+- crear variable año 
+- crear año de nacimiento. 
+
+### Homologación año / encuesta 
+
+```{r}
+cep_sub<-cep_sub%>%
+  dplyr::mutate(ano_apli=case_when(encuesta == 29 ~ 1994, encuesta == 30 ~ 1995, encuesta == 31 ~ 1995,
+                                   encuesta == 32 ~ 1996, encuesta == 33 ~ 1996, encuesta == 34 ~ 1997,
+                                   encuesta == 35 ~ 1998, encuesta == 36 ~ 1998, encuesta == 37 ~ 1999,
+                                   encuesta == 38 ~ 1999, encuesta == 39 ~ 2000, encuesta == 40 ~ 2000,
+                                   encuesta == 41 ~ 2001, encuesta == 42 ~ 2002, encuesta == 43 ~ 2002,
+                                   encuesta == 44 ~ 2002, encuesta == 45 ~ 2003, encuesta == 46 ~ 2003,
+                                   encuesta == 47 ~ 2004, encuesta == 48 ~ 2004, encuesta == 49 ~ 2005,
+                                   encuesta == 50 ~ 2005, encuesta == 51 ~ 2005, encuesta == 52 ~ 2006,
+                                   encuesta == 54 ~ 2006, encuesta == 55 ~ 2007, encuesta == 56 ~ 2007,
+                                   encuesta == 57 ~ 2008, encuesta == 58 ~ 2008, encuesta == 59 ~ 2009,
+                                   encuesta == 60 ~ 2009, encuesta == 61 ~ 2009, encuesta == 62 ~ 2010,
+                                   encuesta == 63 ~ 2010, encuesta == 64 ~ 2011, encuesta == 65 ~ 2011,
+                                   encuesta == 66 ~ 2012, encuesta == 67 ~ 2012, encuesta == 68 ~ 2012,
+                                   encuesta == 69 ~ 2013, encuesta == 70 ~ 2013, encuesta == 71 ~ 2014,
+                                   encuesta == 72 ~ 2014, encuesta == 73 ~ 2015, encuesta == 74 ~ 2015,
+                                   encuesta == 75 ~ 2015, encuesta == 77 ~ 2016, encuesta == 78 ~ 2016,
+                                   encuesta == 79 ~ 2017, encuesta == 80 ~ 2017, encuesta == 81 ~ 2017,
+                                   encuesta == 82 ~ 2018, encuesta == 83 ~ 2019, encuesta == 84 ~ 2019,
+                                   encuesta == 85 ~ 2021, encuesta == 86 ~ 2022, encuesta == 88 ~ 2022))
+```
+
+### revisar variable `ano`
+```{r}
+Freq(tibble(cep_sub$ano_apli))
+```
+
+### crear variable año de nacimiento. 
+```{r}
+cep_sub<-cep_sub%>%
+  remove_val_labels()%>%
+  dplyr::mutate(ano_nac=ano_apli-edad)%>%
+  dplyr::select(encuesta,ano_apli, edad, ano_nac, esc_nivel_1, info_enc_20, iden_pol_1,religion_1)%>%
+  remove_labels()
+```
+
+
+### imputación 
+
+- Revisar pertinencia con el paquete `mice`
+
+```{r}
+is.na(cep_sub$iden_pol_1) <- cep_sub$iden_pol_1 %in% c(88,99) #NA
+is.na(cep_sub$esc_nivel_1)<- cep_sub$esc_nivel_1 %in% c(88,99)
+is.na(cep_sub$religion_1) <- cep_sub$religion_1 %in% c(88,99, 590, 701)
+is.na(cep_sub$info_enc_20)<- cep_sub$info_enc_20 %in% c(88,99)
+```
+
+
+```{r}
+#set.seed(12345)
+#set.seed(NULL)
+imp <- mice(cep_sub, meth = "rf", ntree = 3, maxit=10) # con random forest, maxit = 10 iteraciones. 
+plot(imp)
+c.long <- complete(imp, 5)  
+tibble(c.long)
+```
+
+
+
+### crear variable cohorte. 
+
+Se construyen cohortes de cinco años, en efecto, se trabaja con 7 cohortes de cinco años nacidas en 1970 o antes, dos cohortes nacidas entre 1971 y 1980 y tres cortes nacidas entre 1981 y 1995.
+
+```{r}
+cep_sub_imp<-c.long%>%
+  dplyr::mutate(cohorte=case_when(ano_nac<=1935~"1935", 
+                                  ano_nac%in%1936:1940~"1936-1940", 
+                                  ano_nac%in%1941:1945~"1941-1945", 
+                                  ano_nac%in%1946:1950~"1946-1950", 
+                                  ano_nac%in%1951:1955~"1951-1955",
+                                  ano_nac%in%1956:1960~"1956-1960",
+                                  ano_nac%in%1961:1965~"1961-1965",
+                                  ano_nac%in%1966:1970~"1966-1970",
+                                  ano_nac%in%1971:1975~"1971-1975",
+                                  ano_nac%in%1976:1980~"1976-1980",
+                                  ano_nac%in%1981:1985~"1981-1985",
+                                  ano_nac%in%1986:1990~"1986-1990",
+                                  ano_nac%in%1991:1995~"1991-1995",
+                                  ano_nac%in%1996:2000~"1996-2000",
+                                  ano_nac%in%2001:2004~"2001-2004"))%>%
+  dplyr::mutate(edad_cat=case_when(edad%in%18:29~"18-29",
+                                   edad%in%30:39~"30-39",
+                                   edad%in%40:49~"40-49",
+                                   edad%in%50:59~"50-59",
+                                   edad%in%60:69~"60-69",
+                                   edad>=70~"70+"))%>%
+  dplyr::mutate(gse=case_when(info_enc_20%in%1:8~"bajo",
+                              info_enc_20==15~"bajo",
+                              info_enc_20%in%8:9~"medio",
+                              info_enc_20==10~"medio",
+                              info_enc_20==11~"medio",
+                              info_enc_20==12~"alto",
+                              info_enc_20==13~"alto",
+                              info_enc_20==14~"alto", 
+                              TRUE~NA))%>%
+  dplyr::mutate(relig=case_when(religion_1==1~"catolico",
+                                religion_1==2~"evangelico",
+                                religion_1%in%3:8~"otra",
+                                religion_1%in%9:11~"sin",
+                                TRUE~NA))%>%
+  dplyr::mutate(ideol=case_when(iden_pol_1==1~"derecha",
+                                iden_pol_1%in%2:4~"centro",
+                                iden_pol_1==5~"izquierda",
+                                iden_pol_1%in%6:7~"indep", 
+                                TRUE~NA))%>%
+  dplyr::select(ano_apli, cohorte,relig,gse,ideol)
+```
+
+
+```{r}
+describe(cep_sub_imp)
+```
+
+
+
+# correlaciones (CEP)
+## data
+```{r warning=F}
+plot_cep<-cep_sub_imp %>%
+  dplyr::group_by(ano_apli,cohorte) %>%
+  dplyr::summarize(cor1=cramer_v(ideol, gse),
+                   cor2=cramer_v(relig, gse))
+
+tibble(plot_cep)
+```
+
+## plot 1
+```{r}
+plot_cep%>%ggplot(aes(ano_apli, cor1, color = cohorte)) +
+  geom_smooth(method = lm, se = F, span = 0.5) +
+  geom_point() +
+  scale_color_viridis(discrete = TRUE, option = "H") +
+  theme_classic() +
+  labs(x="", y="Consolidation (SEG/Ideology)", title="CEP")
+```
+
+## plot 2
+```{r}
+plot_cep%>%ggplot(aes(ano_apli, cor2, color = cohorte)) +
+  geom_smooth(method = lm, se = F, span = 0.5) +
+  geom_point() +
+  scale_color_viridis(discrete = TRUE, option = "H") +
+  theme_classic() +
+  labs(x="", y="Consolidation (SEG/Religion)", title="CEP")
+```
+
+
+# WVS (chile)
+
+Adicionalmente, probamos con la seríe de tiempo para Chile del estudio mundial de valores. Las variables a utilizar son las siguientes:
+
+- `X045`: subjective social class
+- `X036`: Ocupation
+- `X025`: nivel educacional más alto alcanzado
+- `X025R`: nivel educ recode (3 categories)
+- `X047_WVS`: escala de ingresos
+- `X047R_WVS`: recode escala de ingresos (3 categories)
+- `X003`: edad
+- `X051`: etnia
+- `F025`: preferencia religiosa
+- `E033`: Self positioning in political scale
+
+
+## datos
+```{r}
+wvs <- get(load('~/Desktop/F00011932-WVS_TimeSeries_1981_2022_Rdata_v4_0/WVS_TimeSeries_4_0.rdata'))
+```
+
+```{r}
+freq(wvs$X036E)
+wvs$X036
+```
+
+
+
+
+
+
+## Seleccionamos variables
+```{r}
+wvs_chile<-wvs%>%filter(COW_NUM==155)%>%
+  dplyr::select(S006,S020,X003,X045,X036,X036E,X025,X025R,X047_WVS,X047R_WVS,X003,X051,F025,E033)
+#table(wvs_chile$S020)
+```
+
+
+11	Employer/manager of establishment with 500 or more employed		
+12	Employer/manager of establishment with 100 or more employed		
+13	Employer/manager of establishment with 10 or more employed		
+14	Employer/manager of establishment w. less than 500 employed		
+15	Employer/manager of establishment w. less than 100 employed
+16	Employer/manager of establishment with less than 10 employed		
+21	Professional worker = 65
+22	Middle level non-manual office worker		
+23	Supervisory Non manual -office worker		
+24	Junior level non manual		
+25	Non manual -office worker		
+31	Foreman and supervisor		
+32	Skilled manual		
+33	Semi-skilled manual worker		
+34	Unskilled manual
+41	Farmer: has own farm		
+42	Agricultural worker = 14
+51	Member of armed forces		
+61	Never had a job		
+81	Other
+
+
+
+
+
+
+## Crear cohortes
+```{r}
+
+
+w<-wvs_chile%>%
+  remove_labels()%>%
+  dplyr::mutate(ano_nac=S020-X003)%>%
+  dplyr::mutate(cohorte=case_when(ano_nac<=1935~"- 1935",
+                                  ano_nac%in%1936:1940~"1936-1940", 
+                                  ano_nac%in%1941:1945~"1941-1945", 
+                                  ano_nac%in%1946:1950~"1946-1950", 
+                                  ano_nac%in%1951:1955~"1951-1955",
+                                  ano_nac%in%1956:1960~"1956-1960",
+                                  ano_nac%in%1961:1965~"1961-1965",
+                                  ano_nac%in%1966:1970~"1966-1970",
+                                  ano_nac%in%1971:1975~"1971-1975",
+                                  ano_nac%in%1976:1980~"1976-1980",
+                                  ano_nac%in%1981:1985~"1981-1985",
+                                  ano_nac%in%1986:1990~"1986-1990",
+                                  ano_nac%in%1991:1995~"1991-1995",
+                                  ano_nac%in%1996:2000~"1996-2000",
+                                  ano_nac%in%2001:2004~"2001-2004"))%>%
+  dplyr::mutate(ingreso=case_when(X047R_WVS==1~"bajo",
+                                  X047R_WVS==2~"medio",
+                                  X047R_WVS==3~"alto")) %>%
+  dplyr::mutate(relig=case_when(F025==0~"sin",
+                                F025==1~"catolica",
+                                F025==2~"protestante",
+                                F025==8~"protestante",
+                                F025%in%3:7~"Otra"))%>%
+  dplyr::mutate(ideol=case_when(E033%in%1:3~"izq",
+                                E033%in%4:7~"centro",
+                                E033%in%8:10~"derecha"))%>%
+  dplyr::select(S020,cohorte,ideol,relig,ingreso)
+```
+
+
+```{r}
+describe(w)
+```
+
+## Correlaciones
+```{r warning=FALSE}
+plot_wvs<-w %>%
+  dplyr::group_by(S020,cohorte) %>%
+  dplyr::summarize(cor1=cramer_v(ideol, ingreso),
+            cor2=cramer_v(relig, ingreso))
+
+tibble(plot_wvs)
+```
+
+### plot 1
+```{r}
+plot_wvs%>%ggplot(aes(S020, cor1, color = cohorte)) +
+  geom_smooth(method = lm, se = F, span = 0.5) +
+  geom_point() +
+  scale_color_viridis(discrete = TRUE, option = "H") +
+  theme_classic() +
+  labs(x="", y="Consolidation (SEG/Ideology)", title="WVS")
+```
+
+### plot 2
+```{r}
+plot_wvs%>%ggplot(aes(S020, cor2, color = cohorte)) +
+  geom_smooth(method = lm, se = F, span = 0.5) +
+  geom_point() +
+  scale_color_viridis(discrete = TRUE, option = "H") +
+  theme_classic() +
+  labs(x="", y="Consolidation (SEG/Religion)", title="WVS")
+```
+
+
+# Bibliografía 
+
+- Blau, P. M., & Schwartz, J. E. (1997). Crosscutting social circles: Testing a macrostructural theory of intergroup relations. Transaction Publishers.
+- Ryder, N. B. (1985). The Cohort as a Concept in the Study of Social Change. In W. M. Mason & S. E. Fienberg (Eds.), Cohort Analysis in Social Research (pp. 9–44). Springer New York. https://doi.org/10.1007/978-1-4613-8536-3_2
+
+
+
+
+

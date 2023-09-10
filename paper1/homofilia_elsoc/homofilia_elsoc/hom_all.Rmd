@@ -1,0 +1,734 @@
+---
+title: "casecontrol"
+author: "redelab"
+date: "26-10-2021"
+output: html_document
+---
+
+
+# Cargar paquetes necesarios del codigo de Smith
+```{r warning=FALSE, message=FALSE}
+library(tidyverse)
+library(biglm)
+#install.packages("ergm")
+library(ergm)
+library(doParallel)
+library(igraph)
+```
+
+# cargar funciones desde el git de Smith
+```{r}
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/ego_net_case_control_model.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/output_glm_formula.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/prepare_case_control_logistic_data_function_create_vars.R")
+source("https://raw.githubusercontent.com/JeffreyAlanSmith/case_control_logistic/master/functions/prepare_case_control_logistic_data_function.R")
+```
+
+# Data
+```{r}
+# load data
+load("C:/Users/rober/Desktop/homofilia_elsoc/hom_rel_c.RData")
+
+# to character
+hom_rel_c<-hom_rel_c %>%
+  mutate(across(everything(), as.character))
+```
+
+## Replication
+
+Crearemos una lista, donde cada segmento es un atributo diferente,
+```{r}
+#name of degree column on data frame:
+var.name.degree="tamred"
+
+#names of key ego attribute columns in data frame:
+var.name.characs=c("ideol","edad", "sexo", "relig", "educ") 
+
+var.name.characs.alter=list()
+
+for (p in 1:length(var.name.characs)){
+  var.name.characs.alter[[p]]=paste(var.name.characs[[p]],1:5,sep="")
+}
+
+#var.name.characs.alter[[7]]<-NULL
+#Let's take a look:
+var.name.characs.alter 
+```
+
+## Fórmula
+
+Ahora vamos a fijar la fórmula de interés. Los posibles términos son los siguientes:
+
+`nodematch` = un término de coincidencia/sin coincidencia (¿ego y alter coinciden en un atributo?)
+`nodemix` = incluye términos para todos los pares de categorías en el atributo de interés.
+`absdiff` = incluye un término para mostrar la diferencia absoluta entre ego y alter (apropiado para variables continuas.
+`nodefactor` =controla el grado de los diferentes grupos (ajustando las estimaciones de homofilia el hecho de que algunos grupos, por ejemplo, los hombres, tienen más vínculos que otros grupos, como las mujeres).
+`nodecov` = similar a nodefactor pero apropiado para variables continuas. Como nota general, es que el algoritmo puede incluir una lista de formulas.
+
+#help("ergm-terms")
+
+https://cran.r-project.org/web/packages/ergm/vignettes/ergm-term-crossRef.html
+http://statnet.org/nme/d2-ergmterms.html
+https://eehh-stanford.github.io/SNA-workshop/ergm-intro.html#some-practical-reasons
+
+
+# Preparing data
+```{r}
+hom_c_2014<-hom_rel_c[hom_rel_c$año == '2014',]
+hom_c_2014<-as.matrix(hom_c_2014)
+hom_c_2014<-as.data.frame(hom_c_2014)
+
+# to numeric "edad"
+hom_c_2014<-hom_c_2014 %>% 
+   mutate_at(vars(starts_with("edad")),funs(as.numeric))
+
+# delete year
+hom_c_2014$año<-NULL
+hom_c_2014$barrio<-NULL
+hom_c_2014$barrio1<-NULL
+hom_c_2014$barrio2<-NULL
+hom_c_2014$barrio3<-NULL
+hom_c_2014$barrio4<-NULL
+hom_c_2014$barrio4<-NULL
+#hom_c_2014$idencuesta<-NULL
+
+# delete missing 
+hom_c_2014<-hom_c_2014%>%drop_na(relig)
+
+# combrobar casos con 1 nivel para contraste
+#which(sapply(hom_c_2014, function(x) (is.character(x) | is.factor(x)) & length(unique(x))<2))
+```
+
+# defining formula
+```{r}
+formula_ego<- as.formula(~ #nodematch("sexo", diff=T) 
+                         # nodefactor("sexo")
+                           nodematch("ideol", diff=TRUE)
+                         + nodefactor("ideol"))
+                         #+ absdiff("edad")
+                         #+ nodecov("edad")
+                         #+ nodematch("relig", diff=T)
+                         #+ nodefactor("relig")
+                         #+ nodematch("ideol", diff=T)
+                         #+ nodefactor("ideol")) 
+
+```
+
+## Análisis 1: 2014 Todos los confidentes (Weighted random matching)
+
+En este primer procedimiento se parea a los respondientes de manera aleatoria y en base a los pesos de probabilidad. 
+
+### Modelo 1 
+```{r}
+modelo5<-egonet_case_control_model(formula=formula_ego,
+                                   ego_data=cep_hom,
+                                   var.name.degree=var.name.degree, 
+                                   var.name.characs=var.name.characs,
+                                   var.name.characs.alter=var.name.characs.alter, 
+                                   case.control.type="weighted.random.matching", 
+                                   max.alter=5,
+                                   max.control.data.N=10000,
+                                   remove.isolates.control=T, 
+                                   weight.var.name="pond", 
+                                   weight.var.name.control="pond", 
+                                   num.iterations=1000,
+                                   bootstrap.sample=T, 
+                                   num.bootstrap.samples=2473,
+                                   useparallel=T, 
+                                   num.cores=8,
+                                   maxit=20,
+                                   adjust.intercept=F)
+modelo1$fit
+#modelo1$coefs
+save(modelo1, file = "C:/Users/rober/Desktop/homofilia_elsoc/modelo1.Rdata")
+```
+
+```{r}
+#names(modelo1)
+coefs=modelo5$coefs
+rm(mean)
+head(coefs)
+
+coefs_sample=aggregate(.~sample, data=coefs, mean)
+coefs_sample
+
+coefs_sample=coefs_sample[,-which(colnames(coefs_sample) %in% c("sample","iteration"))]
+
+apply(coefs_sample, 2, mean)
+apply(coefs_sample, 2, sd)
+apply(coefs_sample, 2, quantile, c(.025, .975))
+
+apply(modelo1$fit["bic"], 2, mean)
+apply(modelo1$fit["aic"], 2, mean)
+apply(modelo1$fit["N.dyads"], 2, mean)
+
+```
+
+### Estimar SE
+```{r}
+std_mean <- function(x) sd(x)/sqrt(length(x))
+std_mean(coefs_sample$Intercept)
+```
+
+## Wald 
+```{r}
+z <- (2.933 - 0.1) / 0.016
+pnorm(q=z, lower.tail=FALSE) 
+```
+
+## Análisis 2: No familiares 
+
+### Select data
+```{r}
+library(panelr)
+
+hom_c_2014_ego<-hom_c_2014%>%
+  dplyr::select(idencuesta,sexo,edad,educ,relig,ideol,tamred,ponderador)
+
+hom_c_2014_alter<-hom_c_2014%>%
+  dplyr::select(idencuesta,
+                sexo1,sexo2,sexo3,sexo4,sexo5,
+                edad1,edad2,edad3,edad4,edad5,
+                educ1,educ2,educ3,educ4,educ5,
+                relig1,relig2,relig3,relig4,relig5,
+                ideol1,ideol2,ideol3,ideol4,ideol5,
+                relacion1,relacion2,relacion3,relacion4,relacion5)
+
+# reshape
+hom_c_2014_long<-long_panel(hom_c_2014_alter, prefix="", begin=1, end=5, label_location="end")
+
+# filter
+hom_c_2014_long_nofam<-hom_c_2014_long%>%
+  dplyr::filter(relacion =="nofam")
+
+# to wide
+hom_c_2014_nofam<-widen_panel(hom_c_2014_long_nofam, separator = "")
+
+
+# matri to data frame
+hom_c_2014_nofam<-as.matrix(hom_c_2014_nofam)
+hom_c_2014_nofam<-as.data.frame(hom_c_2014_nofam)
+hom_c_2014_nofam$id<-NULL
+
+# join
+hom_c_2014_nofam<-dplyr::left_join(hom_c_2014_nofam, 
+                                     hom_c_2014_ego, 
+                                     by="idencuesta")%>%
+  dplyr::select(idencuesta,
+                sexo,sexo1,sexo2,sexo3,sexo4,sexo5,
+                edad,edad1,edad2,edad3,edad4,edad5,
+                educ,educ1,educ2,educ3,educ4,educ5,
+                relig,relig1,relig2,relig3,relig4,relig5,
+                ideol,ideol1,ideol2,ideol3,ideol4,ideol5,
+                relacion1,relacion2,relacion3,relacion4,relacion5,
+                tamred,ponderador)
+# to numeric
+# to numeric "edad"
+hom_c_2014_nofam<-hom_c_2014_nofam %>% 
+   mutate_at(vars(starts_with("edad")),funs(as.numeric))
+
+```
+
+```{r}
+modelo9<-egonet_case_control_model(formula=formula_ego,
+                                   ego_data=hom_c_2014_nofam,
+                                   var.name.degree=var.name.degree, 
+                                   var.name.characs=var.name.characs,
+                                   var.name.characs.alter=var.name.characs.alter, 
+                                   case.control.type="weighted.random.matching", 
+                                   max.alter=5,
+                                   max.control.data.N=500000,
+                                   remove.isolates.control=T, 
+                                   weight.var.name="ponderador", 
+                                   weight.var.name.control="ponderador", 
+                                   num.iterations=10,
+                                   bootstrap.sample=T, 
+                                   num.bootstrap.samples=100,
+                                   useparallel=T, 
+                                   num.cores=8,
+                                   maxit=20,
+                                   adjust.intercept=F)
+
+
+#modelo2$fit
+save(modelo2, file = "C:/Users/rober/Desktop/homofilia_elsoc/modelo2.Rdata")
+
+```
+
+```{r}
+names(modelo9)
+coefs_nofam=modelo9$coefs
+head(coefs_nofam)
+
+coefs_sample_nofam=aggregate(.~sample, data=coefs_nofam, mean)
+coefs_sample_nofam
+
+coefs_sample_nofam=coefs_sample_nofam[,-which(colnames(coefs_sample_nofam) %in% c("sample","iteration"))]
+
+apply(coefs_sample_nofam, 2, mean)
+apply(coefs_sample_nofam, 2, sd)
+apply(coefs_sample_nofam, 2, quantile, c(.025, .975))
+
+apply(modelo2$fit["bic"], 2, mean)
+apply(modelo2$fit["aic"], 2, mean)
+apply(modelo2$fit["N.dyads"], 2, mean)
+
+```
+
+### Estimar SE
+```{r}
+std_mean <- function(x) sd(x)/sqrt(length(x))
+std_mean(coefs_sample_nofam$nodematch.ideol.none)
+```
+
+## Wald 
+```{r}
+z <- (2.855 - 0.1) / 0.023
+pnorm(q=z, lower.tail=FALSE) 
+```
+
+
+# Análisis 3: 2017 todos los vínculos multivariado
+```{r}
+hom_c_2017<-hom_rel_c[hom_rel_c$año == '2017',]
+hom_c_2017<-as.matrix(hom_c_2017)
+hom_c_2017<-as.data.frame(hom_c_2017)
+
+# to numeric "edad"
+hom_c_2017<-hom_c_2017 %>% 
+   mutate_at(vars(starts_with("edad")),funs(as.numeric))
+
+hom_c_2017<-hom_c_2017 %>% 
+   mutate_at(vars(starts_with("barrio")),funs(as.character))
+
+hom_c_2017<-hom_c_2017 %>% drop_na(ideol)
+#hom_c_2017<-hom_c_2017 %>% drop_na(barrio)
+
+```
+
+Crearemos una lista, donde cada segmento es un atributo diferente,
+```{r}
+#name of degree column on data frame:
+var.name.degree="tamred"
+
+#names of key ego attribute columns in data frame:
+var.name.characs=c("sexo", "edad", "educ", "relig", "ideol") 
+
+var.name.characs.alter=list()
+
+for (p in 1:length(var.name.characs)){
+  var.name.characs.alter[[p]]=paste(var.name.characs[[p]],1:5,sep="")
+}
+
+#var.name.characs.alter[[7]]<-NULL
+#Let's take a look:
+var.name.characs.alter 
+```
+
+```{r}
+# combrobar casos con 1 nivel para contraste
+which(sapply(hom_c_2017, function(x) (is.character(x) | is.factor(x)) & length(unique(x))<2))
+
+#summary(hom_c_2017$barrio)
+
+hom_c_2017<-hom_c_2017 %>% as.data.frame(row.names = 1:nrow(.))
+
+hom_c_2017$año<-NULL
+#hom_c_2017$barrio<-NULL
+#hom_c_2017$barrio1<-NULL
+#hom_c_2017$barrio2<-NULL
+#hom_c_2017$barrio3<-NULL
+#hom_c_2017$barrio4<-NULL
+#hom_c_2017$barrio5<-NULL
+```
+
+
+# defining formula
+```{r}
+formula_ego<- as.formula(~ nodefactor("sexo") +
+                           nodefactor("educ") +
+                           nodefactor("relig") +
+                           nodefactor("ideol") +
+                           nodematch("sexo" , diff=T) + 
+                           nodematch("educ" , diff=T) + 
+                           nodematch("relig", diff=T) + 
+                           nodematch("ideol", diff=T) +
+                           absdiff("edad")) 
+```
+
+### Caso- control 
+```{r}
+modelo3<-
+  egonet_case_control_model(formula=formula_ego,
+                            ego_data=hom_c_2017,
+                            var.name.degree=var.name.degree, 
+                            var.name.characs=var.name.characs,
+                            var.name.characs.alter=var.name.characs.alter, 
+                            case.control.type="weighted.random.matching", 
+                            max.alter=5,
+                            max.control.data.N=1000000,
+                            remove.isolates.control=T, 
+                            weight.var.name="ponderador", 
+                            weight.var.name.control="ponderador", 
+                            num.iterations=1000,
+                            bootstrap.sample=T, 
+                            num.bootstrap.samples=2473,
+                            useparallel=T, 
+                            num.cores=8,
+                            maxit=20,
+                            adjust.intercept=F)
+
+
+#save(modelo3, file = "C:/Users/rober/Desktop/homofilia_elsoc/modelo3.Rdata")
+modelo3
+
+```
+
+```{r}
+names(modelo3)
+coefs_egonet_2017=modelo3$coefs
+head(coefs_egonet_2017)
+coefs_sample_egonet_2017=aggregate(.~sample, data=coefs_egonet_2017, mean)
+coefs_sample_egonet_2017
+coefs_sample_egonet_2017=coefs_sample_egonet_2017[,-which(colnames(coefs_sample_egonet_2017) %in% c("sample","iteration"))]
+
+apply(coefs_sample_egonet_2017, 2, mean)
+apply(coefs_sample_egonet_2017, 2, sd)
+apply(coefs_sample_egonet_2017, 2, quantile, c(.025, .975))
+
+apply(modelo3$fit["bic"], 2, mean)
+apply(modelo3$fit["aic"], 2, mean)
+apply(modelo3$fit["N.dyads"], 2, mean)
+```
+
+### Estimar SE
+```{r}
+std_mean <- function(x) sd(x)/sqrt(length(x))
+std_mean(coefs_sample_egonet_2017$nodematch.sexo.female)
+```
+
+## Wald 
+```{r}
+z <- (2.148 - 0.1) / 0.009
+pnorm(q=z, lower.tail=FALSE) 
+```
+
+
+## Análisis 4: 2017 no familiares multivariado
+
+### Select data
+```{r}
+library(panelr)
+
+hom_c_2017_ego<-hom_c_2017%>%
+  dplyr::select(idencuesta,sexo,edad,educ,relig,ideol,barrio,tamred,ponderador)
+
+hom_c_2017_alter<-hom_c_2017%>%
+  dplyr::select(idencuesta,
+                sexo1,sexo2,sexo3,sexo4,sexo5,
+                edad1,edad2,edad3,edad4,edad5,
+                educ1,educ2,educ3,educ4,educ5,
+                relig1,relig2,relig3,relig4,relig5,
+                barrio,barrio1,barrio2,barrio3,barrio4,barrio5,
+                ideol1,ideol2,ideol3,ideol4,ideol5,
+                relacion1,relacion2,relacion3,relacion4,relacion5)
+
+# reshape
+hom_c_2017_long<-long_panel(hom_c_2017_alter, prefix="", begin=1, end=5, label_location="end")
+
+# filter
+hom_c_2017_long_nofam<-hom_c_2017_long%>%
+  dplyr::filter(relacion =="nofam")
+
+# to wide
+hom_c_2017_nofam<-widen_panel(hom_c_2017_long_nofam, separator = "")
+
+
+# matri to data frame
+hom_c_2017_nofam<-as.matrix(hom_c_2017_nofam)
+hom_c_2017_nofam<-as.data.frame(hom_c_2017_nofam)
+hom_c_2017_nofam$id<-NULL
+
+# join
+hom_c_2017_nofam<-dplyr::left_join(hom_c_2017_nofam, 
+                                     hom_c_2017_ego, 
+                                     by="idencuesta")%>%
+  dplyr::select(idencuesta,
+                sexo,sexo1,sexo2,sexo3,sexo4,sexo5,
+                edad,edad1,edad2,edad3,edad4,edad5,
+                educ,educ1,educ2,educ3,educ4,educ5,
+                relig,relig1,relig2,relig3,relig4,relig5,
+                ideol,ideol1,ideol2,ideol3,ideol4,ideol5,
+                barrio, barrio1, barrio2, barrio3, barrio4, barrio5,
+                relacion1,relacion2,relacion3,relacion4,relacion5,
+                tamred,ponderador)
+# to numeric
+# to numeric "edad"
+hom_c_2017_nofam<-hom_c_2017_nofam %>% 
+   mutate_at(vars(starts_with("edad")),funs(as.numeric))
+
+```
+
+### Caso- control 
+```{r}
+
+out_egonet_2017_nofam<-
+  egonet_case_control_model(formula=formula_ego,
+                            ego_data=hom_c_2017_nofam,
+                            var.name.degree=var.name.degree, 
+                            var.name.characs=var.name.characs,
+                            var.name.characs.alter=var.name.characs.alter, 
+                            case.control.type="weighted.random.matching", 
+                            max.alter=5,
+                            max.control.data.N=500000,
+                            remove.isolates.control=T, 
+                            weight.var.name="ponderador", 
+                            weight.var.name.control="ponderador", 
+                            num.iterations=10,
+                            bootstrap.sample=T, 
+                            num.bootstrap.samples=100,
+                            useparallel=T, 
+                            num.cores=8,
+                            maxit=20,
+                            adjust.intercept=F)
+
+#modelo4=out_egonet_2017_nofam
+save(modelo4, file = "C:/Users/rober/Desktop/homofilia_elsoc/modelo4.Rdata")
+```
+
+
+
+```{r}
+names(out_egonet_2017_nofam)
+coefs_egonet_2017_nofam=out_egonet_2017_nofam$coefs
+head(coefs_egonet_2017_nofam)
+coefs_sample_egonet_2017_nofam=aggregate(.~sample, data=coefs_egonet_2017_nofam, mean)
+coefs_sample_egonet_2017_nofam
+coefs_sample_egonet_2017_nofam=coefs_sample_egonet_2017_nofam[,-which(colnames(coefs_sample_egonet_2017_nofam) %in% c("sample","iteration"))]
+
+apply(coefs_sample_egonet_2017_nofam, 2, mean)
+apply(coefs_sample_egonet_2017_nofam, 2, sd)
+apply(coefs_sample_egonet_2017_nofam, 2, quantile, c(.025, .975))
+
+apply(out_egonet_2017_nofam$fit["bic"], 2, mean)
+apply(out_egonet_2017_nofam$fit["aic"], 2, mean)
+apply(out_egonet_2017_nofam$fit["N.dyads"], 2, mean)
+
+```
+
+### Estimar SE
+```{r}
+std_mean <- function(x) sd(x)/sqrt(length(x))
+std_mean(coefs_sample_egonet_2017_nofam$nodematch.ideol.none)
+```
+
+## Wald 
+```{r}
+z <- (3.078 - 0.1) / 0.035
+pnorm(q=z, lower.tail=FALSE) 
+```
+
+
+## Análisis 5: 2019 todos los vínculos multivariado
+```{r}
+hom_c_2019<-hom_rel_c[hom_rel_c$año == '2019',]
+hom_c_2019<-as.matrix(hom_c_2019)
+hom_c_2019<-as.data.frame(hom_c_2019)
+
+library(dplyr)
+# to numeric "edad"
+hom_c_2019<-hom_c_2019 %>% 
+   mutate_at(vars(starts_with("edad")),funs(as.numeric))
+
+# reiniciar secuencia ID
+hom_c_2019<-hom_c_2019 %>% as.data.frame(row.names = 1:nrow(.))
+
+```
+
+### Caso- control 
+```{r}
+
+out_egonet_2019<-
+  egonet_case_control_model(formula=formula_ego,
+                            ego_data=hom_c_2019,
+                            var.name.degree=var.name.degree, 
+                            var.name.characs=var.name.characs,
+                            var.name.characs.alter=var.name.characs.alter, 
+                            case.control.type="weighted.random.matching", 
+                            max.alter=5,
+                            max.control.data.N=500000,
+                            remove.isolates.control=T, 
+                            weight.var.name="ponderador", 
+                            weight.var.name.control="ponderador", 
+                            num.iterations=10,
+                            bootstrap.sample=T, 
+                            num.bootstrap.samples=100,
+                            useparallel=T, 
+                            num.cores=8,
+                            maxit=20,
+                            adjust.intercept=F)
+
+modelo5=out_egonet_2019
+
+#save(modelo5, file = "C:/Users/rober/Desktop/homofilia_elsoc/modelo5.Rdata")
+```
+
+
+# 
+```{r}
+options(scipen=999)
+names(out_egonet_2019)
+coefs_egonet_2019=out_egonet_2019$coefs
+head(coefs_egonet_2019)
+
+coefs_sample_egonet_2019=aggregate(.~sample, data=coefs_egonet_2019, mean)
+coefs_sample_egonet_2019
+
+coefs_sample_egonet_2019=coefs_sample_egonet_2019[,-which(colnames(coefs_sample_egonet_2019) %in% c("sample","iteration"))]
+apply(coefs_sample_egonet_2019, 2, mean)
+apply(coefs_sample_egonet_2019, 2, sd)
+apply(coefs_sample_egonet_2019, 2, quantile, c(.025, .975))
+
+apply(out_egonet_2019$fit["bic"], 2, mean)
+apply(out_egonet_2019$fit["aic"], 2, mean)
+apply(out_egonet_2019$fit["N.dyads"], 2, mean)
+
+```
+
+### Estimar SE
+```{r}
+std_mean <- function(x) sd(x)/sqrt(length(x))
+std_mean(coefs_sample_egonet_2019$nodematch.ideol.none)
+```
+
+## Wald 
+```{r}
+z <- (1.135 - 0.1) / 0.005
+pnorm(q=z, lower.tail=FALSE) 
+```
+
+
+## Análisis 4: 2019 no familiares multivariado
+
+### Select data
+```{r}
+library(panelr)
+
+hom_c_2019_ego<-hom_c_2019%>%
+  dplyr::select(idencuesta,sexo,edad,educ,relig,ideol,barrio,tamred,ponderador)
+
+hom_c_2019_alter<-hom_c_2019%>%
+  dplyr::select(idencuesta,
+                sexo1,sexo2,sexo3,sexo4,sexo5,
+                edad1,edad2,edad3,edad4,edad5,
+                educ1,educ2,educ3,educ4,educ5,
+                relig1,relig2,relig3,relig4,relig5,
+                #barrio,barrio1,barrio2,barrio3,barrio4,barrio5,
+                ideol1,ideol2,ideol3,ideol4,ideol5,
+                relacion1,relacion2,relacion3,relacion4,relacion5)
+
+# reshape
+hom_c_2019_long<-long_panel(hom_c_2019_alter, prefix="", begin=1, end=5, label_location="end")
+
+# filter
+hom_c_2019_long_nofam<-hom_c_2019_long%>%
+  dplyr::filter(relacion =="nofam")
+
+# to wide
+hom_c_2019_nofam<-widen_panel(hom_c_2019_long_nofam, separator = "")
+
+# matrix to data frame
+hom_c_2019_nofam<-as.matrix(hom_c_2019_nofam)
+hom_c_2019_nofam<-as.data.frame(hom_c_2019_nofam)
+hom_c_2019_nofam$id<-NULL
+
+# join
+hom_c_2019_nofam<-dplyr::left_join(hom_c_2019_nofam, 
+                                     hom_c_2019_ego, 
+                                     by="idencuesta")%>%
+  dplyr::select(idencuesta,
+                sexo,sexo1,sexo2,sexo3,sexo4,sexo5,
+                edad,edad1,edad2,edad3,edad4,edad5,
+                educ,educ1,educ2,educ3,educ4,educ5,
+                relig,relig1,relig2,relig3,relig4,relig5,
+                ideol,ideol1,ideol2,ideol3,ideol4,ideol5,
+                #barrio, barrio1, barrio2, barrio3, barrio4, barrio5,
+                relacion1,relacion2,relacion3,relacion4,relacion5,
+                tamred,ponderador)
+# to numeric
+# to numeric "edad"
+hom_c_2019_nofam<-hom_c_2019_nofam %>% 
+   mutate_at(vars(starts_with("edad")),funs(as.numeric))
+
+hom_c_2019_nofam<-hom_c_2019_nofam %>% drop_na(relig)
+hom_c_2019_nofam<-hom_c_2019_nofam %>% drop_na(ideol)
+
+```
+
+### Caso- control sexo
+```{r}
+out_egonet_2019_nofam<-
+  egonet_case_control_model(formula=formula_ego,
+                            ego_data=hom_c_2019_nofam,
+                            var.name.degree=var.name.degree, 
+                            var.name.characs=var.name.characs,
+                            var.name.characs.alter=var.name.characs.alter, 
+                            case.control.type="weighted.random.matching", 
+                            max.alter=5,
+                            max.control.data.N=500000,
+                            remove.isolates.control=T, 
+                            weight.var.name="ponderador", 
+                            weight.var.name.control="ponderador", 
+                            num.iterations=20,
+                            bootstrap.sample=T, 
+                            num.bootstrap.samples=100,
+                            useparallel=T, 
+                            num.cores=8,
+                            maxit=20,
+                            adjust.intercept=F)
+
+#modelo6=out_egonet_2019_nofam
+save(modelo6, file = "C:/Users/rober/Desktop/homofilia_elsoc/modelo6.Rdata")
+```
+
+
+```{r}
+names(out_egonet_2019_nofam)
+coefs_egonet_2019_nofam=out_egonet_2019_nofam$coefs
+head(coefs_egonet_2019_nofam)
+
+coefs_sample_egonet_2019_nofam=aggregate(.~sample, data=coefs_egonet_2019_nofam, mean)
+coefs_sample_egonet_2019_nofam
+coefs_sample_egonet_2019_nofam=coefs_sample_egonet_2019_nofam[,-which(colnames(coefs_sample_egonet_2019_nofam) %in% c("sample","iteration"))]
+
+apply(coefs_sample_egonet_2019_nofam, 2, mean)
+apply(coefs_sample_egonet_2019_nofam, 2, sd)
+apply(coefs_sample_egonet_2019_nofam, 2, quantile, c(.025, .975))
+
+# fit
+apply(out_egonet_2019_nofam$fit["bic"], 2, mean)
+apply(out_egonet_2019_nofam$fit["aic"], 2, mean)
+apply(out_egonet_2019_nofam$fit["N.dyads"], 2, mean)
+
+```
+
+### Estimar SE
+```{r}
+std_mean <- function(x) sd(x)/sqrt(length(x))
+std_mean(coefs_sample_egonet_2019_nofam$nodematch.ideol.none)
+```
+
+## Wald 
+```{r}
+z <- (0.425 - 0.1) / 0.198
+pnorm(q=z, lower.tail=FALSE) 
+```
+
+
+
+
+# Bibliografía 
+
+- Bargsted Valdés, M. A., Espinoza, V., & Plaza, A. (2020). Pautas de Homofilia en Chile. Papers. Revista de Sociología, 105(4), 583. https://doi.org/10.5565/rev/papers.2617
+
+- Smith, J. A., McPherson, M., & Smith-Lovin, L. (2014). Social Distance in the United States: Sex, Race, Religion, Age, and Education Homophily among Confidants, 1985 to 2004. American Sociological Review, 79(3), 432-456. https://doi.org/10.1177/0003122414531776

@@ -1,0 +1,104 @@
+---
+title: "LCA_Random"
+author: "Cantillan, R."
+date: "28-06-2021"
+output: html_document
+---
+
+
+
+
+# El modelo de regresión de clases latentes 
+
+Sea i un caso de nivel 1 dentro del caso de nivel 2 j. Sea x un predictor de nivel 1 yw un predictor de nivel 2. El modelo paramétrico general de dos niveles se puede definir de la siguiente manera:
+
+$$\eta_{ij}=\displaystyle\sum_{q=0}^{Q} \beta_{qj} x_{qij}+e{ij}$$
+
+$$\beta{qj}=\displaystyle\sum_{s=0}^{S}\gamma_{qs}w_{sj}+u_{qj}$$
+(Ecuación 1)
+
+donde $u_j ~ N(0,T)$. La distribución de $e_{ij}$ puede ser cualquier función perteneciente a la familia exponencial. Tenga en cuenta que $x_{0ij}$ y $w_{0j}$ son iguales a 1, lo que hace que $\beta_{0j}$ y $\gamma_{q0}$ sean interceptos.
+
+Usando la misma notación que en la Ecuación anterior e indexando las clases latentes por $k$, el modelo de regresión LC se puede definir de la siguiente manera:
+
+$$\eta_{ij}=\displaystyle\sum_{q=0}^{Q} \beta_{qk} x_{qij}+e{ij}$$
+
+$$\beta{qj}=\displaystyle\sum_{s=0}^{S}\gamma_{qs}w_{sj}+u_{qk}$$
+
+(Ecuación 2)
+
+donde la distribución de $u_k$ no está especificada, es decir, $p(u_k) = \pi_k$. Para la identificación y comparabilidad con el modelo paramétrico de dos niveles, establecemos: 
+$\displaystyle\sum_{k=1}^{K} u_{qk}\pi_k=0$. Tenga en cuenta que en la formulación estándar del modelo de regresión LC, la primera ecuación en (2) es suficiente.
+
+La comparación del modelo LC descrito en (2) con el modelo paramétrico de dos niveles de (1) muestra que en lugar de tener un conjunto separado de coeficientes de regresión para cada individuo proveniente de una distribución normal multivariante, asumimos que existe un número finito de subgrupos con diferentes coeficientes de regresión (Wedel y DeSarbo, 1994). Esto puede verse como una diferencia fundamental entre los dos modelos, especialmente si uno está interesado en identificar clases latentes. Sin embargo, el modelo de regresión LC también puede verse como un modelo no paramétrico de dos niveles; es decir, como un modelo de dos niveles en el que no se hacen suposiciones sobre la forma distributiva de los efectos aleatorios. Con el número máximo de clases latentes identificables, la distribución puede interpretarse como una distribución no paramétrica (Laird, 1978; Rabe-Hesketh et al., 2001). En la práctica, sin embargo, dejaremos de aumentar el número de clases latentes cuando el ajuste del modelo ya no mejore. Cabe señalar que el modelo de regresión LC actual no puede tratar con más de dos niveles.
+
+La equivalencia conceptual entre la regresión LC y el modelo de dos niveles se vuelve aún más clara si calculamos los momentos de segundo orden de los coeficientes aleatorios a partir de los parámetros de clase latente estándar. En un modelo sin interacciones entre niveles, estos se obtienen mediante: 
+
+$$\tau_{qq'}=\displaystyle\sum_{k=1}^{K}u_{qk}u_{q'k}\pi_k=\displaystyle\sum_{k=1}^{K}(\beta_{qk}-\gamma_{q0})(\beta_{q'k}-\gamma_{q'0}) \pi_k \space$$
+
+(Ecuación 3)
+
+Donde $\gamma_{q0}=\displaystyle\sum_{k=1}^{K}\beta_{qk}\pi_k$ La ecuación (3) muestra que los resultados de un análisis de regresión LC se pueden resumir de la misma manera que en un modelo de dos niveles; es decir, en términos de una parte fija y aleatoria.  
+
+El modelo no paramétrico tiene una sería de ventajas: **Es más práctico con variables de resultado categóricas, no hace suposiciones sobre la distribución de los efectos aleatorios entre los egos y produce una agrupación de egos basada en las dependencias entre los alters como un subproducto.**
+
+Una característica importante de la selección de amigos o cónyuges es que las personas deben considerar múltiples características simultáneamente. Debido a que los rasgos están correlacionados dentro de las personas, la elección de una característica determinada en un amigo o cónyuge potencial a menudo implica la elección de otra característica también. Si alguien busca un amigo con un alto nivel educativo, por ejemplo, es muy probable que el amigo que encontrará también sea relativamente rico. Del mismo modo, si alguien prefiere casarse con alguien que comparte su origen nacional, es muy probable que también sea de la misma religión.
+
+Una cuestión importante que surge es si la homogeneidad encontrada en la realidad se basa en la selección explícita de ese rasgo, o si es un subproducto de la selección de otro rasgo. Para establecer que hay selección directa, se necesitaría demostrar que el grado de similitud con respecto a un determinado rasgo es mayor de lo que cabría esperar de la similitud que existe en otro rasgo. Debido a que el problema es simétrico, esto también debe establecerse al revés y, por lo tanto, los rasgos deben analizarse simultáneamente.
+
+
+$$P(Y_{ij}^M = p, Y_{ij}^A=q|Z_j^M=r,Z_j^A=s, X_j=t)$$
+
+$$	\frac{exp(\beta^M_{pt}+\beta^{A}_{qt}+\beta^{MA}_{pq}-0.5\beta^{AA}_{qs})}{\displaystyle\sum_{p´=1}^{4}\displaystyle\sum_{q´=1}^{5}exp(\beta^M_{p´t}+\beta^A_{q´t}+\beta^{MA}_{p´q´}-0.5\beta^{MM}_{p´r}-0.5\beta^{AA}_{q´s}}$$
+Aquí, el término $X_j=t$ indica que condicionamos el logit a la pertenencia del ego $j$ a la clase latente $t$. Como puede verse, los parámetros $\beta^M_{pt}$ y $\beta^{M}_{qt}$ contienen un índice $t$, lo que indica que estos términos pueden diferir entre clases latentes; es decir, que estos términos pueden verse como efectos aleatorios. Más específicamente, en lugar de asumir que cada individuo tiene su propia selección específica de alteris, se supone que hay grupos de individuos que tienen una selección específica de alteris. 
+
+La conexión entre el modelo anterior y un modelo de clase latente estándar se vuelve más clara si escribimos el modelo para la función de densidad de probabilidad conjunta asociada con la red completa de ego $j$; es decir,
+
+$$P(Y^M_j, Y^A_j|Z^M_j,Z^A_j)$$
+
+$$=\displaystyle\sum_{t=1}^{T}P(X_j=t)P(Y_j^M,Y_j^A|Z^M_j,Z^A_j,X_j=t)\\=\displaystyle\sum_{t=1}^{T} P(X_j=t)\prod_{i = 1}^{N_j} P(Y_{ij}^M,Y_{ij}^A|Z^M_j,Z^A_j,X_j=t)$$
+
+
+
+Como en un modelo estándar de clases latentes, la distribución conjunta de las variables de respuesta observadas dadas las variables externas, $P (Y^M_j, Y^A_j | Z^M_j, Z^A_j)$, se obtiene como un promedio ponderado de $T$ distribuciones específicas de clase,$P(Y^M_j, Y^A_j | Z^M_j, Z^A_j, X_j=t)$, donde los tamaños de clase $P(X_j= t)$ sirven como ponderaciones. Como puede verse, se supone que las observaciones de $N_j$ del caso $j$ (alteris respuestas de ego j) son independientes dada la pertenencia de clase del caso $j$, que es equivalente al supuesto de independencia local en un modelo estándar de clases latentes (Goodman, 1974). 
+
+Tenga en cuenta que también en el modelo de efectos aleatorios paramétricos asumimos la independencia local; es decir, se supone que las respuestas son independientes dados los efectos aleatorios. A diferencia de un modelo de clase latente estándar, los pares de variables $(Y^M_{ij}, Y^A_{ij})$ sirven como indicadores conjuntos en lugar de variables individuales y que el número de indicadores (respuestas observadas) varía entre los casos.
+
+Permitir que los parámetros varíen entre las clases latentes de individuos no solo es una forma de tener en cuenta las dependencias entre las observaciones, sino que también nos proporciona información sobre los atributos de las redes, controlando las características del alter y del ego. Como se mostrará al presentar los resultados obtenidos con nuestro análisis, las clases latentes no solo capturan dependencias, sino que también pueden recibir etiquetas significativas en términos de tipos de redes personales.
+
+
+
+
+# Estimación de parámetros 
+
+Los modelos de regresión LC generalmente se estiman por máxima verosimilitud (ML). La contribución a la probabilidad de la unidad j de nivel dos es igual a
+
+$$f(Y_j|X_j,W_j)=\displaystyle\sum_{k=1}^{K}\pi_kf_k(Y_j|X_j,W_j)=\displaystyle\sum_{k=1}^{K}\pi_k \Pi f_k(y_j|X_j,W_j)$$
+
+donde $k$ es el número de clases latentes y $f_k(y_j|X_j,W_j)$ es una densidad específica de clase. Esta densidad puede ser cualquier función perteneciente a la familia exponencial. 
+
+
+
+
+
+
+# A Conditional Logit Multivariate Quasi-Symmetry Model
+
+Dejemos que $Z_j^M$ y $Z^A_j$ denoten el estado marital y la edad de Ego $j$, y dejemos que $Y^M_{ij}$ y $Y_{ij}^A$ denoten el estado marital y la edad del Alter $i$ del Ego $j$. Un estado marital particular será denotado por $r$ y $p$, para Egos y Alteris, respectivamente, y una categoría etaría particular será denotada por $s$ y $q$. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

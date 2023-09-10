@@ -1,0 +1,385 @@
+---
+title: "Homofilia multidimensional en Chile"
+author: "Insituto de Sociología PUC"
+date: '17/01/2022'
+institute: |
+  | 
+  | Roberto Cantillan Carrasco 
+  | Matías Bargsted
+  | Vicente Espinoza
+
+output:
+  xaringan::moon_reader:
+    css: ["libs/my.css"]
+    lib_dir: libs
+    nature:
+      ratio: 16:9
+      beforeInit: "libs/macros.js"
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      slideNumberFormat: "%current%"
+---
+
+class: middle
+
+```{r setup, echo = FALSE, cache = FALSE, results = 'hide', include=FALSE}
+library(knitr)
+require(tidyverse)
+require(kableExtra)
+require(xaringanExtra)
+options(
+  htmltools.dir.version = FALSE, tibble.width = 60, tibble.print_min = 6,
+  crayon.enabled = TRUE,
+  knitr.kable.NA = ""
+)
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	fig.height = 8.5,
+	fig.path = "images/",
+	fig.retina = 3,
+	fig.show = "hold",
+	message = FALSE,
+	warning = FALSE,
+	cache = FALSE,
+	comment = "#>",
+	out.width = "100%"
+)
+```
+
+
+
+```{r logo, echo=FALSE}
+use_logo(
+  image_url = "./images/ins--sociologia-traz-04.png",
+  exclude_class = c("title-slide","hide_logo","inverse"),
+  width = "150px",
+  height = "150px")
+```
+
+# Contexto I
+
+En Chile, las reformas neoliberales establecidas durante la década de 1980 se tradujeron en un proyecto de modernización orientado al desarrollo de:
+
+- Estabilidad política
+- Crecimiento económico sostenido
+- Fomento de igualdad de oportunidades (en desmedro de la igualdad de posiciones)
+  - ej. crecimiento "pro pobre"
+
+---
+
+class: middle
+
+# Contexto II
+
+- Algunas consecuencias perniciosas de este proceso fueron: 
+
+  - El desarrollo de elevados niveles de desigualdad socioeconómica y fragmentación social
+  - Fuertes restricciones a la interacción intergrupal (vertical) 
+  - Bajos niveles cohesión (difusión y acuerdo)
+  - Balcanización y conflictividad 
+
+---
+
+class: middle
+
+# Preguntas de investigación 
+
+- *Restricciones basales y preferencias individuales*: ¿cómo surgen patrones sistemáticos de relaciones a gran escala, a partir de la interacción de las restricciones organizacionales y las preferencias individuales?
+
+- *Homofilia multidimensional*: ¿Cuáles son los rasgos sociodemográficos más prominentes para el desarrollo de límites y fronteras categoriales en la realidad chilena?
+
+- *Homofilia como mecanismos de clausura*: ¿como se relaciona la homofilia (y otros mecanismos de red como la "consolidación") con la desigualdad en el acceso a recursos valiosos y bienestar. 
+
+
+---
+
+class: middle
+
+# Enfoque
+
+- El enfoque adoptado aquí para estudiar la formación de redes se basa en la arquitectura formal desarrollada por Watts et al. (2002), en el que los individuos no sólo tienen lazos sociales sino también identidades, lo cual en conjunto definen su “proximidad social” con otros miembros de la población.
+
+- En un mundo así, esperamos que las redes sociales emergentes estén altamente segregadas, ya que el conjunto de posibles conocidos de cada persona no se superpone con los de los miembros de diferentes grupos.
+
+---
+
+class: middle
+
+# Teoría I: La Homofilia esta en todas partes! 
+
+- La homofilia es un fenómeno ecólogico y un principio organizativo básico (McPherson, et al. 2001; Blau, 1977)
+
+- Refiere a la tendencia empı́rica en la cual el contacto entre personas similares ocurre a un ritmo mayor que entre personas diferente. 
+
+- La omnipresencia de la homofilia significa que la información cultural, conductual, genética o material que fluye a través de las redes tenderá
+a estar localizada (McPherson, 2001; McPherson et al., 2021). 
+
+- Esta tendencia constituye una de las caracterı́sticas más marcadas de la estructura social de las sociedades modernas (McPherson, 2009; Smith et al., 2014)
+
+
+--- 
+
+class: middle
+
+# Teoría I: Homofilia y difusión 
+
+```{r,  fig.align='center', echo=FALSE, out.width = "80%"}
+knitr::include_graphics('images/homo1.png')
+```
+
+---
+
+class: middle
+
+# Teoría II: Homofilia y Desigualdad 
+
+- Constituye el contexto que condiciona las interacciones sociales y condiciona la estructura global de una red social y las caracterı́stica de las redes egocentradas (tamaño, fuerza de los lazos, caracterı́sticas de los alteris, etc.)
+
+- Siguiendo a Dimaggio y Garip (2011; 2012) es esperable que la homofilia puede exacerbar la desigualdad entre grupos.
+
+- Mecanismo que facilita la acumulación de ventaja, el desarrollo de clausura y localización de recursos en determinadas posiciones sociales
+
+- La homofilia puede ser entendida como un correlato micro de la desigualdad social (Barsgted, et al. 2020)
+
+- Más recientemente se ha enfatizado en el papel mediador de la”consolidación” (Blau y Schwartz, 1997) en la relación entre homofilia y distribución diferencial de recursos (Zhao y Garip, 2021)
+
+---
+
+class: middle
+
+# Teoría III: Homofilia de base y endogámica 
+
+```{r,  fig.align='center', echo=FALSE, out.width = "70%"}
+knitr::include_graphics('images/homo2.png')
+```
+
+
+---
+
+class: middle
+
+# Evidencia para el caso chileno 
+
+- Cerca del 50 % presenta homogamı́a educacional al momento de seleccionar parejas, siendo este el fenómeno más predominante en las clases medias y altas en Chile (Torche, 2010; Mac-Clure, 2012; Huneeuss, 2013)
+
+- Efectos negativos de la homogeneidad social en los procesos de superación de la pobreza y movilidad social (Espinoza, 1995; Espinoza y Canteros, 2001)
+
+- Diferencias culturales, regionales y étnicas (Plaza, et al. 2022; Espinoza y Durston, 2013; Espinoza y Rabı́, 2009)
+
+---
+
+class: middle
+
+# Evidencia para el caso chileno II
+
+- Bargsted, Espinoza y Plaza (2020), analizan las pautas de homofilia en Chile, considerando los atributos de edad, sexo, educación, religión y posición polı́tica
+
+- Los resultados indicaron que la sociedad chilena esta fuertemente estructurada por la edad, la religión y en un grado menor, por la posición polı́tica y el nivel educacional
+
+- Para el caso educacional se ve un fuerte grado de segmentación entre aquellos que poseen educación superior y los que no la tienen 
+
+- Los autores sugieren complementar estos análisis con otros queconsideren la naturaleza sinérgica de la homofilı́a y la tendencia la consolidación (correlación entre rasgos)
+
+---
+
+class: middle
+
+# Hipótesis
+
+- *Sexo*: Las similitudes en el tamaño de los grupos implica que la homofilia por sexo sea principalmente endogámica. Dado que los lazos de confidencia contienen muchos parientes y el parentesco une a confidente de distinto sexo, esperamos que la homofilia para los vı́nculos no familiares sea considerablemente mayor (McPherson et al., 2001)
+
+- *Edad*: La investigación anterior sugiere que en las relaciones de confidencia hay una fuerte tendencia a establecer vı́nculos con otros
+similares en edad (Fischer, 1982; McPherson et al., 2001; Bargsted et. al. 2020)
+
+- **Educación: En la medida que la fase de expansión en el acceso a la educación universitaria es relativamente reciente, puede esperarse mayor cohesión social entre las personas que hayan tenido mayor exposición al sistema formal de educación universitaria**
+
+- *Religión*: Dado el decaimiento en la adscripción a la fe católica esperamos ver mayores niveles de homofilia entre individuos evangélicos (segundo grupo de mayor tamaño) 
+
+- *Ideologı́a*: Considerando el incremento de la distancia entre partidos polı́ticos y bases sociales, esperamos ver mayores niveles de
+polarización ideológica. Esto es, mayor probabilidad de formación de vinculos homófilos en los polos del espectro. 
+
+---
+
+
+class: middle
+
+# Metodología: Datos I 
+
+- Usamos las olas 2 (2017) del estudio social longitundinal de Chile (ELSOC). 
+
+- Muestreo aleatorio multietapa estratificado por tamaño de ciudad, agrupado por bloques de viviendas generados aleatoriamente y
+direcciones individuales, para seleccionar aleatoriamente a encuestados de 18 a 75 años de edad 
+
+- N egos=2,927 para la ola 2017.
+
+- N díadas= 500000 aprox. (la literatura ha sugerido 1000000). 
+
+
+---
+
+class: middle
+
+# Metodología: Datos II 
+
+```{r,  fig.align='center', echo=FALSE, out.width = "70%"}
+knitr::include_graphics('images/ng.png')
+```
+
+
+---
+
+class: middle
+
+# Metodología: Estrategía de análisis I 
+
+- Seguimos la orientación de Smith et al. (2014) 
+
+- Revisamos la tasa absoluta de interacción o contacto entre grupos sociodemográficos, y la tasa de contacto en relación con algún
+modelo base de expectativas al azar.
+
+- Las expectativas al azar se construyen en función de la composición demográfica de la población de interés.
+
+- El modelo permite evaluar la prominencia relativa de los parámetros, es decir, controlando sus efectos. Esto es importante, puesto que la homofilia suele operar como una tendencia ecológica-sinérgica (Kalmijn & Vermunt, 2007; Marsden, 1988; McPherson et al., 2021)
+
+---
+
+class: middle
+
+# Metodología: Estrategia de análisis II 
+
+- Los modelos de casos y controles se utilizan a menudo en la investigación médica para estudiar enfermedades raras que son difı́ciles de capturar mediante un muestreo aleatorio (Smith et al. 2014)
+
+- Estos modelos comparan los casos, un conjunto de individuos con la ”enfermedad”, con los controles, un conjunto de individuos sin la
+”enfermedad” 
+
+- Esta aproximación es ideal para los datos egocentrados porque la muestra captura el raro evento de interés: las relaciones sociales
+entre actores
+
+
+---
+
+class: middle
+
+# Metodología: Estrategia de análisis III 
+
+- El modelo es una regresión logística simple, donde los 1 son los pares encuestado-alter y los 0 son los pares encuestados formados aleatoriamente.
+Formalmente:
+
+  $$ln\left(\frac{p(Y)}{1-p(Y)}\right) = \theta D$$
+   
+- donde $Y_{ij}$ es la presencia o ausencia de un empate
+- $D_{ij}$ es la similaridad (o distancia)  sociodemográfica entre i y j para cada díada
+- y $\theta$ es el vector de coeficientes
+
+---
+
+class: middle
+
+# Metodología: Estrategia de análisis IV 
+
+- Los errores estándar se calcularon utilizando "bootstrap" (n=2473).
+
+- Los errores estándar son iguales a la desviación estándar de los coeficientes en 1000 iteraciones y, por lo tanto, no dependen del número de díadas.
+
+- Para cada iteración, tomamos una muestra aleatoria de encuestados de cada año y volvimos a ejecutar la regresión logística de casos y controles.
+
+- Se calculan efectos marginales y valores predichos para persona promedio para algunos parámetros sociodemográficos de interés. 
+
+---
+
+class: middle
+
+# Resultados I 
+
+.pull-left[
+```{r,  fig.align='center', echo=FALSE, out.width = "100%"}
+knitr::include_graphics('images/desc_hom.png')
+```
+]
+
+.pull-right[
+```{r, out.width='100%', fig.align='center', echo=FALSE}
+knitr::include_graphics('images/tb1.png')
+```
+]
+
+
+
+---
+
+class: middle
+
+# Resultados II 
+
+```{r,  fig.align='center', echo=FALSE, out.width = "50%"}
+knitr::include_graphics('images/cc_hom.png')
+```
+
+---
+
+class: middle
+
+# Resultados 3 
+
+.pull-left[
+```{r, out.width='100%', fig.align='center', echo=FALSE}
+knitr::include_graphics('images/p1.png')
+```
+]
+
+.pull-right[
+```{r, out.width='100%', fig.align='center', echo=FALSE}
+knitr::include_graphics('images/p2.png')
+```
+]
+
+---
+
+class: middle
+
+# Resultados 4
+
+```{r, out.width='70%', fig.align='center', echo=FALSE}
+knitr::include_graphics('images/p3.png')
+```
+
+---
+
+class: middle
+
+# Limitaciones
+
+- El análisis anterior se lı́mita a ser descriptivo y no identitifica efectos causales
+
+- Es deseable integrar una perspectiva longitudinal que analice el efecto de la homofilia en la distribución desigual de recursos (ej. capital
+social), incluyendo un tratamiento efectivo de la endogeneidad. 
+
+- Existen otras potenciales formas de analizar esta estructura de datos, incluidas las técnicas multinivel y las técnicas de gráficos
+exponenciales aleatorios para datos egocentrados (Krivitsk & Morris, 2017), las cuales deben incluirse como análisis de robustes.  
+
+---
+
+# Bibliografía
+
+- Bargsted Valdés, M. A., Espinoza, V., & Plaza, A. (2020). Pautas de Homofilia en Chile. Papers. Revista de Sociologia, 105(4), 583. https://doi.org/10.5565/rev/papers.2617
+- Blau, P. M., & Schwartz, J. E. (1997). Crosscutting social circles: testing a macrostructural theory of intergroup relations. Transaction Publishers.
+- DiMaggio, P., & Garip, F. (2011). How Network Externalities Can Exacerbate Intergroup Inequality. American Journal of Sociology, 116(6), 1887–1933. https://doi.org/10.1086/659653
+- DiMaggio, P., & Garip, F. (2012). Network Effects and Social Inequality. Annual Review of Sociology, 38(1), 93–118. https://doi.org/10.1146/annurev.soc.012809.102545
+- McPherson, M., Smith-Lovin, L., & Cook, J. M. (2001). Birds of a Feather: Homophily in Social Networks. Annual Review of Sociology, 27(1), 415–444. https://doi.org/10.1146/annurev.soc.27.1.415
+- McPherson, M., Smith-Lovin, L., & Rawlings, C. (2021). The Enormous Flock of Homophily Researchers: Assessing and Promoting a Research Agenda. In M. L. Small & B. L. Perry (Eds.), Personal Networks (1st ed., pp. 459–470). Cambridge University Press. https://doi.org/10.1017/9781108878296.033
+- Smith, J. A., McPherson, M., & Smith-Lovin, L. (2014). Social Distance in the United States: Sex, Race, Religion, Age, and Education Homophily among Confidants, 1985 to 2004. American Sociological Review, 79(3), 432–456. https://doi.org/10.1177/0003122414531776
+- Watts, D. J., Dodds, P. S., & Newman, M. E. J. (2002). Identity and Search in Social Networks. Science, 296(5571), 1302–1305. https://doi.org/10.1126/science.1070120
+- Zhao, L., & Garip, F. (2021). Network Diffusion Under Homophily and Consolidation as a Mechanism for Social Inequality. Sociological Methods & Research, 50(3), 1150–1185. https://doi.org/10.1177/00491241211014237
+
+
+
+---
+
+class: center, middle
+# Gracias por la atención  
+## Se agradece cualquier sugerencia. 
+Presentación creada con el paquete de entorno R  [**xaringan**](https://github.com/yihui/xaringan).
+
+
