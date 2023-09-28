@@ -1,4 +1,4 @@
-# tesis_phd_isuc
+# PhD Thesis ISUC
 
 This repository contains the processing and analysis codes of the work planned to develop my doctoral thesis at the Institute of Sociology of the Pontificia Universidad Católica de Chile.
 
