@@ -71,8 +71,7 @@ include-in-header:
 ```
 </head>
 
-
-## Cálculo de matriz de adyacencia ponderada. 
+## Cálculo de matriz de adyacencia ponderada.
 
 Calculamos los vínculos ponderados no dirigidos entre las ocupaciones $i$ y $j$ durante el período $p$ como la tasa promedio de movilidad entre ocupaciones ponderada por el tamaño ocupacional del año pasado, que podría simplificarse como movimiento conjunto sobre tamaño de articulación:
 
@@ -80,14 +79,232 @@ $$
 E_{i\leftrightarrow j, p} = \frac{C_{i\rightarrow j,p} + C_{j\rightarrow i,p}}{O_{i,p} + O_{j,p}}
 $$
 
-donde $C_{i\rightarrow j,p}$ y $C_{j\rightarrow i,p}$ denotan el número ponderado por población de trabajadores que se movieron entre la ocupación $i$ y la ocupación $j$ durante el período $p$ y $O_{i,p}$ y $O_{j,p}$ denotan los tamaños de las ocupaciones i y j del año pasado (es decir, los márgenes de las filas en la figura 1A). Porque $O_{i,p}$ + $O_{j,p}$ limita $C_{i\rightarrow j,p}$ + $C_{j\rightarrow i,p}$, $E_{i\leftrightarrow j, p}$ oscila entre 0 y 1, con valores grandes que indican altas tasas de intercambio. 
-
-
-
+donde $C_{i\rightarrow j,p}$ y $C_{j\rightarrow i,p}$ denotan el número ponderado por población de trabajadores que se movieron entre la ocupación $i$ y la ocupación $j$ durante el período $p$ y $O_{i,p}$ y $O_{j,p}$ denotan los tamaños de las ocupaciones i y j del año pasado (es decir, los márgenes de las filas en la figura 1A). Porque $O_{i,p}$ + $O_{j,p}$ limita $C_{i\rightarrow j,p}$ + $C_{j\rightarrow i,p}$, $E_{i\leftrightarrow j, p}$ oscila entre 0 y 1, con valores grandes que indican altas tasas de intercambio.
 
 ## Modelo de diferenciación diádica.
 
-En desarrollo... 
+La variable dependiente es una medida de la tasa de intercambio (movilidad) entre cada par de ocupaciones i y j en cada periodo de tiempo p. Más específicamente, la variable dependiente es:
+
+$C_{i↔j,p}$ : El recuento de trabajadores que se movieron entre la ocupación i y la ocupación j durante el periodo p. Esta variable dependiente tiene dos problemas potenciales:
+
+No toma en cuenta el tamaño de las ocupaciones, así que le aplican una estandarización. Tiene muchos ceros (cuando no hay movilidad entre un par de ocupaciones). Por esto utilizan modelos de regresión negativa binomial. La variable dependiente estandarizada es:
+
+$E_i↔j,p$: Promedio ponderado por tamaño de las tasas de movilidad entre las ocupaciones i y j. Donde el numerador es el número promedio de trabajadores que se movieron entre i y j en ambas direcciones (C_i→j,p + C_j→i,p), y el denominador es el tamaño promedio de esas ocupaciones, que limita/estandariza las cuentas.
+
+Las variables independientes principales son:
+
+$|A_i,k,p - A_j,k,p|$: Diferencia absoluta entre las ocupaciones i y j en el atributo k durante el periodo p. Donde k puede ser composición por sexo, composición racial, habilidades requeridas, etc. Es decir, modelan el efecto de la disimilitud ocupacional.
+
+También incluyen variables de control:
+
+$I_i,j,p$ : 1 si $i$ y $j$ están en distintas industrias, 0 en otro caso. $log(O_i,p + O_j,p)$ : Log del tamaño combinado de las ocupaciones. En resumen, con este modelo negativo binomial están analizando si la disimilitud entre ocupaciones en múltiples dimensiones se asocia de forma sistemática con menores tasas de intercambio entre esos pares de ocupaciones, controlando por industria y tamaño ocupacional.
+
+### variables
+
+Edad media; el porcentaje de trabajadores hombres, blancos y con educación universitaria; y la industria modal.
+
+Además, extraemos una variedad de elementos de la Red de Información Ocupacional (O-NET; ver Handel \[2016b\] para una revisión reciente) para describir diferentes dimensiones del contenido ocupacional. La *dimensión cognitiva* incluye la importancia de las habilidades verbales, cuantitativas, analíticas y creativas (Liu y Grusky 2013) y la orientación espacial. La *dimensión física* incluye el requisito de control del movimiento y fuerza. La *dimensión social* incluye tareas interactivas y de supervisión (Bacolod 2017; Deming 2017). La *dimensión ambiental* considera el grado en que las condiciones de trabajo son incómodas y si los trabajadores están expuestos a peligros físicos (Choi et al. 2012; Fujishiro et al. 2013). Todas las medidas O\*NET son invariantes en el tiempo y están estandarizadas en el análisis.
+
+$$log_e (C_{i\longleftrightarrow j, p}) = \alpha_p + \sum_{k}^{K} \beta_{k,p } | A_{i,k,p} - A_{j,k,p} | \beta_{1,p} I_{i,j,p} + \beta_{2,p}log_e (O_{i,p}+O_{j,p}) + \varepsilon_{i \longleftrightarrow j, p}$$
+
+donde $C_{i↔j,p}$ denota el recuento de trabajadores que se movieron entre la ocupación $i$ y la ocupación $j$ en el período $p$, $\alpha_p$ denota intersecciones específicas del período, $A_{i,k,p}$ denota el atributo $k$ para la ocupación $i$; $I_{i,j,p}$ representa una variable dicotómica que indica si las dos ocupaciones tienen industrias modales diferentes (Hartmann et al. 2019), y $log(O_{i,p} + O_{j,p})$ representa el término de exposición que se ajusta al tamaño combinado de las dos ocupaciones. En esencia, capturamos cómo el tipo de cambio para un par de ocupaciones se asocia con las diferencias absolutas en los atributos ocupacionales $\beta_{k,p}$ y la membresía industrial $\beta_{1,p}$, al tiempo que permitimos que la asociación varíe según el período. Cuando una mayor disimilitud conduce a menos intercambios, se espera que $\beta_{k,p}$ y $\beta_{1,p}$ sean negativos.
+
+```{r}
+# Diferencias absolutas
+edges_full$hombres_perc_dist <- abs(edges_full$hombres_perc_i - edges_full$hombres_perc_j)
+edges_full$mujeres_perc_dist <- abs(edges_full$mujeres_perc_i - edges_full$mujeres_perc_j)
+edges_full$promedio_educ_dist <- abs(edges_full$promedio_educ_i - edges_full$promedio_educ_j)
+edges_full$promedio_edad_dist <- abs(edges_full$promedio_edad_i - edges_full$promedio_edad_j)
+edges_full$promedio_horas_dist <- abs(edges_full$promedio_horas_i - edges_full$promedio_horas_j)
+edges_full$promedio_ingreso_dist <- abs(edges_full$promedio_ingreso_i - edges_full$promedio_ingreso_j)
+edges_full$tamaño_combinado <- abs(edges_full$tamano_i + edges_full$tamano_j)
+```
+
+```{r}
+edges_full <- edges_full %>% 
+  filter(ocup_i != 0 & ocup_i != 11 & ocup_i != 31) %>%
+  filter(ocup_j != 0 & ocup_j != 11 & ocup_j != 31) %>%
+  filter(ocup_i != ocup_j)
+```
+
+```{r}
+m1 <- glm.nb(peso ~ log(tamaño_combinado) +
+                       #hombres_perc_dist + 
+                       mujeres_perc_dist + 
+                       promedio_educ_dist + 
+                       promedio_edad_dist +
+                       promedio_horas_dist +
+                       promedio_ingreso_dist +
+                       mujeres_perc_dist * promedio_educ_dist +
+                       factor(ano), 
+             data = edges_full, maxit = 1000)
+
+summary(m1)
+tidy(m1)
+glance(m1)
+a<-augment(m1)
+coeftest(m1, vcov = vcovCL(m1, cluster = edges_full$ocup_i))
+efectos_marginales <- negbinmfx(m1, data=edges_full, robust=T)
+
+# Obtener valores de leverage
+leverage <- hatvalues(m1)
+
+# Identificar observaciones con alto leverage
+alto_leverage <- which(leverage > 2 * mean(leverage))  # Umbral arbitrario
+
+# Instalar y cargar el paquete car
+if (!requireNamespace("car", quietly = TRUE)) {
+  install.packages("car")
+}
+library(car)
+
+# Crear gráfico de influencia
+influencePlot(m1, id.method = "identify", main = "Gráfico de Influencia")
+
+
+# Crear un dataframe con valores de ejemplo para las variables de interés
+datos_ejemplo <- expand.grid(
+  mujeres_perc_dist = seq(0, 100, length.out = 100),
+  promedio_educ_dist = seq(0, 13, length.out = 100),
+  tamaño_combinado = median(edges_full$tamaño_combinado),  # Agrega tamaño_combinado con un valor arbitrario
+  promedio_edad_dist = median(edges_full$promedio_edad_dist),  # Agrega promedio_edad_dist con un valor arbitrario
+  promedio_horas_dist = median(edges_full$promedio_horas_dist, na.rm=T),
+  promedio_ingreso_dist = median(edges_full$promedio_ingreso_dist, na.rm=T),
+  ano = "2012"  # Puedes cambiar el año según tus necesidades
+)
+
+# Predecir valores de peso utilizando el modelo
+datos_ejemplo$peso_predicho <- predict(m1, newdata = datos_ejemplo, type = "response")
+
+
+library(ggplot2)
+library(reshape2)
+
+# Crear un dataframe con valores de ejemplo para las variables de interés
+datos_ejemplo <- expand.grid(
+  mujeres_perc_dist = seq(0, 100, length.out = 100),
+  promedio_educ_dist = seq(0, 13, length.out = 100),
+  tamaño_combinado = median(edges_full$tamaño_combinado),
+  promedio_edad_dist = median(edges_full$promedio_edad_dist, na.rm=T),
+  promedio_horas_dist = median(edges_full$promedio_horas_dist, na.rm=T),
+  promedio_ingreso_dist = median(edges_full$promedio_ingreso_dist, na.rm=T),
+  ano = "2012"
+)
+
+# Predecir valores de peso utilizando el modelo
+datos_ejemplo$peso_predicho <- predict(m1, newdata = datos_ejemplo, type = "response")
+
+# Convertir el dataframe a formato largo para ggplot
+datos_largos <- melt(datos_ejemplo, id.vars = c("mujeres_perc_dist", "promedio_educ_dist"), variable.name = "Variable")
+
+
+# Crear el gráfico de contorno con escala de colores ajustada
+ggplot(datos_ejemplo, aes(x = mujeres_perc_dist, y = promedio_educ_dist, fill = peso_predicho)) +
+  geom_tile() +
+  labs(title = "Interacción mujeres_perc_dist:promedio_educ_dist en Peso",
+       x = "mujeres_perc_dist",
+       y = "promedio_educ_dist",
+       fill = "Peso predicho") +
+  scale_fill_viridis_c() +  # Utilizar paleta de colores "viridis"
+  theme_minimal()
+
+
+
+
+
+
+
+
+
+
+
+library(plot3D)
+
+# Crear el gráfico 3D
+scatter3D(
+  datos_ejemplo$mujeres_perc_dist, 
+  datos_ejemplo$promedio_educ_dist, 
+  datos_ejemplo$peso_predicho,
+  color = "blue", 
+  pch = 19, 
+  cex = 2, 
+  phi = 20,  # Ajusta este valor según sea necesario
+  theta = 30,  # Ajusta este valor según sea necesario
+  ticktype = "detailed", 
+  xlab = "mujeres_perc_dist", 
+  ylab = "promedio_educ_dist", 
+  zlab = "Peso predicho"
+)
+
+library(plotly)
+plot_ly(x=datos_ejemplo$mujeres_perc_dist, 
+        y=datos_ejemplo$promedio_educ_dist, 
+        z=datos_ejemplo$peso_predicho, 
+        type="scatter3d", mode="markers", color=datos_ejemplo$peso_predicho) %>%
+  layout(scene = list(
+    xaxis = list(title = "Porcentaje de mujeres (distancia)"),
+    yaxis = list(title = "Promedio d"),
+    zaxis = list(title = "Peso predicho")
+  ))
+
+plot_ly(datos_ejemplo, x = ~mujeres_perc_dist, y = ~promedio_educ_dist, z = ~peso_predicho, type = "scatter3d") %>%
+  layout(scene = list(
+    xaxis = list(title = "mujeres_perc_dist"),
+    yaxis = list(title = "promedio_educ_dist"),
+    zaxis = list(title = "Peso predicho")
+  ))
+```
+
+```{r}
+
+library(mfx)
+me<-negbinmfx(peso ~ log(tamaño_combinado) +
+                       #hombres_perc_dist + 
+                       mujeres_perc_dist + 
+                       promedio_educ_dist + 
+                       promedio_edad_dist +
+                       promedio_horas_dist +
+                       promedio_ingreso_dist +
+                       factor(ano), 
+              data = edges_full, robust=T)
+
+
+
+
+m1 <- glm(peso ~ log(tamaño_combinado) +
+                 #hombres_perc_dist + 
+                 mujeres_perc_dist + 
+                 promedio_educ_dist + 
+                 promedio_edad_dist +
+                 promedio_horas_dist +
+                 promedio_ingreso_dist +
+                 factor(ano), data = edges_full, family = quasipoisson)
+
+summary(m1)
+```
+
+```{r}
+#install.packages("pscl")
+library("pscl")
+library("sandwich")
+library("lmtest")
+
+fm1 <- zeroinfl(peso ~ log(tamaño_combinado) +
+                 #hombres_perc_dist + 
+                 mujeres_perc_dist + 
+                 promedio_educ_dist + 
+                 promedio_edad_dist +
+                 promedio_horas_dist +
+                 promedio_ingreso_dist +
+                 factor(ano), 
+                data = edges_full, 
+                dist = "poisson",
+                link = "logit", 
+                control = zeroinfl.control(maxit = 1000, trace = TRUE))
+
+coeftest(fm1)
+
+```
 
 ## Modelo de contagio ocupacional.
 
@@ -158,22 +375,54 @@ library(devtools)
 library(tidygraph)
 library(sjlabelled)
 library(viridis)
+library(reshape2)
+library(quanteda.textmodels)
+library(MASS)
+library(netglm)
+library(broom)
+#install.packages("pglm")
+#devtools::install_github("timonelmer/netglm")
+library(pglm)
+
 ```
 
 ### Datos
 
 ## 2009
+
 ```{r}
 # 2009 
-hlaboral_2009 <- read_dta(here("data/EPS/2009/hlaboral.dta"))
-ind_attr_2009 <- read_dta(here("data/EPS/2009/entrevistado.dta"))
+hlaboral_2009 <- read_dta(here("paper1/data/EPS/2009/hlaboral.dta"))
+ind_attr_2009 <- read_dta(here("paper1/data/EPS/2009/entrevistado.dta"))
 
-ind_2009 <- ind_attr_2009 %>% select(folio_n20,a8,a9,a12n) #sexo,edad,nivel educativo
-s_2009<-hlaboral_2009%>%dplyr::select(folio_n20, oficio, b12, b13, orden) #ingreso,horas semanales
-# Repetor para el 2012, 2015 y 2019
+# seleccionar variables
+ind_2009 <- ind_attr_2009 %>% dplyr::select(folio_n20,a8,a9,a12n) #sexo,edad,nivel educativo
+s_2009<-hlaboral_2009%>%dplyr::select(folio_n20, oficio, b12, b12t, b13, orden) #ingreso,horas semanales
+
+# unir, filtrar, contar. 
+laboral_2009 <- inner_join(ind_2009, s_2009, by = "folio_n20") %>%
+  dplyr::select(folio_n20, sexo = a8, edad = a9, educ = a12n, ocup = oficio, 
+         ingreso = b12, ingreso_tramo = b12t, horas = b13, orden) %>%
+  filter(sexo %in% c(1, 2)) %>%
+  mutate(
+    educ = ifelse(educ %in% c(88, 99), NA, educ),
+    ingreso = ifelse(ingreso %in% c(8, 9), NA, ingreso),
+    horas = ifelse(horas %in% c(888, 999), NA, horas)
+  ) %>%
+  group_by(ocup) %>%
+  summarise(
+    tamano = n(),
+    hombres_perc = sum(sexo == 1) / sum(!is.na(sexo)) * 100,
+    mujeres_perc = sum(sexo == 2) / sum(!is.na(sexo)) * 100,
+    promedio_educ = mean(educ, na.rm = TRUE),
+    promedio_edad = mean(edad, na.rm = TRUE),
+    promedio_horas = mean(horas, na.rm = TRUE),
+    promedio_ingreso = median(ingreso, na.rm = TRUE)
+  )
 ```
 
 ##### overlap ocupaciones
+
 ```{r}
 # renombrar columnas
 #colnames(s_2009)<-c("from", "to", "orden")
@@ -195,6 +444,28 @@ overlap_2009 <- overlap_2009[-filas_a_eliminar, ]
 overlap_2009 <- overlap_2009[,-filas_a_eliminar]
 ```
 
+```{r}
+# Convertir la matriz en un edgelist
+edgelist_2009 <- melt(overlap_2009, varnames = c("ocup_i", "ocup_j"), value.name = "peso")
+glimpse(edgelist_2009)
+```
+
+#### unir (datos para binomial negativo)
+
+```{r}
+edges_2009 <- edgelist_2009 %>%
+  left_join(laboral_2009, by = c("ocup_i" = "ocup")) %>%
+  rename_at(vars(-ocup_i, -ocup_j, -peso), ~ paste0(., "_i")) 
+
+edges_2009 <- edges_2009 %>% 
+  left_join(laboral_2009, by = c("ocup_j" = "ocup")) %>%
+  rename_at(vars(-ocup_i, -ocup_j, -peso, -tamano_i, -hombres_perc_i,
+                 -mujeres_perc_i, -promedio_educ_i, -promedio_edad_i,
+                 -promedio_horas_i, -promedio_ingreso_i), ~ paste0(., "_j")) %>%
+  mutate(ano=2009)
+```
+
+#### 
 
 ```{r}
 # Extracción de los nombres de filas y columnas 
@@ -249,12 +520,13 @@ print(paste("Proporción de casillas que son 0:", round(proportion_zero_edges, 2
 ```
 
 ### edgelist
+
 ```{r}
 # to edgelist con igraph 
 wedgelist_2009 <- graph.adjacency(weighted_matrix, weighted=TRUE)
 wedgelist_2009 <- get.data.frame(wedgelist_2009)
 wedgelist_2009 <- wedgelist_2009%>%filter(from!=to) # Remove self loops
-
+wedgelist_2009$ano<-2009
 #save(wedgelist_2009, file="wedgelist_2009.RData")
 #wedgelist_2009<-wedgelist_2009%>%filter(from!=to) # Remove self loops
 #cl<-wedgelist_2009 %>% select(from, to)
@@ -262,8 +534,23 @@ wedgelist_2009 <- wedgelist_2009%>%filter(from!=to) # Remove self loops
 #wgraph_2009
 ```
 
+```{r}
+save(wedgelist_2009, file = "/home/rober/Desktop/wedgelist_2009.RData")
+save(laboral_2009, file = "/home/rober/Desktop/laboral_2009.RData")
 
-###  Distribuciones del intercambio a nivel de díadas
+write.csv(wedgelist_2009, file = "/home/rober/Desktop/wedgelist_2009.csv", row.names = FALSE)
+write.csv(laboral_2009, file = "/home/rober/Desktop/laboral_2009.csv", row.names = FALSE)
+write.csv(edges_full_2009, file = "/home/rober/Desktop/edges_full_2009.csv", row.names = FALSE)
+```
+
+### crear variable de segregación compartida y salario compartido.
+
+```{r}
+laboral_2009$dissim_index = abs(laboral_2009$hombres_perc - laboral_2009$mujeres_perc)/2
+```
+
+### Distribuciones del intercambio a nivel de díadas
+
 ```{r}
 # Calcula el intercambio a nivel de díadas (suma de las dos direcciones)
 wedgelist_2009 <- wedgelist_2009 %>%
@@ -290,8 +577,8 @@ ggplot(wedgelist_2009, aes(x = log_exchange)) +
        y = "Densidad")
 ```
 
-
 ### Average shortest distance
+
 ```{r, message=FALSE}
 
 # Crear un objeto de grafo ponderado a partir del edgelist
@@ -323,13 +610,12 @@ ggplot() +
   theme_grey()
 ```
 
+## clusters 2009
 
-## clusters 2009 
-
-- `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar. 
-
+-   `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar.
 
 ### Louvain
+
 ```{r}
 # Crear un objeto de grafo ponderado a partir del edgelist
 weighted_graph <- graph_from_data_frame(wedgelist_2009, directed = FALSE) %>%
@@ -352,9 +638,6 @@ data_ocup_cluster_2009_1 <- data.frame(type="louvain",
                                 ano=2009)
 ```
 
-
-
-
 ### leading eigen
 
 ```{r}
@@ -374,10 +657,10 @@ data_ocup_cluster_2009_2 <- data.frame(type="leading_eigen",
                                 ano=2009)
 ```
 
+-   `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
 
-- `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
+### Walktrap.
 
-### Walktrap. 
 ```{r}
 # Aplicar el algoritmo Walktrap 
 walktrap_communities <- cluster_walktrap(weighted_graph)
@@ -395,9 +678,8 @@ data_ocup_cluster_2009_3 <- data.frame(type="walktrap",
                                 ano=2009)
 ```
 
-
-
 ### Infomap
+
 ```{r}
 network_object <- create_monolayer_object(wedgelist_2009, directed = F, bipartite = F)
 res_dir <- run_infomap_monolayer(network_object, 
@@ -426,7 +708,6 @@ res_rawdir_modules <- res_rawdir$modules %>% drop_na()
 El "LinkRank modularity" se diferencia de otras medidas porque también considera la dirección y la fuerza de las conexiones. Puedes pensar en ello como si tuvieras una persona caminando al azar por la red. La medida compara cuánto tiempo pasa esta persona en diferentes grupos de conexiones en comparación con lo que esperaríamos si simplemente se moviera sin rumbo fijo. Si pasa más tiempo del esperado en ciertos grupos, eso significa que hay comunidades reales en la red.
 
 En resumen, el "LinkRank modularity" nos ayuda a ver cómo las conexiones en una red se agrupan en comunidades, considerando su dirección y fuerza. Esto es útil para entender cómo las cosas están conectadas en redes más complejas. (Referencias: Leicht y Newman, 2008; Fortunato, 2010; Kim et al., 2012).
-
 
 ```{r}
 # LinkRank 
@@ -549,7 +830,6 @@ lr.modularity <- function(g,
 
 ```
 
-
 ```{r}
 memb<-res_dir$modules
 memb<-memb%>%dplyr::select(node_name, module_level1)
@@ -572,14 +852,12 @@ mod_09<-lr.modularity(wedgelist_2009,
 
 ```
 
-
 ```{r}
 data_ocup_cluster_2009_4 <- data.frame(type="infomap", 
                                 n = max(res_dir$modules$module_level1, na.rm=TRUE), 
                                 modularity=mod_09,
                                 ano=2009)
 ```
-
 
 ```{r}
 data_ocup_cluster_2009<-rbind(data_ocup_cluster_2009_1, 
@@ -590,24 +868,44 @@ data_ocup_cluster_2009<-rbind(data_ocup_cluster_2009_1,
 data_ocup_cluster_2009
 ```
 
-
-
 ## 2012
+
 ```{r}
 # 2009 
-hlaboral_2012 <- read_dta(here("data/EPS/2012/hlaboral.dta"))
-ind_attr_2012 <- read_dta(here("data/EPS/2012/entrevistado.dta"))
+hlaboral_2012 <- read_dta(here("paper1/data/EPS/2012/hlaboral.dta"))
+ind_attr_2012 <- read_dta(here("paper1/data/EPS/2012/entrevistado.dta"))
 
-ind_2012 <- ind_attr_2012 %>% select(folio_n20,a8,a9,a12n) #sexo,edad,nivel educativo
-s_2012<-hlaboral_2012%>%dplyr::select(folio_n20, b5_cod, b12m, b13, orden) #ingreso,horas semanales
+ind_2012 <- ind_attr_2012 %>% dplyr::select(folio_n20,a8,a9,a12n) #sexo,edad,nivel educativo
+s_2012<-hlaboral_2012%>%dplyr::select(folio_n20, b5_cod, b12m, b12t, b13, orden) #ingreso,horas semanales
+
+# unir, filtrar, contar. 
+laboral_2012 <- inner_join(ind_2012, s_2012, by = "folio_n20") %>%
+  dplyr::select(folio_n20, sexo = a8, edad = a9, educ = a12n, ocup = b5_cod, 
+         ingreso = b12m, ingreso_tramo = b12t, horas = b13, orden) %>%
+  filter(sexo %in% c(1, 2)) %>%
+  mutate(
+    educ = ifelse(educ %in% c(88, 99), NA, educ),
+    ingreso = ifelse(ingreso %in% c(8, 9), NA, ingreso),
+    horas = ifelse(horas %in% c(888, 999), NA, horas)
+  ) %>%
+  group_by(ocup) %>%
+  summarise(
+    tamano = n(),
+    hombres_perc = sum(sexo == 1) / sum(!is.na(sexo)) * 100,
+    mujeres_perc = sum(sexo == 2) / sum(!is.na(sexo)) * 100,
+    promedio_educ = mean(educ, na.rm = TRUE),
+    promedio_edad = mean(edad, na.rm = TRUE),
+    promedio_horas = mean(horas, na.rm = TRUE),
+   promedio_ingreso = median(ingreso, na.rm = TRUE)
+  )
 ```
 
-
 ##### overlap ocupaciones
+
 ```{r}
 # edgelist to 
 m1 <- netmem::edgelist_to_matrix(cbind(s_2012$folio_n20,s_2012$b5_cod), bipartite = T)
-m1t <-t(m1)
+m1t <- t(m1)
 overlap_2012 <- m1t%*%t(m1t)
 
 # borrar x en nombres de filas
@@ -619,6 +917,24 @@ overlap_2012 <- overlap_2012[-filas_a_eliminar, ]
 overlap_2012 <- overlap_2012[,-filas_a_eliminar]
 ```
 
+```{r}
+# Convertir la matriz en un edgelist
+edgelist_2012 <- melt(overlap_2012, varnames = c("ocup_i", "ocup_j"), value.name = "peso")
+glimpse(edgelist_2012)
+```
+
+```{r}
+edges_2012 <- edgelist_2012 %>%
+  left_join(laboral_2012, by = c("ocup_i" = "ocup")) %>%
+  rename_at(vars(-ocup_i, -ocup_j, -peso), ~ paste0(., "_i")) 
+
+edges_2012 <- edges_2012 %>% 
+  left_join(laboral_2012, by = c("ocup_j" = "ocup")) %>%
+  rename_at(vars(-ocup_i, -ocup_j, -peso, -tamano_i, -hombres_perc_i,
+                 -mujeres_perc_i, -promedio_educ_i, -promedio_edad_i,
+                 -promedio_horas_i, -promedio_ingreso_i), ~ paste0(., "_j")) %>%
+  mutate(ano=2012)
+```
 
 ```{r}
 # Extracción de los nombres de filas y columnas 
@@ -672,11 +988,13 @@ print(paste("Proporción de casillas que son 0:", round(proportion_zero_edges, 2
 ```
 
 ### edgelist
+
 ```{r}
 # to edgelist con igraph 
 wedgelist_2012 <- graph.adjacency(weighted_matrix, weighted=TRUE)
 wedgelist_2012 <- get.data.frame(wedgelist_2012)
 wedgelist_2012 <- wedgelist_2012%>%filter(from!=to) # Remove self loops
+wedgelist_2012$ano<-2012
 
 #save(wedgelist_2009, file="wedgelist_2009.RData")
 #wedgelist_2009<-wedgelist_2009%>%filter(from!=to) # Remove self loops
@@ -685,8 +1003,8 @@ wedgelist_2012 <- wedgelist_2012%>%filter(from!=to) # Remove self loops
 #wgraph_2009
 ```
 
+### Distribuciones del intercambio a nivel de díadas
 
-###  Distribuciones del intercambio a nivel de díadas
 ```{r}
 # Calcula el intercambio a nivel de díadas (suma de las dos direcciones)
 wedgelist_2012 <- wedgelist_2012 %>%
@@ -713,8 +1031,8 @@ ggplot(wedgelist_2012, aes(x = log_exchange)) +
        y = "Densidad")
 ```
 
-
 ### Average shortest distance
+
 ```{r, message=FALSE}
 # Crear un objeto de grafo ponderado a partir del edgelist
 weighted_graph <- graph_from_data_frame(wedgelist_2012, directed = FALSE) %>%
@@ -745,13 +1063,12 @@ ggplot() +
   theme_grey()
 ```
 
+## clusters 2012
 
-## clusters 2012 
-
-- `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar. 
-
+-   `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar.
 
 ### Louvain
+
 ```{r}
 # Crear un objeto de grafo ponderado a partir del edgelist
 weighted_graph <- graph_from_data_frame(wedgelist_2012, directed = FALSE) %>%
@@ -793,10 +1110,10 @@ data_ocup_cluster_2012_2 <- data.frame(type="leading_eigen",
                                 ano=2012)
 ```
 
+-   `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
 
-- `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
+### Walktrap.
 
-### Walktrap. 
 ```{r}
 # Aplicar el algoritmo Walktrap 
 walktrap_communities <- cluster_walktrap(weighted_graph)
@@ -814,9 +1131,8 @@ data_ocup_cluster_2012_3 <- data.frame(type="walktrap",
                                 ano=2012)
 ```
 
-
-
 ### Infomap
+
 ```{r}
 network_object <- create_monolayer_object(wedgelist_2012, directed = F, bipartite = F)
 res_dir <- run_infomap_monolayer(network_object, 
@@ -846,7 +1162,6 @@ El "LinkRank modularity" se diferencia de otras medidas porque también consider
 
 En resumen, el "LinkRank modularity" nos ayuda a ver cómo las conexiones en una red se agrupan en comunidades, considerando su dirección y fuerza. Esto es útil para entender cómo las cosas están conectadas en redes más complejas. (Referencias: Leicht y Newman, 2008; Fortunato, 2010; Kim et al., 2012).
 
-
 ```{r}
 memb<-res_dir$modules
 memb<-memb%>%dplyr::select(node_name, module_level1)
@@ -869,7 +1184,6 @@ mod_12<-lr.modularity(wedgelist_2012,
 
 ```
 
-
 ```{r}
 data_ocup_cluster_2012_4 <- data.frame(type="infomap", 
                                 n = max(res_dir$modules$module_level1, na.rm=TRUE), 
@@ -885,20 +1199,40 @@ data_ocup_cluster_2012<-rbind(data_ocup_cluster_2012_1,
 data_ocup_cluster_2012
 ```
 
-
-
 ## 2015
-```{r}
-hlaboral_2015 <- read_dta(here("data/EPS/2015/MODULOB_historia_laboral.dta"))
-ind_attr_2015 <- read_dta(here("data/EPS/2015/MODULOA_entrevistado.dta"))
 
-ind_2015 <- ind_attr_2015 %>% select(folio_n20,a8,a9,a12n) #sexo,edad,nivel educativo
-s_2015<-hlaboral_2015%>%dplyr::select(folio_n20, b5_cod, b12, b13, orden) #ingreso,horas semanales
+```{r}
+hlaboral_2015 <- read_dta(here("paper1/data/EPS/2015/MODULOB_historia_laboral.dta"))
+ind_attr_2015 <- read_dta(here("paper1/data/EPS/2015/MODULOA_entrevistado.dta"))
+
+ind_2015 <- ind_attr_2015 %>% dplyr::select(folio_n20,a8,a9,a12n) #sexo,edad,nivel educativo
+s_2015<-hlaboral_2015%>%dplyr::select(folio_n20, b5_cod, b12, b12t, b13, orden) #ingreso,horas semanales
+
+
+# unir, filtrar, contar. 
+laboral_2015 <- inner_join(ind_2015, s_2015, by = "folio_n20") %>%
+  dplyr::select(folio_n20, sexo = a8, edad = a9, educ = a12n, ocup = b5_cod, 
+         ingreso = b12, ingreso_tramo = b12t, horas = b13, orden) %>%
+  filter(sexo %in% c(1, 2)) %>%
+  mutate(
+    educ = ifelse(educ %in% c(88, 99), NA, educ),
+    ingreso = ifelse(ingreso %in% c(8, 9), NA, ingreso),
+    horas = ifelse(horas %in% c(888, 999), NA, horas)
+  ) %>%
+  group_by(ocup) %>%
+  summarise(
+    tamano = n(),
+    hombres_perc = sum(sexo == 1) / sum(!is.na(sexo)) * 100,
+    mujeres_perc = sum(sexo == 2) / sum(!is.na(sexo)) * 100,
+    promedio_educ = mean(educ, na.rm = TRUE),
+    promedio_edad = mean(edad, na.rm = TRUE),
+    promedio_horas = mean(horas, na.rm = TRUE),
+    promedio_ingreso = median(ingreso, na.rm = TRUE)
+  )
 ```
 
-
-
 ##### overlap ocupaciones
+
 ```{r}
 # edgelist to 
 m1 <- netmem::edgelist_to_matrix(cbind(s_2015$folio_n20,s_2015$b5_cod), bipartite = T)
@@ -914,6 +1248,24 @@ overlap_2015 <- overlap_2015[-filas_a_eliminar, ]
 overlap_2015 <- overlap_2015[,-filas_a_eliminar]
 ```
 
+```{r}
+# Convertir la matriz en un edgelist
+edgelist_2015 <- melt(overlap_2015, varnames = c("ocup_i", "ocup_j"), value.name = "peso")
+glimpse(edgelist_2015)
+```
+
+```{r}
+edges_2015 <- edgelist_2015 %>%
+  left_join(laboral_2015, by = c("ocup_i" = "ocup")) %>%
+  rename_at(vars(-ocup_i, -ocup_j, -peso), ~ paste0(., "_i")) 
+
+edges_2015 <- edges_2015 %>% 
+  left_join(laboral_2015, by = c("ocup_j" = "ocup")) %>%
+  rename_at(vars(-ocup_i, -ocup_j, -peso, -tamano_i, -hombres_perc_i,
+                 -mujeres_perc_i, -promedio_educ_i, -promedio_edad_i,
+                 -promedio_horas_i, -promedio_ingreso_i), ~ paste0(., "_j")) %>%
+  mutate(ano=2015)
+```
 
 ```{r}
 # Extracción de los nombres de filas y columnas 
@@ -967,12 +1319,13 @@ print(paste("Proporción de casillas que son 0:", round(proportion_zero_edges, 2
 ```
 
 ### edgelist
+
 ```{r}
 # to edgelist con igraph 
 wedgelist_2015 <- graph.adjacency(weighted_matrix, weighted=TRUE)
 wedgelist_2015 <- get.data.frame(wedgelist_2015)
 wedgelist_2015 <- wedgelist_2015%>%filter(from!=to) # Remove self loops
-
+wedgelist_2015$ano <- 2015
 #save(wedgelist_2009, file="wedgelist_2009.RData")
 #wedgelist_2009<-wedgelist_2009%>%filter(from!=to) # Remove self loops
 #cl<-wedgelist_2009 %>% select(from, to)
@@ -980,8 +1333,8 @@ wedgelist_2015 <- wedgelist_2015%>%filter(from!=to) # Remove self loops
 #wgraph_2009
 ```
 
+### Distribuciones del intercambio a nivel de díadas
 
-###  Distribuciones del intercambio a nivel de díadas
 ```{r, message=FALSE}
 # Calcula el intercambio a nivel de díadas (suma de las dos direcciones)
 wedgelist_2015 <- wedgelist_2015 %>%
@@ -1009,8 +1362,8 @@ ggplot(wedgelist_2015, aes(x = log_exchange)) +
 
 ```
 
-
 ### Average shortest distance
+
 ```{r, message=FALSE}
 # Crear un objeto de grafo ponderado a partir del edgelist
 weighted_graph <- graph_from_data_frame(wedgelist_2015, directed = FALSE) %>%
@@ -1042,13 +1395,12 @@ ggplot() +
 
 ```
 
+## clusters 2015
 
-## clusters 2015 
-
-- `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar. 
-
+-   `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar.
 
 ### Louvain
+
 ```{r}
 # Crear un objeto de grafo ponderado a partir del edgelist
 weighted_graph <- graph_from_data_frame(wedgelist_2015, directed = FALSE) %>%
@@ -1090,10 +1442,10 @@ data_ocup_cluster_2015_2 <- data.frame(type="leading_eigen",
                                 ano=2015)
 ```
 
+-   `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
 
-- `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
+### Walktrap.
 
-### Walktrap. 
 ```{r}
 # Aplicar el algoritmo Walktrap 
 walktrap_communities <- cluster_walktrap(weighted_graph)
@@ -1111,9 +1463,8 @@ data_ocup_cluster_2015_3 <- data.frame(type="walktrap",
                                 ano=2015)
 ```
 
-
-
 ### Infomap
+
 ```{r}
 network_object <- create_monolayer_object(wedgelist_2015, directed = F, bipartite = F)
 res_dir <- run_infomap_monolayer(network_object, 
@@ -1143,7 +1494,6 @@ El "LinkRank modularity" se diferencia de otras medidas porque también consider
 
 En resumen, el "LinkRank modularity" nos ayuda a ver cómo las conexiones en una red se agrupan en comunidades, considerando su dirección y fuerza. Esto es útil para entender cómo las cosas están conectadas en redes más complejas. (Referencias: Leicht y Newman, 2008; Fortunato, 2010; Kim et al., 2012).
 
-
 ```{r}
 memb<-res_dir$modules
 memb<-memb%>%dplyr::select(node_name, module_level1)
@@ -1165,7 +1515,6 @@ mod_15<-lr.modularity(wedgelist_2015,
               weights = E(wedgelist_2015)$exchange)
 ```
 
-
 ```{r}
 data_ocup_cluster_2015_4 <- data.frame(type="infomap", 
                                 n = max(res_dir$modules$module_level1, na.rm=TRUE), 
@@ -1182,20 +1531,40 @@ data_ocup_cluster_2015<-rbind(data_ocup_cluster_2015_1,
 data_ocup_cluster_2015
 ```
 
-
 ## 2020
-```{r}
-hlaboral_2020 <- read_dta(here("data/EPS/2020/Bases_EPS2020_continuidad/01_Vivos_continuidad/MODULO_Historia Laboral_VIVOS_in.dta"))
-ind_attr_2020 <- read_dta(here("data/EPS/2020/Bases_EPS2020_continuidad/01_Vivos_continuidad/MODULO_Entrevistado_VIVOS_in.dta"))
 
-ind_2020 <- ind_attr_2020 %>% select(folio_n20,a8,a9,a12_n) #sexo,edad,nivel educativo
+```{r}
+hlaboral_2020 <- read_dta(here("paper1/data/EPS/2020/Bases_EPS2020_continuidad/01_Vivos_continuidad/MODULO_Historia Laboral_VIVOS_in.dta"))
+ind_attr_2020 <- read_dta(here("paper1/data/EPS/2020/Bases_EPS2020_continuidad/01_Vivos_continuidad/MODULO_Entrevistado_VIVOS_in.dta"))
+
+ind_2020 <- ind_attr_2020 %>% dplyr::select(folio_n20,a8,a9,a12_n) #sexo,edad,nivel educativo
 s_2020<-hlaboral_2020%>%dplyr::select(folio_n20, CIUO_08_4dig, b12, b13, orden) #ingreso,horas semanales
-# Repetor para el 2012, 2015 y 2019
+
+# unir, filtrar, contar. 
+laboral_2020 <- inner_join(ind_2020, s_2020, by = "folio_n20") %>%
+  dplyr::select(folio_n20, sexo = a8, edad = a9, educ = a12_n, ocup = CIUO_08_4dig, 
+         ingreso = b12, horas = b13, orden) %>%
+  filter(sexo %in% c(1, 2)) %>%
+  mutate(
+    educ = ifelse(educ %in% c(88, 99), NA, educ),
+    ingreso = ifelse(ingreso %in% c(8, 9), NA, ingreso),
+    horas = ifelse(horas %in% c(888, 999), NA, horas)
+  ) %>%
+  group_by(ocup) %>%
+  summarise(
+    tamano = n(),
+    hombres_perc = sum(sexo == 1) / sum(!is.na(sexo)) * 100,
+    mujeres_perc = sum(sexo == 2) / sum(!is.na(sexo)) * 100,
+    promedio_educ = mean(educ, na.rm = TRUE),
+    promedio_edad = mean(edad, na.rm = TRUE),
+    promedio_horas = mean(horas, na.rm = TRUE),
+    promedio_ingreso = median(ingreso, na.rm = TRUE)
+  )
+
 ```
 
-
-
 ##### overlap ocupaciones
+
 ```{r}
 # edgelist to 
 m1 <- netmem::edgelist_to_matrix(cbind(s_2020$folio_n20,s_2020$CIUO_08_4dig), bipartite = T)
@@ -1211,6 +1580,38 @@ overlap_2020 <- overlap_2020[-filas_a_eliminar, ]
 overlap_2020 <- overlap_2020[,-filas_a_eliminar]
 ```
 
+```{r}
+# Convertir la matriz en un edgelist
+edgelist_2020 <- melt(overlap_2020, varnames = c("ocup_i", "ocup_j"), value.name = "peso")
+glimpse(edgelist_2020)
+```
+
+```{r}
+edges_2020 <- edgelist_2020 %>%
+  left_join(laboral_2020, by = c("ocup_i" = "ocup")) %>%
+  rename_at(vars(-ocup_i, -ocup_j, -peso), ~ paste0(., "_i")) 
+
+edges_2020 <- edges_2020 %>% 
+  left_join(laboral_2020, by = c("ocup_j" = "ocup")) %>%
+  rename_at(vars(-ocup_i, -ocup_j, -peso, -tamano_i, -hombres_perc_i,
+                 -mujeres_perc_i, -promedio_educ_i, -promedio_edad_i,
+                 -promedio_horas_i, -promedio_ingreso_i), ~ paste0(., "_j")) %>%
+  mutate(ano=2020)
+```
+
+```{r}
+#unir todos los data frames
+edges_full <- rbind(edges_2009,edges_2012,edges_2015, edges_2020)
+
+```
+
+```{r}
+edges_full <- edges_full %>% 
+  filter(ocup_i != 0 & ocup_i != 11 & ocup_i != 31) %>%
+  filter(ocup_j != 0 & ocup_j != 11 & ocup_j != 31) %>%
+  filter(ocup_i != ocup_j)
+
+```
 
 ```{r}
 # Extracción de los nombres de filas y columnas 
@@ -1264,11 +1665,13 @@ print(paste("Proporción de casillas que son 0:", round(proportion_zero_edges, 2
 ```
 
 ### edgelist
+
 ```{r}
 # to edgelist con igraph 
 wedgelist_2020 <- graph.adjacency(weighted_matrix, weighted=TRUE)
 wedgelist_2020 <- get.data.frame(wedgelist_2020)
 wedgelist_2020 <- wedgelist_2020%>%filter(from!=to) # Remove self loops
+wedgelist_2020$ano <- 2020
 
 #save(wedgelist_2009, file="wedgelist_2009.RData")
 #wedgelist_2009<-wedgelist_2009%>%filter(from!=to) # Remove self loops
@@ -1277,8 +1680,8 @@ wedgelist_2020 <- wedgelist_2020%>%filter(from!=to) # Remove self loops
 #wgraph_2009
 ```
 
+### Distribuciones del intercambio a nivel de díadas
 
-###  Distribuciones del intercambio a nivel de díadas
 ```{r, message=FALSE}
 # Calcula el intercambio a nivel de díadas (suma de las dos direcciones)
 wedgelist_2020 <- wedgelist_2020 %>%
@@ -1305,8 +1708,8 @@ ggplot(wedgelist_2020, aes(x = log_exchange)) +
        y = "Densidad")
 ```
 
-
 ### Average shortest distance
+
 ```{r, message=FALSE}
 # Crear un objeto de grafo ponderado a partir del edgelist
 weighted_graph <- graph_from_data_frame(wedgelist_2020, directed = FALSE) %>%
@@ -1338,13 +1741,12 @@ ggplot() +
 
 ```
 
-
 ## clusters 2020
 
-- `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar. 
-
+-   `Métodos basados en la modularidad`: La modularidad nos dice qué tan bien funcionan esos subgrupos. Si los nodos en los subgrupos se conectan mucho más de lo que esperaríamos al azar, la modularidad será alta. La modularidad es una medida común para evaluar la efectividad de dividir una red compleja en comunidades (Newman y Girvan, 2004). La modularidad se define como la fracción real de intercambios que ocurren dentro de grupos, menos la fracción hipotética de tales intercambios si se distribuyeran al azar. La modularidad varía entre 0.2 y 1, con valores positivos y más altos indicando que hay más intercambios dentro de grupos de lo esperado al azar.
 
 ### Louvain
+
 ```{r}
 # Crear un objeto de grafo ponderado a partir del edgelist
 weighted_graph <- graph_from_data_frame(wedgelist_2020, directed = FALSE) %>%
@@ -1386,10 +1788,10 @@ data_ocup_cluster_2020_2 <- data.frame(type="leading_eigen",
                                 ano=2020)
 ```
 
+-   `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
 
-- `Métodos basados en caminatas aleatorias`: Imaginemos que alguien camina aleatoriamente por la red, es más probable que esa persona permanezca en el mismo grupo de amigos que cambiar a otro grupo. Utilizamos dos métodos basados en este concepto. El primer método, llamado `walk-trap`. Este, mide la cercanía entre dos personas al calcular la probabilidad de que puedan llegar una a la otra en unos cuantos pasos. Es como si contáramos cuántos pasos se necesitarían para que dos personas se encuentren. Luego, otro método llamado `infomap` (o `map equation`) considera un paseo aleatorio infinito, imaginando que una persona siempre se queda en su grupo de amigos, pero de vez en cuando cambia a otro grupo. Este método busca encontrar la manera más sencilla de describir cómo la persona se mueve entre los grupos, tratando de tener un número similar de grupos y de personas únicas en cada grupo. Es como si quisiéramos describir los movimientos de alguien usando la menor cantidad de palabras posible.
+### Walktrap.
 
-### Walktrap. 
 ```{r}
 # Aplicar el algoritmo Walktrap 
 walktrap_communities <- cluster_walktrap(weighted_graph)
@@ -1407,9 +1809,8 @@ data_ocup_cluster_2020_3 <- data.frame(type="walktrap",
                                 ano=2020)
 ```
 
-
-
 ### Infomap
+
 ```{r}
 network_object <- create_monolayer_object(wedgelist_2020, directed = F, bipartite = F)
 res_dir <- run_infomap_monolayer(network_object, 
@@ -1439,7 +1840,6 @@ El "LinkRank modularity" se diferencia de otras medidas porque también consider
 
 En resumen, el "LinkRank modularity" nos ayuda a ver cómo las conexiones en una red se agrupan en comunidades, considerando su dirección y fuerza. Esto es útil para entender cómo las cosas están conectadas en redes más complejas. (Referencias: Leicht y Newman, 2008; Fortunato, 2010; Kim et al., 2012).
 
-
 ```{r}
 memb<-res_dir$modules
 memb<-memb%>%dplyr::select(node_name, module_level1)
@@ -1461,7 +1861,6 @@ mod_20<-lr.modularity(wedgelist_2020,
               weights = E(wedgelist_2020)$exchange)
 ```
 
-
 ```{r}
 data_ocup_cluster_2020_4 <- data.frame(type="infomap", 
                                 n = max(res_dir$modules$module_level1, na.rm=TRUE), 
@@ -1476,7 +1875,6 @@ data_ocup_cluster_2020<-rbind(data_ocup_cluster_2020_1,
                               data_ocup_cluster_2020_4)
 ```
 
-
 ```{r}
 data_ocup_cluster<-rbind(data_ocup_cluster_2009,
                          data_ocup_cluster_2012,
@@ -1485,7 +1883,6 @@ data_ocup_cluster<-rbind(data_ocup_cluster_2009,
 
 glimpse(data_ocup_cluster)
 ```
-
 
 ## plot cluster tendencies
 
@@ -1515,19 +1912,153 @@ print(plot_clusters)
 print(plot_modularity)
 ```
 
+### unir edgelist
+
+```{r}
+wedgelist_full <- rbind(wedgelist_2009,wedgelist_2012,wedgelist_2015,wedgelist_2020) %>%
+  dplyr::select(ocup_i = from, ocup_j = to, weight, ano) 
+
+edges_full$ocup_i<-as.character(edges_full$ocup_i)
+edges_full$ocup_j<-as.character(edges_full$ocup_j)
+
+wedgelist_full <- left_join(edges_full, wedgelist_full, by=c("ocup_i", "ocup_j", "ano"))
+wedgelist_full <- wedgelist_full %>% dplyr::select(ocup_i, ocup_j, peso, peso_ponderado=weight, 
+                                                   tamano_i, tamano_j, hombres_perc_i, hombres_perc_j,
+                                                   mujeres_perc_i, mujeres_perc_j, promedio_ingreso_i,
+                                                   promedio_ingreso_j, ano)
+
+wedgelist_full <- wedgelist_full %>% mutate(peso_ponderado = ifelse(is.na(peso_ponderado), 0, peso_ponderado))
+
+wa<-wedgelist_full %>%
+  group_by(ocup_i, ano) %>%
+  summarise(
+    sum_weights = sum(peso_ponderado, na.rm = TRUE),
+    sum_weighted_income = sum(peso_ponderado * log(promedio_ingreso_j), na.rm = TRUE)
+  ) %>%
+  mutate(
+    linked_wage = sum_weighted_income / sum_weights
+  )
+
+```
+
+```{r}
+df_disimilitud <- wedgelist_full %>%
+  group_by(ocup_i, ano) %>% 
+  summarise(
+    diff_hombres_mujeres = sum(abs(hombres_perc_i - mujeres_perc_i)),
+    total = n(),
+    hombres_max = max(hombres_perc_i),
+    mujeres_max = max(mujeres_perc_i)
+  ) %>%
+  mutate(
+    disimilitud = diff_hombres_mujeres / (total * pmax(hombres_max, mujeres_max)) 
+  ) %>% 
+  dplyr::select(ocup_i, disimilitud_i = disimilitud, ano)
+
+wedgelist_full <- left_join(wedgelist_full, df_disimilitud, by=c("ocup_i", "ano"))
+df_disimilitud <- df_disimilitud %>% dplyr::select(ocup_j=ocup_i, disimilitud_j = disimilitud_i, ano) #ahora con j
+wedgelist_full <- left_join(wedgelist_full, df_disimilitud, by=c("ocup_j", "ano"))
+glimpse(wedgelist_full)
+```
+
+```{r}
+# Linked disimilitud
+df_linked <- wedgelist_full %>%
+  group_by(ocup_i, ocup_j, ano) %>%
+  summarise(
+    peso_ponderado = sum(peso_ponderado, na.rm = TRUE),
+    disimilitud_ponderada = sum(disimilitud_i * peso_ponderado, na.rm = TRUE)  
+  ) %>%
+  group_by(ocup_i, ano) %>%
+  summarise(
+    sum_pesos = sum(peso_ponderado, na.rm = TRUE),
+    sum_disim_ponderadas = sum(disimilitud_ponderada, na.rm = TRUE)
+  ) %>% 
+  mutate(
+    linked_disimilitud = sum_disim_ponderadas / sum_pesos
+  ) %>% 
+  dplyr::select(ocup_i, linked_disimilitud, ano)
 
 
 
 
+df_linked %>% 
+  left_join(df_linked, wedgelist_full, by=c("ocup_i","ano")) %>%
+  
+```
+
+```{r}
+disimilitud <- wedgelist_full %>% 
+  dplyr::select(ocup_i, disimilitud_i, ano) %>% 
+  distinct()
 
 
 
+  disimilitud <- 
+    left_join(disimilitud, df_linked, by=c("ocup_i","ano")) %>%
+    dplyr::select(ocup=ocup_i, disimilitud = disimilitud_i, linked_disimilitud, ano)
+  
+```
+
+```{r}
+df_disimilitud <- wedgelist_full %>% 
+  group_by(ocup_i, ano) %>% 
+  summarise(
+    diff_hombres_mujeres = sum(abs(hombres_perc_i - mujeres_perc_i)),
+    total = n(),
+    max_proporcion = max(hombres_perc_i, mujeres_perc_i)
+  ) %>%
+  mutate(
+    disimilitud = diff_hombres_mujeres / (total * max_proporcion)
+  )
+```
+
+```{r}
+df_linked <- wedgelist_full %>%
+  group_by(ocup_i, ocup_j, ano) %>%
+  summarise(
+    peso_ponderado = sum(peso_ponderado, na.rm = TRUE),
+    disimilitud_ponderada = sum(disimilitud_i * peso_ponderado, na.rm = TRUE)
+  ) %>% 
+  group_by(ocup_i, ano) %>%
+  summarise(
+    suma_pesos = sum(peso_ponderado, na.rm = TRUE),
+    suma_disim_ponderada = sum(disimilitud_ponderada, na.rm = TRUE) 
+  ) %>%
+  mutate(
+    linked_disimilitud = suma_disim_ponderada / suma_pesos
+  )
+```
+
+```{r}
+wedgelist_full <- wedgelist_full %>%
+  mutate(diff_hombres_mujeres = abs(hombres_perc_i - mujeres_perc_i))
+
+df_disimilitud <- wedgelist_full %>%
+  group_by(ocup_i, ano) %>%
+  summarise(
+    diff_hombres_mujeres = sum(abs(hombres_perc_i - mujeres_perc_i)),
+    total = n(),
+    max_proporcion = max(hombres_perc_i, mujeres_perc_i)
+  ) %>%
+  mutate(
+    disimilitud = diff_hombres_mujeres / (total * max_proporcion)  
+  )
 
 
-
-
-
-
-
-
-
+df_linked <- wedgelist_full %>% 
+  left_join(df_disimilitud) %>%
+  group_by(ocup_i, ocup_j, ano) %>%
+  summarise(
+    peso_ponderado = sum(peso_ponderado), 
+    disimilitud_ponderada = sum(peso_ponderado * disimilitud) 
+  ) %>%
+  group_by(ocup_i, ano) %>%
+  summarise(
+     total_pesos = sum(peso_ponderado),
+     total_disim_ponderada = sum(disimilitud_ponderada)  
+  ) %>%
+  mutate(
+    linked_disimilitud = total_disim_ponderada / total_pesos
+  )
+```

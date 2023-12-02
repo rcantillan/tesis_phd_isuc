@@ -372,6 +372,7 @@ system.time(
                               random =~ educa_alterMC | idencuesta,
                               data=subset(homoL, !is.na(educa_alterMC)),
                               family = binomial, nAGQ=5)
+    
     m_lin_int1 <- mixed_model(case ~ 1 + 
                                 educa_alterMC*educ_papa + 
                                 educa_alterMC*mov_padre + 
