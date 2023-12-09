@@ -1,5 +1,4 @@
 
-
 library(mfx)
 
 
@@ -220,4 +219,3 @@ plot_ly(datos_ejemplo, x = ~mujeres_perc_dist, y = ~promedio_educ_dist, z = ~pes
     yaxis = list(title = "promedio_educ_dist"),
     zaxis = list(title = "Peso predicho")
   ))
-```

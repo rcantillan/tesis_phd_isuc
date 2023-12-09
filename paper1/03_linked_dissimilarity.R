@@ -924,11 +924,8 @@ ggplot(laboral_completos, aes(x = linked_dissimilarity_hat, y = dissim_index)) +
   theme_minimal()
 
 
-# Modelo de diferenciación estructural ------------------------------------------
-library(mfx)
-
-
-#unir todos los data frames
+# Modelo de diferenciación estructural ------------------------------------------------
+# unir todos los data frames
 edges_full <- rbind(edges_2009, edges_2015, edges_2020)
 
 
@@ -1035,7 +1032,7 @@ m3 <- MASS::glm.nb(peso ~ scale(tamaño_combinado) +
 summary(m3)
 coefs_m3 <- coef(m3)
 
-
+summary(edges_full$superior_perc_dist)
 
 
 library(texreg)
@@ -1059,7 +1056,7 @@ texreg(list(m1, m2, m3),
        booktabs = TRUE)
 
 
-
+datos_ejemplo$
 
 # Crear un dataframe con valores de ejemplo para las variables de interés
 datos_ejemplo <- expand.grid(
@@ -1069,15 +1066,36 @@ datos_ejemplo <- expand.grid(
   promedio_edad_dist = median(edges_full$promedio_edad_dist),  # Agrega promedio_edad_dist con un valor arbitrario
   promedio_horas_dist = median(edges_full$promedio_horas_dist, na.rm=T),
   promedio_ingreso_dist = median(edges_full$promedio_ingreso_dist, na.rm=T),
-  ano = "2009"  # Puedes cambiar el año según tus necesidades
+  ano = "2012"  # Puedes cambiar el año según tus necesidades
 )
 
 # Predecir valores de peso utilizando el modelo
 datos_ejemplo$peso_predicho <- predict(m1, newdata = datos_ejemplo, type = "response")
 
 
+library(ggplot2)
+library(reshape2)
+
+# Crear un dataframe con valores de ejemplo para las variables de interés
+datos_ejemplo <- expand.grid(
+  mujeres_perc_dist = seq(0, 100, length.out = 100),
+  superior_perc_dist = seq(0, 100, length.out = 100),
+  tamaño_combinado = median(edges_full$tamaño_combinado),
+  promedio_edad_dist = median(edges_full$promedio_edad_dist, na.rm=T),
+  promedio_horas_dist = median(edges_full$promedio_horas_dist, na.rm=T),
+  promedio_ingreso_dist = median(edges_full$promedio_ingreso_dist, na.rm=T),
+  ano = "2009"
+)
+
+# Predecir valores de peso utilizando el modelo
+datos_ejemplo$peso_predicho <- predict(m1, newdata = datos_ejemplo, type = "response")
+
+# Convertir el dataframe a formato largo para ggplot
+#datos_largos <- melt(datos_ejemplo, id.vars = c("mujeres_perc_dist", "promedio_educ_dist"), variable.name = "Variable")
+
+
 # Crear el gráfico de contorno con escala de colores ajustada
-ggplot(datos_ejemplo, aes(x = mujeres_perc_dist, y = superior_perc_dist, fill = peso_predicho)) +
+ggplot(datos_ejemplo, aes(x = mujeres_perc_dist, y = promedio_educ_dist, fill = peso_predicho)) +
   geom_tile() +
   labs(title = "Interacción mujeres_perc_dist:promedio_educ_dist en Peso",
        x = "mujeres_perc_dist",
@@ -1088,9 +1106,28 @@ ggplot(datos_ejemplo, aes(x = mujeres_perc_dist, y = superior_perc_dist, fill = 
 
 
 
+
+library(plot3D)
+
+# Crear el gráfico 3D
+scatter3D(
+  datos_ejemplo$mujeres_perc_dist, 
+  datos_ejemplo$promedio_educ_dist, 
+  datos_ejemplo$peso_predicho,
+  color = "blue", 
+  pch = 19, 
+  cex = 2, 
+  phi = 20,  # Ajusta este valor según sea necesario
+  theta = 30,  # Ajusta este valor según sea necesario
+  ticktype = "detailed", 
+  xlab = "mujeres_perc_dist", 
+  ylab = "promedio_educ_dist", 
+  zlab = "Peso predicho"
+)
+
 library(plotly)
 plot_ly(x=datos_ejemplo$mujeres_perc_dist, 
-        y=datos_ejemplo$superior_perc_dist, 
+        y=datos_ejemplo$promedio_educ_dist, 
         z=datos_ejemplo$peso_predicho, 
         type="scatter3d", mode="markers", color=datos_ejemplo$peso_predicho) %>%
   layout(scene = list(
@@ -1099,12 +1136,11 @@ plot_ly(x=datos_ejemplo$mujeres_perc_dist,
     zaxis = list(title = "Peso predicho")
   ))
 
-plot_ly(datos_ejemplo, x = ~superior_perc_dist, y = ~mujeres_perc_dist, z = ~peso_predicho, 
-        type="scatter3d", mode="markers", color=datos_ejemplo$peso_predicho) %>%
+plot_ly(datos_ejemplo, x = ~mujeres_perc_dist, y = ~promedio_educ_dist, z = ~peso_predicho, type = "scatter3d") %>%
   layout(scene = list(
-    xaxis = list(title = "% trabajadores con educación superior (distancia)"),
-    yaxis = list(title = "% mujeres (distancia)"),
-    zaxis = list(title = "Flujo predicho")
+    xaxis = list(title = "mujeres_perc_dist"),
+    yaxis = list(title = "promedio_educ_dist"),
+    zaxis = list(title = "Peso predicho")
   ))
 
 
@@ -1112,94 +1148,4 @@ plot_ly(datos_ejemplo, x = ~superior_perc_dist, y = ~mujeres_perc_dist, z = ~pes
 
 
 
-glimpse(laboral_completos)
-
-
-# Datos
-data <- laboral_completos %>% mutate(year = extract_year(laboral_completos$ano))
-
-library(lubridate)
-
-# Datos 
-data <- laboral_completos %>% 
-  dplyr::select(ocup            
-                ,tamano          
-                ,hombres_perc    
-                ,mujeres_perc    
-                ,superior_perc   
-                ,promedio_edad   
-                ,promedio_horas  
-                ,promedio_ingreso
-                ,dissim_index    
-                ,ano)
-
-glimpse(data)
-data <- sapply( data, as.numeric )
-
-
-
-tabla <- data %>%
-  group_by(ano) %>%
-  summarise_all(list(Mean = ~mean(., na.rm=TRUE),  
-                     SD = ~sd(., na.rm = TRUE),
-                     "Ocup. Mín" = ~first(ocup[which.min(.)]),
-                     "Ocup. Máx" = ~first(ocup[which.max(.)])))
-
-
-data$ocup <- as.character(data$ocup)
-data$ano <- as.character(data$ano)
-data$tamano <-as.numeric(data$tamano)
-
-glimpse(tabla)
-
-# Tabla resumen
-tabla <- data %>%
-  
-  group_by(ano) %>%
-  
-  summarise(tamano_mean = mean(tamano, na.rm=TRUE), 
-            tamano_sd = sd(tamano, na.rm = TRUE),
-            tamano_min = first(ocup[which.min(tamano)]), 
-            tamano_max = first(ocup[which.max(tamano)]),
-            
-            hombres_perc_mean = mean(hombres_perc, na.rm=TRUE),
-            hombres_perc_sd   = sd(hombres_perc, na.rm = TRUE),
-            hombres_perc_min  = first(ocup[which.min(hombres_perc)]), 
-            hombres_perc_max  = first(ocup[which.max(hombres_perc)]),
-            
-            mujeres_perc_mean = mean(mujeres_perc, na.rm=TRUE),
-            mujeres_perc_sd   = sd(mujeres_perc, na.rm = TRUE),
-            mujeres_perc_min  = first(ocup[which.min(mujeres_perc)]), 
-            mujeres_perc_max  = first(ocup[which.max(mujeres_perc)]),
-            
-            superior_perc_mean = mean(superior_perc, na.rm=TRUE),
-            superior_perc_sd   = sd(superior_perc, na.rm = TRUE),
-            superior_perc_min  = first(ocup[which.min(superior_perc)]), 
-            superior_perc_max  = first(ocup[which.max(superior_perc)]),
-            
-            promedio_edad_mean = mean(promedio_edad, na.rm=TRUE),
-            promedio_edad_sd   = sd(promedio_edad, na.rm = TRUE),
-            promedio_edad_min  = first(ocup[which.min(promedio_edad)]), 
-            promedio_edad_max  = first(ocup[which.max(promedio_edad)]),
-            
-            promedio_horas_mean = mean(promedio_horas, na.rm=TRUE),
-            promedio_horas_sd   = sd(promedio_horas, na.rm = TRUE),
-            promedio_horas_min  = first(ocup[which.min(promedio_horas)]), 
-            promedio_horas_max  = first(ocup[which.max(promedio_horas)]),
-            
-            promedio_ingreso_mean = mean(promedio_ingreso, na.rm=TRUE),
-            promedio_ingreso_sd   = sd(promedio_ingreso, na.rm = TRUE),
-            promedio_ingreso_min  = first(ocup[which.min(promedio_ingreso)]), 
-            promedio_ingreso_max  = first(ocup[which.max(promedio_ingreso)]),
-            
-            dissim_index_mean = mean(dissim_index, na.rm=TRUE),
-            dissim_index_sd   = sd(dissim_index, na.rm = TRUE),
-            dissim_index_min  = first(ocup[which.min(dissim_index)]), 
-            dissim_index_max  = first(ocup[which.max(dissim_index)])
-            
-            #... resto variables
-  ) 
-
-
-glimpse(tabla)
 
