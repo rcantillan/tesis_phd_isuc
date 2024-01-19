@@ -40,8 +40,6 @@ ind_attr_2009 <- read_dta(here("paper1/data/EPS/2009/entrevistado.dta"))
 ind_2009 <- ind_attr_2009 %>% dplyr::select(folio_n20,a8,a9,a12n) #sexo,edad,nivel educativo
 s_2009<-hlaboral_2009%>%dplyr::select(folio_n20, oficio, b12, b12t, b13, orden) #ingreso,horas semanales
 
-ind_2009$a12n
-
 # unir, filtrar, contar. 
 laboral_2009 <- inner_join(ind_2009, s_2009, by = "folio_n20") %>%
   dplyr::select(folio_n20, sexo = a8, edad = a9, educ = a12n, ocup = oficio, 
@@ -800,6 +798,8 @@ laboral <- rbind(laboral_2009, laboral_2015, laboral_2020)
 # Cargar paquetes
 library(plm)
 library(AER)
+#install.packages("ivreg", dependencies = TRUE)
+library(ivreg)
 
 laboral_completos <- laboral[complete.cases(laboral), ]
 
@@ -817,51 +817,119 @@ laboral_completos <- laboral_completos %>% rename(ano=ano.x)
 glimpse(laboral_completos)
 
 
-# OLS
-m1<-lm(dissim_index ~ 
-         linked_dissimilarity + 
-         superior_perc_linked +
-         #hombres_perc_linked +
-         superior_perc + 
-         promedio_ingreso + 
-         promedio_horas +
-         factor(ano),
-       data=laboral_completos)
-
-summary(m1)
+install.packages("ivreg", dependencies = TRUE)
+library(ivreg)
 
 
+#OLS
+ols_reg <- lm(dissim_index ~ 
+                linked_dissimilarity + 
+                promedio_edad + 
+                superior_perc +
+                promedio_horas + 
+                #promedio_ingreso + 
+                factor(ano), 
+              data=laboral_completos)
+summary(ols_reg)
 
 # modelo IV
+m_iv_d <- ivreg::ivreg(dissim_index ~ 
+                         promedio_edad +
+                         superior_perc +  
+                         promedio_horas + 
+                         #promedio_ingreso + 
+                         factor(ano) # otras exógenas
+                       | 
+                         linked_dissimilarity  #endógena
+                       |
+                         promedio_edad_linked +
+                         #promedio_ingreso_linked + 
+                         superior_perc_linked +
+                         promedio_horas_linked ,  # instrumento
+                       data = laboral_completos)
 
-m_iv <- ivreg(dissim_index ~ 
-                promedio_horas + mujeres_perc + promedio_ingreso + factor(ano) # otras exógenas
-              | 
-                linked_dissimilarity  #endógena
-              |
-                superior_perc_linked,  # instrumento
-              data = laboral_completos)
 
+
+summary(m_iv_d, diagnostics = T)
+summary(m_iv_d, vcov = sandwich,  diagnostics = TRUE)
+m_list <- list(OLS = ols_reg, IV = m_iv_d)
+library("modelsummary")
+
+
+
+lmx<-lm(linked_dissimilarity ~ promedio_edad_linked +
+     #superior_perc_linked +
+     promedio_horas_linked + 
+   promedio_edad +
+     superior_perc +  
+     promedio_horas + 
+     #promedio_ingreso + 
+     factor(ano),# instrumento
+   data = laboral_completos)
+
+summary(lmx)
+
+
+# Crear DAG
+dag <- dagitty('dag {  
+  A1 [label = "Atributos linked", pos ="0,2!"]
+  A2 [label = "Atributos focal", pos = "4,2!"] 
+  B [label = "linked_dissimilarity", pos = "2,1!"]
+  C [label = "dissim_index", pos = "2,0!"]
+
+  A1 -> B
+  A2 -> C 
+  B -> C
+}')
+
+# Gráfico
+plot(dag) 
+
+# Leyenda
+legend("topleft",  
+       legend = c("A1 = Atributos de ocupaciones linked (inst.)",
+                  "A2 = Atributos de la ocupación focal", 
+                  "B = linked_dissimilarity (endógena)",
+                  "C = dissim_index (outcome)"),
+       bty = "n")
+
+
+
+msummary(m_list)
+modelplot(m_list, conf_level = 0.99) + 
+  theme_minimal(base_size = 14) +
+  scale_color_manual(values=c("black", "blue")) +
+  labs(x= "", 
+       title = "",
+       subtitle = "",
+       caption = "Variable dependdiente: índice de disimilitud de género",
+       color = "Modelos"
+  )
+
+
+
+m_iv <- ivreg(log(wage) ~ education + poly(experience, 2) + ethnicity + smsa + south |
+                nearcollege + poly(age, 2) + ethnicity + smsa + south,
+              data = SchoolingReturns)
 summary(m_iv)
 
+## ivreg(formula = log(wage) ~ education + poly(experience, 2) + 
+##     ethnicity + smsa + south | nearcollege + poly(age, 2) + ethnicity + 
+##     smsa + south, data = SchoolingReturns)
 
-iv3<-ivreg(dissim_index ~ 
+
+iv3<-ivreg::ivreg(dissim_index ~ 
              linked_dissimilarity + # endógena
-             superior_perc_linked   # instrumento
-              | 
-             promedio_horas + mujeres_perc + promedio_ingreso + factor(ano), 
+                          promedio_horas + mujeres_perc + promedio_ingreso + factor(ano) | 
+             superior_perc_linked +  promedio_horas + mujeres_perc + promedio_ingreso + factor(ano),  # instrumento
+           
       data = laboral_completos)
 
 summary(iv3)
 coef(iv3)
 
-summary(iv3, vcov = sandwich, df = laboral, diagnostics = TRUE)
+summary(iv3, vcov = sandwich, df = laboral_completos, diagnostics = TRUE)
 summary(iv3, vcov = sandwich::sandwich, df = Inf)
-
-
-coef(iv3, component = "stage1")
-confint(iv3, component = "stage1")
-
 
 ## extract components from ivreg stage 1
 c1 = coef(iv3, component = 'stage1')
@@ -895,11 +963,11 @@ fe <- plm(dissim_index ~
             linked_dissimilarity_hat + 
             superior_perc + promedio_ingreso + promedio_horas +
                 factor(ano),
-              index = c("ano"), 
+              index = c("ocup","ano"), 
               model = "within",
               data = laboral_completos)
 
-summary(m2)
+summary(fe)
 glimpse(laboral_completos)
 
 
@@ -947,117 +1015,137 @@ edges_full <- edges_full %>%
   filter(ocup_i != ocup_j)
 
 
+#glimpse(edges_full)
 
 # Modelo binomial negativo por año (con coeficientes estandarizados)
 ## Modelo 2009
-m1 <- MASS::glm.nb(peso ~ 
-                     tamaño_combinado +  
-                     mujeres_perc_dist +
-                     superior_perc_dist +   
-                     promedio_edad_dist +
-                     promedio_horas_dist +
-                     promedio_ingreso_dist +
-                     mujeres_perc_dist*superior_perc_dist,
-                   data = subset(edges_full, ano == 2009),
-                   maxit = 1000)
 
-me_m1 <- negbinmfx(m1, data=subset(edges_full, ano == 2009), robust=T, clustervar1 = "ocup_i")
 
-m1 <- MASS::glm.nb(peso ~ 
-                     scale(tamaño_combinado) +  
-                     scale(mujeres_perc_dist) +
-                     scale(superior_perc_dist) +   
-                     scale(promedio_edad_dist) +
-                     scale(promedio_horas_dist) +
-                     scale(promedio_ingreso_dist) +
-                     scale(mujeres_perc_dist)*scale(superior_perc_dist),
-                   data = subset(edges_full, ano == 2009),
-                   maxit = 1000)
+# Modelo 
+m1 <- glmmTMB(peso ~ 
+                tamaño_combinado + 
+                mujeres_perc_dist +
+                superior_perc_dist + 
+                promedio_edad_dist +  
+                promedio_horas_dist + 
+                promedio_ingreso_dist +
+                mujeres_perc_dist * superior_perc_dist +
+                #factor(ano) +
+                (1 |ano) +
+                (1 |ocup_i) + 
+                (1 |ocup_j),  
+              data =  edges_full,
+              family = nbinom2)
 summary(m1)
-coefs_m1 <- coef(m1)
 
-## modelo 2015
-m2 <- MASS::glm.nb(peso ~ 
-                     tamaño_combinado +  
-                     mujeres_perc_dist +
-                     superior_perc_dist +   
-                     promedio_edad_dist +
-                     promedio_horas_dist +
-                     promedio_ingreso_dist +
-                     mujeres_perc_dist*superior_perc_dist,
-                   data = subset(edges_full, ano == 2015),
-                   maxit = 2000)
+# Crea un conjunto de datos con valores de interés
+# Definir niveles de factor(ano)
 
+# Crear datos nuevos para la predicción
+datos_nuevos <- expand.grid(
+  mujeres_perc_dist = seq(min(edges_full$mujeres_perc_dist), max(edges_full$mujeres_perc_dist), length.out = 100),
+  tamaño_combinado = mean(edges_full$tamaño_combinado),
+  superior_perc_dist = mean(edges_full$superior_perc_dist),
+  promedio_edad_dist = mean(edges_full$promedio_edad_dist),
+  promedio_horas_dist = mean(edges_full$promedio_horas_dist, na.rm=TRUE),
+  promedio_ingreso_dist = mean(edges_full$promedio_ingreso_dist, na.rm=TRUE)
+)
+
+
+gpe1 <- ggpredict(m1, "mujeres_perc_dist", type = "fe") # para capturar los efectos fijos describen la relación media entre las variables independientes y la variable dependiente.
+#predict(m1, newdata = datos_nuevos, type = "link")
+
+
+# Crear el gráfico de dispersión con intervalos de confianza
+ggplot(gpe1, aes(x = x, y = predicted, group = group)) +
+  geom_point() +  # Agregar puntos
+  geom_line(aes(y = conf.low), linetype = "dashed", color = "blue") +  # Límite inferior
+  geom_line(aes(y = conf.high), linetype = "dashed", color = "blue") +  # Límite superior
+  labs(title = "Distancia en la proporción de mujeres y flujo entre ocupaciones",
+       x = "Distancia en la proporción de mujeres",
+       y = "predicted") +
+  theme_minimal()
+
+
+coefs <- summary(m1)$coefficients
+coefs_df <- coefs$cond %>% 
+  as_tibble() %>%
+  mutate(ymin = Estimate - 1.96*`Std. Error`,  
+         ymax = Estimate + 1.96*`Std. Error`)
+
+coefs_df<-rownames_to_column(coefs_df, var="var")
+coefs_df<-coefs_df%>%filter(var%in%c(2,3,4,5,6,7))
+
+glimpse(coefs_df)
+
+coefs_df$var[coefs_df$var == 2 ] <- "Tamaño combinado"
+coefs_df$var[coefs_df$var == 3 ] <- "Proporción de mujeres (dist.)"
+coefs_df$var[coefs_df$var == 4 ] <- "Proporción educ. supeior (dist.)"
+coefs_df$var[coefs_df$var == 5 ] <- "Promedio edad (dist.)"
+coefs_df$var[coefs_df$var == 6 ] <- "Promedio horas (dist.)"
+coefs_df$var[coefs_df$var == 7 ] <- "Promedio ingreso (dist.)"
+
+
+ggplot(coefs_df, aes(x = Estimate, y = var)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = ymin, xmax = ymax), height = 0.1, color = "red") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  theme_grey(base_size = 13) +
+
+  labs(title = "Estimates with Confidence Intervals",
+       x = "Estimate",
+       y = "")
+
+
+# Modelo sin efectos aeatorios
+# Modelo 
+m2 <- glmmTMB(peso ~ 
+                tamaño_combinado + 
+                mujeres_perc_dist +
+                superior_perc_dist + 
+                promedio_edad_dist +  
+                promedio_horas_dist + 
+                promedio_ingreso_dist +
+                mujeres_perc_dist *  superior_perc_dist + 
+                factor(ano),  
+              data =  edges_full,
+              family = nbinom2)
 summary(m2)
-me_m2 <- negbinmfx(m2, data=subset(edges_full, ano == 2015), robust=T, clustervar1 = "ocup_i")
+summary(m1)
 
 
-m2 <- MASS::glm.nb(peso ~ scale(tamaño_combinado) +  
-                     scale(mujeres_perc_dist) +
-                     scale(superior_perc_dist) +   
-                     scale(promedio_edad_dist) +
-                     scale(promedio_horas_dist) +
-                     scale(promedio_ingreso_dist) +
-                     scale(mujeres_perc_dist)*scale(superior_perc_dist),
-                   data = subset(edges_full, ano == 2015),
-                   maxit = 1000)
-summary(m2)
-coefs_m2 <- coef(m2)
+screenreg(m2)
 
-## Modelo 2020
-m3 <- MASS::glm.nb(peso ~ 
-                     tamaño_combinado +  
-                     mujeres_perc_dist +
-                     superior_perc_dist +   
-                     promedio_edad_dist +
-                     promedio_horas_dist +
-                     promedio_ingreso_dist +
-                     mujeres_perc_dist*superior_perc_dist,
-                   data = subset(edges_full, ano == 2020),
-                   maxit = 1000)
-
-me_m3 <- negbinmfx(m3, data=subset(edges_full, ano == 2020), robust=T, clustervar1 = "ocup_i")
-
-
-m3 <- MASS::glm.nb(peso ~ scale(tamaño_combinado) +  
-                     scale(mujeres_perc_dist) +
-                     scale(superior_perc_dist) +   
-                     scale(promedio_edad_dist) +
-                     scale(promedio_horas_dist) +
-                     scale(promedio_ingreso_dist) +
-                     scale(mujeres_perc_dist)*scale(superior_perc_dist),
-                   data = subset(edges_full, ano == 2020),
-                   maxit = 1000)
-
-summary(m3)
-coefs_m3 <- coef(m3)
-
-summary(edges_full$superior_perc_dist)
-
-
+# tabla de reporte. 
 library(texreg)
-
-library(texreg)
-
-texreg(list(m1, m2, m3),  
+texreg(list(m2, m1),  
        
        # Nombres de modelos
-       custom.model.names = c("Modelo 2009", "Modelo 2010", "Modelo 2011"),
+       # custom.model.names = c("Modelo 2009", "Modelo 2010", "Modelo 2011"),
        
        # Nombre variable dependiente  
        dep.var.caption = "Variable Dependiente: Flujo de Trabajadores",
        
        # Leyendas
        caption = "Modelos Regresión Binomial Negativa",
-       label = c("2009", "2010", "2011"),
+      # label = c("2009", "2010", "2011"),
        
        # Opciones de formato tabla
        dcolumn = TRUE,
        booktabs = TRUE)
 
 
-datos_ejemplo$
-
+source(system.file("other_methods","extract.R",package="glmmTMB"))
+texreg(list(m2, m1)),
+       #dep.var.caption = "Variable Dependiente: Flujo de Trabajadores",
+       custom.model.names = c("Sin RE", "RE"),
+       caption="Modelos Regresión Binomial Negativa", 
+       dcolumn = TRUE,
+       booktabs = TRUE,
+       digits = 4,
+       label="tab:owls")
+  
+  
 # Crear un dataframe con valores de ejemplo para las variables de interés
 datos_ejemplo <- expand.grid(
   mujeres_perc_dist = seq(0, 100, length.out = 100),
@@ -1147,5 +1235,73 @@ plot_ly(datos_ejemplo, x = ~mujeres_perc_dist, y = ~promedio_educ_dist, z = ~pes
 
 
 
+library(glmmTMB)
+
+m1 <- glmmTMB(peso ~ tamaño_combinado + mujeres_perc_dist +  
+                superior_perc_dist + promedio_edad_dist +    promedio_horas_dist + 
+                promedio_ingreso_dist + (1 |ocup_i) + (1|ocup_j),  
+              data = edges_full,
+              family = poisson(link="log"),
+              ziformula = ~1)
+
+# Inferencia  
+vc <- vcov(m1, cluster = "dyad")
+ses <- sqrt(diag(vc))
+print(summary(m1))
+
+
+library(glmmTMB)
+library(numDeriv)
+
+
+# Modelo glmmTMB
+m1 <- glmmTMB(peso ~ tamaño_combinado + mujeres_perc_dist +  
+                superior_perc_dist + promedio_edad_dist +    promedio_horas_dist + 
+                promedio_ingreso_dist + (1 |ocup_i) + 
+                (1|ocup_j),  
+              data = edges_full, 
+              family = nbinom2)
+
+
+
+
+
+
+
+
+
+library(glmmTMB)
+library(numDeriv)
+
+# Modelo 
+m1 <- glmmTMB(peso ~ tamaño_combinado + mujeres_perc_dist +
+                superior_perc_dist + promedio_edad_dist +  
+                promedio_horas_dist + promedio_ingreso_dist +
+                (1 |ocup_i) + (1|ocup_j),  
+              data = edges_full,
+              family = nbinom2)
+
+# Función de verosimilitud
+ll <- function(beta){
+  
+  mu <- predict(m1, type="response")  
+  
+  dnbinom(edges_full$peso, mu, 1, TRUE)
+  
+}
+
+environment(ll) <- environment(edges_full)
+
+# Matriz Gradientes
+G <- jacobian(ll, m1$beta)
+
+# Dyads    
+dyads <- interaction(edges_full$ocup_i, edges_full$ocup_j)
+
+# Errores estandar robustos  
+V_dyad <- crossprod(G) / length(dyads)
+ses <- sqrt(diag(solve(V_dyad)*4*crossprod(G[lower.tri(G)]))) 
+
+print(summary(m1))
 
 

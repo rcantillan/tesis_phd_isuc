@@ -1,5 +1,22 @@
 
 
+# install InfoMap 
+package.list=c("emln","attempt", "cowplot", "igraph", "ggalluvial","magrittr","vegan", "dplyr","readr","ggplot2","stringr","tibble","tidyr","rlang","igraph","bipartite")
+loaded <-  package.list %in% .packages()
+package.list <-  package.list[!loaded]
+installed <-  package.list %in% .packages(TRUE)
+if (!all(installed)) install.packages(package.list[!installed], repos="http://cran.rstudio.com/")
+
+# Install infomapecology 
+devtools::install_github('Ecological-Complexity-Lab/emln', force=T)
+devtools::install_github('Ecological-Complexity-Lab/infomap_ecology_package', force=T)
+
+library(infomapecology)
+setwd('/home/rober/Documents/doctorado-UC/tesis_phd_isuc/paper1')
+install_infomap()
+check_infomap() # Make sure file can be run correctly. Should return TRUE
+
+
 # Librerías 
 library(igraph)
 library(ggraph)
@@ -17,6 +34,8 @@ library(infomapecology)
 library(devtools)
 library(tidygraph)
 library(sjlabelled)
+
+
 
 # 2009 
 hlaboral_2009 <- read_dta("data/EPS/2009/hlaboral.dta")
@@ -67,15 +86,23 @@ cl<-wedgelist_2009 %>% select(from, to)
 
 # fit infomap --------------------------------------------------------
 setwd('/home/rober/Documents/doctorado-UC/tesis')
-#install_infomap()
-#check_infomap()
+install_infomap()
+check_infomap()
+library(infomapecology)
+library(tidyverse)
+library(igraph)
 
-network_object <- create_monolayer_object(wedgelist_2009, directed = T, bipartite = F)
+network_object <- create_monolayer_network(wedgelist_2009, directed = T, bipartite = F)
+library(bipartite)
+
 res_dir <- run_infomap_monolayer(network_object, 
                                  infomap_executable='Infomap',
                                  flow_model = 'directed',
                                  silent=F,
-                                 trials=500, 
+                                 trials=500,
+                                 signif = T, 
+                                 nsim = 50,
+                                 shuff_method = 'r00',
                                  #two_level=-2, 
                                  seed=200952)
 
@@ -94,7 +121,9 @@ res_dir_modules <- res_dir$modules %>% drop_na()
 res_rawdir_modules <- res_rawdir$modules %>% drop_na()
 #create_infomap_linklist(network_object)
 
-
+plot_modular_matrix(res_dir)
+plots <- plot_signif(res_dir, plotit = T)
+plots
 
 # create modularity  -----------------------------------------------
 
@@ -160,26 +189,26 @@ lr.modularity <- function(g,
     edge_attr(g, 'tmp') <- weights
     A <- get.adjacency(g, type = 'both', attr = 'tmp')
     
-    out.deg <- strength(g, mode = 'out', weights = weights)
+    out.deg <- igraph::strength(g, mode = 'out', weights = weights)
     
   } else if (is.null(weights)) {
     
     if ('weight' %in% edge_attr_names(g)) {
       
       A <- get.adjacency(g, type='both', attr='weight')
-      out.deg <- strength(g, mode = 'out')
+      out.deg <- igraph::strength(g, mode = 'out')
       
     }  else {
       
       A <- get.adjacency(g, type='both')
-      out.deg <- degree(g, mode = 'out')
+      out.deg <- igraph::degree(g, mode = 'out')
       
     }
     
   } else if (is.na(weights)) {
     
     A <- get.adjacency(g, type='both')
-    out.deg <- degree(g, mode = 'out')
+    out.deg <- igraph::degree(g, mode = 'out')
     
   } else {
     
@@ -238,8 +267,10 @@ lr.modularity(wedgelist_2009,
               pr.algo = 'prpack',
               weights = E(wedgelist_2009)$weight)
 
+
+
 # degree dist
-hist(degree(wedgelist_2009),
+hist(igraph::degree(wedgelist_2009),
      xlab = "k",
      ylab = "Frequency",
      main = "Distribución de grado ocupacional 2009",
@@ -247,9 +278,9 @@ hist(degree(wedgelist_2009),
 
 
 
-degree(wedgelist_2009, mode = "all")
-degree(wedgelist_2009, mode = "in")
-degree(wedgelist_2009, mode = "out")
+igraph::degree(wedgelist_2009, mode = "all")
+igraph::degree(wedgelist_2009, mode = "in")
+igraph::degree(wedgelist_2009, mode = "out")
 #wedgelist_2009
 
 
@@ -289,7 +320,7 @@ top_occupations$name_degree <- paste(top_occupations$name2, top_occupations$degr
 legend_labels <- top_occupations$name_degree
 
 # Plotea la distribución de grados
-hist(degree(wedgelist_2009),
+hist(igraph::degree(wedgelist_2009),
      xlab = "degree",
      ylab = "Frequency",
      main = "",
@@ -297,6 +328,61 @@ hist(degree(wedgelist_2009),
 
 # Agrega la leyenda
 legend("topright", legend = legend_labels, fill = legend_colors)
+
+
+
+
+# plot. --------------------------------------------------------
+library(ggraph)
+library(ggforce)
+library(ggrepel)
+library(igraph)
+library(graphlayouts)
+#install.packages("oaqc")
+
+# Graph
+wg <- as_tbl_graph(wedgelist_2009) %>% filter(igraph::degree(wedgelist_2009) > 0) 
+
+wg <- igraph::simplify(wg)
+wg
+V(wg)$grp <- V(wg)$module_level1
+V(wg)$grp <- as.factor(V(wg)$grp)
+
+
+wg<- as.undirected(wg, mode = "each")
+bb <- layout_as_backbone(wg, keep = 0.5)
+bb <- layout_as_backbone(wg)
+
+E(wg)$col <- F
+E(wg)$col[bb$backbone] <- T
+
+ggraph(wg,
+       layout = "manual",
+       x = bb$xy[, 1],
+       y = bb$xy[, 2]) +
+  geom_edge_link0(aes(col = col), width = 0.2) +
+  geom_node_point(aes(fill = grp), shape = 21, size = 3) +
+  geom_mark_hull(
+    aes(x, y, group = grp, fill = grp),
+    concavity = 4,
+    expand = unit(2, "mm"),
+    alpha = 0.25
+  ) +
+  scale_color_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set1") +
+  scale_edge_color_manual(values = c(rgb(0, 0, 0, 0.3), rgb(0, 0, 0, 1))) +
+  theme_graph()+
+  theme(legend.position = "none")
+
+
+# Función layout por comunidad
+# Load graph data
+library(tidygraph) 
+wg <- create_graph(...) # load/create graph in wg
+
+# Simplify 
+wg <- simplify(wg)
+
 
 
 
