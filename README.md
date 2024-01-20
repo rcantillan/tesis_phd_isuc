@@ -2,8 +2,6 @@
 
 This repository contains the processing and analysis codes of the work planned to develop my doctoral thesis at the Institute of Sociology of the Pontificia Universidad Católica de Chile.
 
- Here is my attempt at translating the Spanish text into English:
-
 - Study 1 (Macro process): Following the conceptualization of Cheng and Park (2020) of "mobility classes", the first paper aims to detect "occupational mobility classes" over a 10-year period in Chile. The key idea can be divided into 3 parts: 1) detect clusters using InfoMap and evaluate modularities over time with LinkRank, 2) Analyze how gender dissimilarity is distributed between occupation clusters, and 3) evaluate whether there are different cluster configurations (and topologies) by analyzing individual trajectories separated by gender.
 
 - Study 2 (Microdynamics and mechanisms I): In this study I follow the proposals of Block (2023) and Lin and Hung (2022). I wonder about the contagion dynamics that underlie the emerging processes of occupational isomorphism in the occupational market in Chile. The study should evaluate 1) how distances on axes such as gender composition regulate mobility opportunities between pairs of occupations? And 2) To what extent do shared levels of segregation between connected occupations predict greater internal occupational segregation? The study explores recent developments by Block (Block et al., 2022) for developing analysis of mobility tables with ERGM models and, from there, seeks to develop contagion modeling strategies following the substantive theoretical ideas behind ALAAM models (Parker et al., 2022).
