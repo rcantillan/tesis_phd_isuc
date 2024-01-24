@@ -1,20 +1,24 @@
 
 
 # install InfoMap 
-package.list=c("emln","attempt", "cowplot", "igraph", "ggalluvial","magrittr","vegan", "dplyr","readr","ggplot2","stringr","tibble","tidyr","rlang","igraph","bipartite")
-loaded <-  package.list %in% .packages()
-package.list <-  package.list[!loaded]
-installed <-  package.list %in% .packages(TRUE)
-if (!all(installed)) install.packages(package.list[!installed], repos="http://cran.rstudio.com/")
+#package.list=c("emln","attempt", "cowplot", "igraph", "ggalluvial","magrittr","vegan", "dplyr","readr","ggplot2","stringr","tibble","tidyr","rlang","igraph","bipartite")
+#loaded <-  package.list %in% .packages()
+#package.list <-  package.list[!loaded]
+#installed <-  package.list %in% .packages(TRUE)
+#if (!all(installed)) install.packages(package.list[!installed], repos="http://cran.rstudio.com/")
 
 # Install infomapecology 
-devtools::install_github('Ecological-Complexity-Lab/emln', force=T)
-devtools::install_github('Ecological-Complexity-Lab/infomap_ecology_package', force=T)
+#devtools::install_github('Ecological-Complexity-Lab/emln', force=T)
+#devtools::install_github('Ecological-Complexity-Lab/infomap_ecology_package', force=T)
 
-library(infomapecology)
-setwd('/home/rober/Documents/doctorado-UC/tesis_phd_isuc/paper1')
-install_infomap()
-check_infomap() # Make sure file can be run correctly. Should return TRUE
+#library(infomapecology)
+#setwd('/home/rober/Documents/doctorado-UC/tesis_phd_isuc/paper1')
+#install_infomap()
+#check_infomap() # Make sure file can be run correctly. Should return TRUE
+
+install.packages("segregation")
+
+
 
 
 # Librerías 
@@ -31,16 +35,56 @@ library(netmem)
 library(occupar)
 library(data.table)
 library(infomapecology)
+library(infomapecology)
 library(devtools)
 library(tidygraph)
 library(sjlabelled)
+#install.packages("here")
+library(here)
+library(segregation)
+library(patchwork)
+
 
 
 
 # 2009 
-hlaboral_2009 <- read_dta("data/EPS/2009/hlaboral.dta")
+hlaboral_2009 <- read_dta("/home/rober/Documents/doctorado-UC/tesis_phd_isuc/data/EPS/2009/hlaboral.dta")
 s_2009<-hlaboral_2009%>%dplyr::select(folio_n20, oficio, orden)
 hlaboral_2009$oficio
+
+
+# add attributes
+## 2009
+hlaboral_2009 <- read_dta(here("/home/rober/Documents/doctorado-UC/tesis_phd_isuc/data/EPS/2009/hlaboral.dta"))
+ind_attr_2009 <- read_dta(here("/home/rober/Documents/doctorado-UC/tesis_phd_isuc/data/EPS/2009/entrevistado.dta"))
+
+# seleccionar variables
+ind_2009 <- ind_attr_2009 %>% dplyr::select(folio_n20,a8,a9,a12n) #sexo,edad,nivel educativo
+s_2009<-hlaboral_2009%>%dplyr::select(folio_n20, oficio, b12, b12t, b13, orden) #ingreso,horas semanales
+
+# unir, filtrar, contar. 
+laboral_2009 <- inner_join(ind_2009, s_2009, by = "folio_n20") %>%
+  dplyr::select(folio_n20, sexo = a8, edad = a9, educ = a12n, ocup = oficio, 
+                ingreso = b12, ingreso_tramo = b12t, horas = b13, orden) %>%
+  filter(sexo %in% c(1, 2)) %>%
+  mutate(
+    educ = ifelse(educ %in% c(88, 99), NA, educ),
+    ingreso = ifelse(ingreso %in% c(8, 9), NA, ingreso),
+    horas = ifelse(horas %in% c(888, 999), NA, horas),
+    superior = ifelse(educ %in% c(12,13), 1, 0)
+  ) %>%
+  group_by(ocup) %>%
+  summarise(
+    tamano          = n(),
+    hombres_n       = sum(sexo == 1),
+    mujeres_n       = sum(sexo == 2),
+    superior_n      = sum(superior == 1),
+    nosuperior_n    = sum(superior == 0),
+    hombres_prop    = sum(sexo == 1)/ sum(!is.na(sexo)),
+    mujeres_prop    = sum(sexo == 2)/ sum(!is.na(sexo)),
+    superior_prop   = sum(superior == 1) / sum(!is.na(superior)),
+    nosuperior_prop = sum(superior == 0) / sum(!is.na(superior))
+  )
 
 # 2009 -------------------------------------------------------
 # renombrar columnas
@@ -59,9 +103,9 @@ rownames(overlap_2009) <- gsub('X', '', rownames(overlap_2009))
 #colnames(overlap_2009)
 
 # Eliminar las filas y columnas de nombre NA 
-filas_a_eliminar <- 338
-overlap_2009 <- overlap_2009[-filas_a_eliminar, ]
-overlap_2009 <- overlap_2009[,-filas_a_eliminar]
+filas_a_eliminar <- c(337,338)
+overlap_2009 <- overlap_2009[-filas_a_eliminar, ] # filas 
+overlap_2009 <- overlap_2009[,-filas_a_eliminar] # columnas
 
 
 # data.table object 
@@ -86,14 +130,11 @@ cl<-wedgelist_2009 %>% select(from, to)
 
 # fit infomap --------------------------------------------------------
 setwd('/home/rober/Documents/doctorado-UC/tesis')
-install_infomap()
-check_infomap()
-library(infomapecology)
-library(tidyverse)
-library(igraph)
+#install_infomap()
+#check_infomap()
+
 
 network_object <- create_monolayer_network(wedgelist_2009, directed = T, bipartite = F)
-library(bipartite)
 
 res_dir <- run_infomap_monolayer(network_object, 
                                  infomap_executable='Infomap',
@@ -123,7 +164,7 @@ res_rawdir_modules <- res_rawdir$modules %>% drop_na()
 
 plot_modular_matrix(res_dir)
 plots <- plot_signif(res_dir, plotit = T)
-plots
+#plots
 
 # create modularity  -----------------------------------------------
 
@@ -277,10 +318,9 @@ hist(igraph::degree(wedgelist_2009),
      col = "skyblue")
 
 
-
-igraph::degree(wedgelist_2009, mode = "all")
-igraph::degree(wedgelist_2009, mode = "in")
-igraph::degree(wedgelist_2009, mode = "out")
+#igraph::degree(wedgelist_2009, mode = "all")
+#igraph::degree(wedgelist_2009, mode = "in")
+#igraph::degree(wedgelist_2009, mode = "out")
 #wedgelist_2009
 
 
@@ -313,14 +353,13 @@ top_occupations <- wedgelist_2009 %>%
 
 # Crea un vector de colores para la leyenda
 legend_colors <- rainbow(length(top_occupations))
-
 top_occupations$name_degree <- paste(top_occupations$name2, top_occupations$degree, sep = " / ")
 
 # Etiqueta de leyenda con las tres ocupaciones principales
 legend_labels <- top_occupations$name_degree
 
 # Plotea la distribución de grados
-hist(igraph::degree(wedgelist_2009),
+hist(igraph::degree(wedgelist_2009,  mode = "all"),
      xlab = "degree",
      ylab = "Frequency",
      main = "",
@@ -330,58 +369,289 @@ hist(igraph::degree(wedgelist_2009),
 legend("topright", legend = legend_labels, fill = legend_colors)
 
 
-
-
 # plot. --------------------------------------------------------
 library(ggraph)
 library(ggforce)
 library(ggrepel)
 library(igraph)
 library(graphlayouts)
+library(colourvalues)
 #install.packages("oaqc")
 
 # Graph
-wg <- as_tbl_graph(wedgelist_2009) %>% filter(igraph::degree(wedgelist_2009) > 0) 
+g <- as_tbl_graph(wedgelist_2009) %>% filter(igraph::degree(wedgelist_2009) > 0) 
+#g <- simplify(g)
+#g <- as.undirected(g)
+#comunidades <- unique(V(g)$module_level1)  
 
-wg <- igraph::simplify(wg)
-wg
-V(wg)$grp <- V(wg)$module_level1
-V(wg)$grp <- as.factor(V(wg)$grp)
+# Dataframe original 
+nodes <- wedgelist_2009 %>% activate(nodes) %>% select(name, module_level1, degree) %>% as_tibble()
+df <- nodes
 
 
-wg<- as.undirected(wg, mode = "each")
-bb <- layout_as_backbone(wg, keep = 0.5)
-bb <- layout_as_backbone(wg)
+# Función para generar coordenadas
+generate_coordinates <- function(community_df, scale_factor = 1) {
+  
+  nodes <- community_df$name 
+  
+  # Calcular ángulo aleatorio
+  angle <- runif(1, 0, 2 * pi)
+  
+  # Aleatorizar ligeramente el radio y el desplazamiento
+  radius <- runif(1, 0.5, 1) * runif(1, 0.8, 1.2)
+  
+  # Introducir ruido pequeño para variabilidad entre nodos de la misma comunidad
+  noise_factor_x <- 0.2  # Ajusta este factor según la intensidad de variabilidad deseada en la coordenada x
+  noise_factor_y <- 0.2  # Ajusta este factor según la intensidad de variabilidad deseada en la coordenada y
+  
+  noise_x <- noise_factor_x * runif(length(nodes), -1, 1)
+  noise_y <- noise_factor_y * runif(length(nodes), -1, 1)
+  
+  # Añadir más desplazamiento entre nodos de la misma comunidad
+  displacement_factor_x <- 20.5  # Ajusta este factor para controlar la distancia entre nodos de la misma comunidad en x
+  displacement_factor_y <- 20.5  # Ajusta este factor para controlar la distancia entre nodos de la misma comunidad en y
+  
+  # Generar coordenadas en función del ángulo con desplazamiento y ruido
+  x <- scale_factor * community_df$module_level1 * radius * cos(angle) + displacement_factor_x * noise_x
+  y <- scale_factor * community_df$module_level1 * radius * sin(angle) + displacement_factor_y * noise_y
+  
+  return(data.frame(name = nodes, x = x, y = y)) 
+}
 
-E(wg)$col <- F
-E(wg)$col[bb$backbone] <- T
+# Dataframe de salida
+positions <- data.frame(name = character(),
+                        x = numeric(),
+                        y = numeric())
 
-ggraph(wg,
-       layout = "manual",
-       x = bb$xy[, 1],
-       y = bb$xy[, 2]) +
-  geom_edge_link0(aes(col = col), width = 0.2) +
-  geom_node_point(aes(fill = grp), shape = 21, size = 3) +
+# Generar coordenadas por comunidad con un factor de escala adicional
+scale_factor <- 8  # Ajusta este factor según la separación deseada entre comunidades
+
+for(com in unique(df$module_level1)){
+  
+  com_df <- filter(df, module_level1 == com)  
+  coords <- generate_coordinates(com_df, scale_factor)
+  
+  positions <- bind_rows(positions, coords)  
+}
+
+# Graficar
+# Leer grafo
+#g <- wedgelist_2009 %>%
+#  as_tbl_graph() 
+
+# Unir coordenadas a nodos del grafo
+laboral_2009 <- laboral_2009 %>% select(name, tamano, hombres_n, mujeres_n, superior_n,
+                                        nosuperior_n, hombres_prop, mujeres_prop, superior_prop,  
+                                        nosuperior_prop)
+
+laboral_2009$name <- as.character(laboral_2009$name)
+
+g <- g %>%   
+  activate(nodes) %>%
+  left_join(positions, by = "name") %>%
+  left_join(laboral_2009, by = "name")
+
+# estadisticas a nivel de modulo
+a <- g %>% 
+  activate(nodes) %>%
+  group_by(module_level1) %>%
+  as_tibble() %>%
+  summarize(sum_tamano = sum(tamano),
+            sum_mujeres_n = sum(mujeres_n),
+            sum_hombres_n = sum(hombres_n),
+            sum_superior_n = sum(superior_n),
+            sum_nosuperior_n = sum(nosuperior_n)) %>%
+  mutate(modulo_prop_mujeres    = sum_mujeres_n / sum_tamano,
+         modulo_prop_hombres    = sum_hombres_n / sum_tamano,
+         modulo_prop_superior   = sum_superior_n / sum_tamano,
+         modulo_prop_nosuperior = sum_nosuperior_n / sum_tamano) %>%
+  ungroup()
+
+# unir
+g <- g %>%   
+  activate(nodes) %>%
+  left_join(a, by = "module_level1") 
+
+
+glimpse(g)
+
+# crear medidas de segregación -------------------------------------------------
+seg <- g %>% 
+  activate(nodes) %>% 
+  select(name, module_level1, tamano, hombres_n, mujeres_n) %>% 
+  as_tibble()
+
+#glimpse(seg)
+
+# Datos en formato largo
+seg <- seg %>% 
+  pivot_longer(cols = c(hombres_n, mujeres_n), 
+               names_to = "sexo", 
+               values_to = "n")
+
+# Segregación a nivel de ocupación 
+mutual_total(seg, "sexo", "name", weight = "n")
+name_ml <- mutual_local(seg, "sexo", "name", weight = "n", wide = TRUE) %>% as_tibble()
+names(name_ml) <- c("name", "ls_name", "p_name")
+hist(name_ml$ls_name)
+
+
+# Segregación a nivel de cluster
+mutual_total(seg, "sexo", "module_level1", weight = "n")  
+module_ml <- mutual_local(seg, "sexo", "module_level1", weight = "n", wide = TRUE) %>% as_tibble()
+names(module_ml) <- c("module_level1", "ls_module", "p_module")
+hist(module_ml$ls_module)
+
+
+# join
+g <- g %>% 
+  activate(nodes) %>%
+  left_join(name_ml, by="name") %>%  # medidas locales
+  left_join(module_ml, by = "module_level1") # medidas de componentes
+glimpse(g)
+
+# segcurve plot
+p<-segcurve(seg, "sexo", "name", weight = "n") 
+segcurve(seg, "sexo", "name", weight = "n", segment = "module_level1") +
+  theme(legend.position = "none")
+glimpse(p)
+
+
+# Crear el gráfico con ambas curvas suavizadas, reducir el tamaño y agregar la línea en 45 grados
+ggplot(p$data, aes(y = 1:nrow(p$data))) +
+ # geom_abline(intercept = 0, linetype = "dashed", color = "black") +
+  geom_abline(intercept = 23, slope = 214, linetype = "dashed") +
+  geom_smooth(aes(x = cumul_prob_1, color = "Hombres"), se = FALSE, size = .3) +
+  geom_smooth(aes(x = cumul_prob_2, color = "Mujeres"), se = FALSE, size = .3) +
+  labs(x = "Cumulative Probability", y = "index") +
+  scale_color_manual(name = "Catgeories", values = c("Hombres" = "blue", "Mujeres" = "red", "Equidad" = "black"))
+  theme_minimal() +
+  guides(shape = guide_legend("Category", override.aes = list(fill = c("red", "blue", "black"))))
+
+  
+?segplot
+segplot(seg, "sexo", "name", weight = "n",order = "segregation")
+segplot(seg, "sexo", "name", weight = "n", order = "segregation", secondary_plot = "segregation")
+
+
+
+## correlations ---------------------------------------------------------------
+library(corrr)
+
+g %>% 
+  activate(nodes) %>%
+  as_tibble()%>%
+  select(modulo_prop_mujeres, modulo_prop_superior, ls_name, ls_module) %>% 
+  correlate()
+
+# plot -------------------------------------------------------------------------
+
+# round
+g<-g %>% 
+  activate(nodes) %>%
+  mutate_at(vars(ls_name, ls_module, p_name, p_module,
+                 hombres_prop, mujeres_prop, superior_prop, 
+                 nosuperior_prop, 
+                 modulo_prop_mujeres,   
+                 modulo_prop_hombres,   
+                 modulo_prop_superior,  
+                 modulo_prop_nosuperior), ~ round(., digits = 2))%>%
+  mutate(ls_module_label = paste("ls:", ls_module)) %>%
+  mutate(p_module_label = paste("p:", p_module)) %>%
+  mutate(p_module_mujeres = paste("pm:", modulo_prop_mujeres)) %>% 
+  mutate(p_module_superior= paste("ps:", modulo_prop_superior)) %>%
+  mutate(ls_pms_module = paste(ls_module_label,p_module_mujeres,p_module_superior))
+
+
+
+
+g<-g %>% 
+  activate(nodes) %>%
+  mutate(module_level1 = as.factor(module_level1))
+
+glimpse(g)
+
+#glimpse(g)
+# Plotear el grafo con las posiciones especificadas
+# Obtener los nodos con mayor grado en cada comunidad
+top_nodes <- g %>%
+  group_by(module_level1) %>%
+  top_n(3, degree) %>%
+  ungroup() %>% as_tibble()
+
+
+grupos_a_etiquetar <- c("ls: 0.27 pm: 0.77 ps: 0.15", 
+                        "ls: 0.41 pm: 0.03 ps: 0.03",
+                        "ls: 0.35 pm: 0.82 ps: 0.12", 
+                        "ls: 0.36 pm: 0.04 ps: 0.04",
+                        # "ls: 0.77 pm: 0.98 ps: 0.39", 
+                        "ls: 0.13 pm: 0.17 ps: 0",
+                        "ls: 0.18 pm: 0.71 ps: 0.12",
+                        "ls: 0.19 pm: 0.13 ps: 0.14")
+
+# Convertir ls_module_label a factor
+g_filtered<-g%>%
+  activate(nodes) %>%
+  #dplyr::mutate(ls_pms_module = as.factor(ls_pms_module)) %>%
+  filter(ls_pms_module %in% grupos_a_etiquetar) %>%
+  as_tibble()
+
+# Seleccionar la segunda fila (por ejemplo)
+#fila <- g_filtered %>%
+#  filter(module_level1 == 20 & name == "3320") %>%
+#  mutate(name = case_when(name == 3320 ~ 3321))
+#
+#g_filtered <- rbind(g_filtered, fila)
+
+# plot
+ggraph(g, layout = "manual", x = g$x, y = g$y) +
+  geom_edge_link(aes(edge_alpha = weight), show.legend = FALSE) +
+  geom_node_point(aes(size = degree, fill = as.factor(module_level1)), colour = "#FFFFFF", shape = 21, stroke = 0.3) +
+  scale_size_continuous(range = c(2, 10)) +  # Ajusta el rango según tus preferencias
   geom_mark_hull(
-    aes(x, y, group = grp, fill = grp),
-    concavity = 4,
-    expand = unit(2, "mm"),
+    aes(x, y, 
+        group = module_level1, 
+        fill  = module_level1,
+        label = ls_pms_module),
+    data = g_filtered, 
+    concavity = 0.2,
+    expand = unit(2.5, "mm"),
     alpha = 0.25
-  ) +
-  scale_color_brewer(palette = "Set1") +
-  scale_fill_brewer(palette = "Set1") +
-  scale_edge_color_manual(values = c(rgb(0, 0, 0, 0.3), rgb(0, 0, 0, 1))) +
-  theme_graph()+
+  ) + 
+  theme_void() +
   theme(legend.position = "none")
 
 
-# Función layout por comunidad
-# Load graph data
-library(tidygraph) 
-wg <- create_graph(...) # load/create graph in wg
+glimpse(g)
 
-# Simplify 
-wg <- simplify(wg)
+
+
+# descriptivos ocupaciones 
+df <- g %>% activate(nodes)%>%as_tibble()
+df <- arrange(df, ls_name)
+
+deciles <- quantile(df$ls_name, probs = seq(0,1,0.1))
+
+inf_decil <- subset(df, ls_name <= deciles[2])
+
+sup_decil <- subset(df, ls_name >= deciles[9])
+
+#Comparación de promedios
+summary(inf_decil$superior_prop)
+summary(sup_decil$superior_prop)
+
+Frecuencias absolutas y relativas de factores cualitativos
+table(inf_decil$sector_economico)
+
+prop.table(table(sup_decil$nivel_educativo))
+
+
+
+ggplot(df, aes(mujeres_prop, superior_prop)) +
+  geom_point() +
+  geom_smooth(method = lm)
+
+
 
 
 
